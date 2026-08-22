@@ -59,7 +59,7 @@ export default async function JobDetailPage({ params }: Props) {
           <aside className="h-fit rounded-md border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-28">
             <h2 className="text-xl font-black text-[#071A3D]">Apply for this job</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">Start through the official Red Stone application guidance page. Do not send documents to unofficial contacts.</p>
-            <Link href={`/apply?job=${slug}`} className="mt-5 block rounded-md bg-[#D4AF37] px-5 py-4 text-center text-sm font-black text-[#071A3D]">Apply Now</Link>
+            <Link href={`/apply/${slug}`} className="mt-5 block rounded-md bg-[#D4AF37] px-5 py-4 text-center text-sm font-black text-[#071A3D]">Apply Now</Link>
           </aside>
         </div>
       </Band>

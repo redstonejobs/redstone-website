@@ -38,10 +38,15 @@ export async function updateSession(request: NextRequest) {
 
   const { data, error } = await supabase.auth.getClaims();
 
-  if (
-    request.nextUrl.pathname.startsWith("/admin") &&
-    (error || !data?.claims)
-  ) {
+  const protectedCandidateApply =
+    request.nextUrl.pathname.startsWith("/apply/") &&
+    request.nextUrl.pathname !== "/apply";
+  const protectedPath =
+    request.nextUrl.pathname.startsWith("/admin") ||
+    request.nextUrl.pathname.startsWith("/candidate") ||
+    protectedCandidateApply;
+
+  if (protectedPath && (error || !data?.claims)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("next", request.nextUrl.pathname);
