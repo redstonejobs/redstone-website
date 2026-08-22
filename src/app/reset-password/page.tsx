@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { createClient } from "@/utils/supabase/client";
 
 export default function ResetPasswordPage() {
@@ -23,6 +24,15 @@ export default function ResetPasswordPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#F3F4F6] px-4">
       <form onSubmit={submit} className="w-full max-w-md rounded-md bg-white p-8 shadow-xl">
+        <RedstoneLogo
+          href="/"
+          size="lg"
+          showText
+          subtitle="Account Recovery"
+          priority
+          className="mb-6 text-[#071A3D]"
+          textClassName="text-[#071A3D]"
+        />
         <h1 className="text-3xl font-black text-[#071A3D]">Choose a new password</h1>
         <label className="mt-5 grid gap-2 text-sm font-bold">
           New Password
@@ -38,4 +48,3 @@ export default function ResetPasswordPage() {
     </main>
   );
 }
-

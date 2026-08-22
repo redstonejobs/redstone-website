@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { registerEmployer } from "@/lib/employer/actions";
 
 type PageProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
@@ -10,7 +11,15 @@ export default async function EmployerRegisterPage({ searchParams }: PageProps) 
   return (
     <main className="min-h-screen bg-[#071A3D] px-4 py-10 text-slate-900">
       <div className="mx-auto max-w-3xl rounded-md bg-white p-6 shadow-2xl">
-        <p className="text-sm font-black uppercase tracking-[0.22em] text-[#B8860B]">Employer Registration</p>
+        <RedstoneLogo
+          href="/"
+          size="lg"
+          showText
+          subtitle="Employer Registration"
+          priority
+          className="mb-6 text-[#071A3D]"
+          textClassName="text-[#071A3D]"
+        />
         <h1 className="mt-2 text-3xl font-black text-[#071A3D]">Create a Red Stone employer account</h1>
         <p className="mt-3 text-sm text-slate-600">Company verification remains controlled by Red Stone. Registration does not approve or publish vacancies automatically.</p>
         {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{decodeURIComponent(error)}</p> : null}

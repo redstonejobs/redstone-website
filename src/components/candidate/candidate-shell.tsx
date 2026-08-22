@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { CONTACT } from "@/lib/public/site";
 import type { CandidateContext } from "@/lib/candidate/types";
 
@@ -19,7 +20,14 @@ export function CandidateShell({ context, children }: { context: CandidateContex
       </div>
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <Link href="/candidate" className="font-black text-[#071A3D]">Red Stone Candidate Portal</Link>
+          <RedstoneLogo
+            href="/candidate"
+            size="sm"
+            showText
+            subtitle="Candidate Portal"
+            className="text-[#071A3D]"
+            textClassName="text-[#071A3D]"
+          />
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-slate-600 sm:inline">{context.profile.full_name ?? context.user.email}</span>
             <form action="/auth/logout" method="post">
@@ -40,4 +48,3 @@ export function CandidateShell({ context, children }: { context: CandidateContex
     </div>
   );
 }
-

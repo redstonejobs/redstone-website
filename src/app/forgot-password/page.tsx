@@ -1,3 +1,4 @@
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { requestPasswordReset } from "@/lib/auth/actions";
 
 type Props = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
@@ -8,6 +9,15 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
   return (
     <main className="grid min-h-screen place-items-center bg-[#F3F4F6] px-4">
       <form action={requestPasswordReset} className="w-full max-w-md rounded-md bg-white p-8 shadow-xl">
+        <RedstoneLogo
+          href="/"
+          size="lg"
+          showText
+          subtitle="Account Recovery"
+          priority
+          className="mb-6 text-[#071A3D]"
+          textClassName="text-[#071A3D]"
+        />
         <h1 className="text-3xl font-black text-[#071A3D]">Reset Password</h1>
         <p className="mt-3 text-sm text-slate-600">Enter your email. If the account can receive reset email, Supabase will send secure instructions.</p>
         {params.sent ? <p className="mt-4 rounded-md bg-emerald-50 p-3 text-sm text-emerald-700">If an account is eligible, reset instructions have been sent.</p> : null}
@@ -21,4 +31,3 @@ export default async function ForgotPasswordPage({ searchParams }: Props) {
     </main>
   );
 }
-

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { registerCandidate } from "@/lib/auth/actions";
 
 type Props = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
@@ -11,7 +12,15 @@ export default async function RegisterPage({ searchParams }: Props) {
     <main className="min-h-screen bg-[#F3F4F6] px-4 py-10">
       <form action={registerCandidate} className="mx-auto grid max-w-2xl gap-5 rounded-md bg-white p-8 shadow-xl">
         <div>
-          <p className="text-sm font-black uppercase tracking-wide text-[#B8860B]">Candidate Registration</p>
+          <RedstoneLogo
+            href="/"
+            size="lg"
+            showText
+            subtitle="Candidate Registration"
+            priority
+            className="mb-6 text-[#071A3D]"
+            textClassName="text-[#071A3D]"
+          />
           <h1 className="mt-2 text-3xl font-black text-[#071A3D]">Create your Red Stone account</h1>
         </div>
         {error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
@@ -43,4 +52,3 @@ function Field({ name, label, type = "text", required = false }: { name: string;
     </label>
   );
 }
-

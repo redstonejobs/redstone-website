@@ -27,6 +27,14 @@ export const metadata: Metadata = {
       "Responsible international recruitment support for candidates and employers.",
     url: SITE_URL,
     siteName: SITE_NAME,
+    images: [
+      {
+        url: "/images/redstone-logo.png",
+        width: 1254,
+        height: 1254,
+        alt: SITE_NAME,
+      },
+    ],
     type: "website",
   },
   twitter: {
@@ -34,6 +42,7 @@ export const metadata: Metadata = {
     title: SITE_NAME,
     description:
       "Responsible international recruitment support for candidates and employers.",
+    images: ["/images/redstone-logo.png"],
   },
 };
 

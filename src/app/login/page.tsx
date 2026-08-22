@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
@@ -48,7 +49,15 @@ function LoginForm() {
       <div className="mx-auto flex min-h-[80vh] max-w-md items-center">
         <div className="w-full rounded-md bg-white p-8 text-slate-900 shadow-2xl">
           <div className="mb-8 text-center">
-            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.25em] text-[#B8860B]">Red Stone Employment Agency</p>
+            <RedstoneLogo
+              href="/"
+              size="lg"
+              showText
+              subtitle="Secure Account Access"
+              priority
+              className="mx-auto justify-center text-[#071A3D]"
+              textClassName="text-left text-[#071A3D]"
+            />
             <h1 className="text-3xl font-bold">Secure Login</h1>
             <p className="mt-3 text-sm text-slate-600">Sign in to access your Red Stone account.</p>
           </div>

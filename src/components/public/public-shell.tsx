@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CONTACT, SITE_NAME } from "@/lib/public/site";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
+import { CONTACT } from "@/lib/public/site";
 
 const nav = [
   ["Home", "/"],
@@ -20,13 +21,15 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       </div>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-          <Link href="/" className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-md bg-[#071A3D] text-lg font-black text-[#D4AF37]">RS</span>
-            <span>
-              <span className="block text-base font-black text-[#071A3D]">{SITE_NAME}</span>
-              <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">redstone.co.ke</span>
-            </span>
-          </Link>
+          <RedstoneLogo
+            href="/"
+            size="md"
+            showText
+            subtitle="redstone.co.ke"
+            priority
+            className="text-[#071A3D]"
+            textClassName="text-[#071A3D]"
+          />
           <nav className="hidden items-center gap-5 text-sm font-semibold text-slate-700 lg:flex">
             {nav.map(([label, href]) => (
               <Link key={href} href={href} className="transition hover:text-[#B8860B]">
@@ -70,7 +73,14 @@ function Footer() {
     <footer className="bg-[#071A3D] text-white">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
         <div>
-          <p className="text-xl font-black text-[#F2D675]">{SITE_NAME}</p>
+          <RedstoneLogo
+            href="/"
+            size="lg"
+            showText
+            subtitle="redstone.co.ke"
+            className="text-[#F2D675]"
+            textClassName="text-[#F2D675]"
+          />
           <p className="mt-4 max-w-sm text-sm leading-6 text-slate-200">
             Responsible recruitment support for candidates and employers. Only trust communications sent through Red Stone&apos;s official contact channels.
           </p>
@@ -96,4 +106,3 @@ function Footer() {
     </footer>
   );
 }
-

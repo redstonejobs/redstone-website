@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import type { EmployerContext } from "@/lib/employer/types";
 import { textValue } from "@/lib/admin/format";
 import { employerStatusLabel } from "@/lib/employer/constants";
@@ -19,9 +20,12 @@ export function EmployerShell({ context, children }: { context: EmployerContext;
     <div className="min-h-screen bg-[#F3F4F6] text-slate-900">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B8860B]">Red Stone Employer Portal</p>
-            <h1 className="mt-1 text-xl font-black text-[#071A3D]">{textValue(context.employer, ["company_name"], "Employer Account")}</h1>
+          <div className="flex min-w-0 items-center gap-4">
+            <RedstoneLogo href="/employer" size="sm" className="shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#B8860B]">Red Stone Employer Portal</p>
+              <h1 className="mt-1 text-xl font-black text-[#071A3D]">{textValue(context.employer, ["company_name"], "Employer Account")}</h1>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="rounded-md bg-slate-100 px-3 py-2 font-semibold capitalize text-slate-700">{employerStatusLabel(context.employer.verification_status)}</span>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import type { AdminContext } from "@/lib/admin/types";
 import { canManageStaff } from "@/lib/admin/auth";
 
@@ -29,8 +30,14 @@ export function AdminShell({ context, children }: AdminShellProps) {
       <div className="flex min-h-screen">
         <aside className="hidden w-72 shrink-0 border-r border-white/10 bg-[#071A3D] text-white lg:block">
           <div className="px-6 py-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#D4AF37]">Red Stone</p>
-            <h1 className="mt-2 text-xl font-bold">Admin Platform</h1>
+            <RedstoneLogo
+              href="/admin"
+              size="md"
+              showText
+              subtitle="Admin Platform"
+              className="text-[#F2D675]"
+              textClassName="text-[#F2D675]"
+            />
           </div>
           <nav className="space-y-1 px-3" aria-label="Admin navigation">
             {visibleNav.map((item) => (
@@ -48,13 +55,16 @@ export function AdminShell({ context, children }: AdminShellProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="border-b border-slate-200 bg-white">
             <div className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#B8860B]">
-                  Red Stone Employment Agency
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Dashboard / Administration
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <RedstoneLogo href="/admin" size="sm" className="shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#B8860B]">
+                    Red Stone Employment Agency
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Dashboard / Administration
+                  </p>
+                </div>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <label className="sr-only" htmlFor="admin-search">
