@@ -59,9 +59,9 @@ export default async function JobsPage({ searchParams }: PageProps) {
             <td className="px-4 py-3 text-slate-600">{textValue(job, ["country"])}</td>
             <td className="px-4 py-3 text-slate-600">{textValue(job, ["category"])}</td>
             <td className="px-4 py-3 text-slate-600">{textValue(job, ["skill_level"])}</td>
-            <td className="px-4 py-3 text-slate-600">{numberValue(job, ["number_of_vacancies", "vacancies"])}</td>
+            <td className="px-4 py-3 text-slate-600">{numberValue(job, ["vacancies"])}</td>
             <td className="px-4 py-3"><StatusBadge status={textValue(job, ["status"], "draft")} /></td>
-            <td className="px-4 py-3 text-slate-600">{dateText(job.deadline)}</td>
+            <td className="px-4 py-3 text-slate-600">{dateText(job.application_deadline)}</td>
             <td className="px-4 py-3">
               <div className="flex gap-2">
                 <Link href={`/admin/jobs/${textValue(job, ["id"])}`} className="font-semibold text-[#071A3D]">View</Link>
@@ -76,4 +76,3 @@ export default async function JobsPage({ searchParams }: PageProps) {
     </div>
   );
 }
-

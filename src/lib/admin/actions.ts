@@ -73,7 +73,7 @@ function uuidValue(formData: FormData, key: string) {
 function jobPayload(formData: FormData, creatorId?: string) {
   const title = value(formData, "title");
   const slug = value(formData, "slug");
-  const deadline = value(formData, "deadline");
+  const applicationDeadline = value(formData, "application_deadline");
   const status = value(formData, "status") || "draft";
 
   const payload: Record<string, unknown> = {
@@ -90,8 +90,8 @@ function jobPayload(formData: FormData, creatorId?: string) {
     salary_max: optionalNumber(formData, "salary_max"),
     currency: value(formData, "currency") || null,
     salary_period: value(formData, "salary_period") || null,
-    number_of_vacancies: requiredPositiveInteger(formData, "number_of_vacancies"),
-    deadline: deadline || null,
+    vacancies: requiredPositiveInteger(formData, "vacancies"),
+    application_deadline: applicationDeadline || null,
     visa_sponsorship: checkbox(formData, "visa_sponsorship"),
     accommodation: checkbox(formData, "accommodation"),
     transport: checkbox(formData, "transport"),
@@ -169,7 +169,7 @@ export async function setJobStatus(id: string, status: string) {
   if (status === "published") {
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .select("title, slug, country, description, number_of_vacancies, deadline")
+      .select("title, slug, country, description, vacancies, application_deadline")
       .eq("id", id)
       .maybeSingle<Record<string, unknown>>();
 
@@ -201,7 +201,7 @@ export async function duplicateJob(id: string) {
   const { data: job, error } = await supabase
     .from("jobs")
     .select(
-      "title, slug, employer_id, country, city, category, job_type, skill_level, description, salary_min, salary_max, currency, salary_period, number_of_vacancies, deadline, visa_sponsorship, accommodation, transport, meals"
+      "title, slug, employer_id, country, city, category, job_type, skill_level, description, salary_min, salary_max, currency, salary_period, vacancies, application_deadline, visa_sponsorship, accommodation, transport, meals"
     )
     .eq("id", id)
     .maybeSingle();

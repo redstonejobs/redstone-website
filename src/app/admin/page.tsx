@@ -114,9 +114,9 @@ export default async function AdminPage() {
                 <td className="px-4 py-3 text-slate-600">
                   {textValue(job, ["employer_name", "employer_id"], "Employer not set")}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{numberValue(job, ["number_of_vacancies", "vacancies"])}</td>
+                <td className="px-4 py-3 text-slate-600">{numberValue(job, ["vacancies"])}</td>
                 <td className="px-4 py-3"><StatusBadge status={textValue(job, ["status"], "draft")} /></td>
-                <td className="px-4 py-3 text-slate-600">{dateText(job.deadline)}</td>
+                <td className="px-4 py-3 text-slate-600">{dateText(job.application_deadline)}</td>
               </tr>
             )}
           />
@@ -177,7 +177,7 @@ export default async function AdminPage() {
               {dashboard.upcomingDeadlines.map((job) => (
                 <div key={textValue(job, ["id"])} className="flex justify-between gap-4">
                   <span className="text-sm font-semibold text-[#071A3D]">{textValue(job, ["title"])}</span>
-                  <span className="text-sm text-slate-500">{dateText(job.deadline)}</span>
+                  <span className="text-sm text-slate-500">{dateText(job.application_deadline)}</span>
                 </div>
               ))}
             </div>

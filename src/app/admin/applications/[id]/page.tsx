@@ -55,7 +55,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
           <Field label="Job" value={textValue(job, ["title"], textValue(application, ["job_id"], "Job"))} />
           <Field label="Destination" value={textValue(job, ["country", "city"])} />
           <Field label="Employer" value={textValue(employer, ["company_name"], "Employer")} />
-          <Field label="Deadline" value={dateText(job?.deadline)} />
+          <Field label="Deadline" value={dateText(job?.application_deadline)} />
         </Panel>
         <Panel title="Application Details">
           <Field label="Status" value={<StatusBadge status={textValue(application, ["status"], "draft")} />} />

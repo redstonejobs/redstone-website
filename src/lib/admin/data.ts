@@ -294,7 +294,7 @@ export async function getDashboardData() {
       .returns<Row[]>(),
     supabase
       .from("jobs")
-      .select("id, title, status, country, city, deadline, created_at")
+      .select("id, title, status, country, city, application_deadline, created_at")
       .order("created_at", { ascending: false })
       .limit(6)
       .returns<Row[]>(),
@@ -316,10 +316,10 @@ export async function getDashboardData() {
       .is("assigned_staff_id", null),
     supabase
       .from("jobs")
-      .select("id, title, status, country, city, deadline")
-      .gte("deadline", new Date().toISOString().slice(0, 10))
-      .lte("deadline", new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
-      .order("deadline", { ascending: true })
+      .select("id, title, status, country, city, application_deadline")
+      .gte("application_deadline", new Date().toISOString().slice(0, 10))
+      .lte("application_deadline", new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+      .order("application_deadline", { ascending: true })
       .limit(6)
       .returns<Row[]>(),
     supabase

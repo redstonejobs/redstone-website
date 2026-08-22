@@ -38,8 +38,8 @@ export default async function JobDetailPage({ params }: PageProps) {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Detail label="Status" value={<StatusBadge status={textValue(job, ["status"], "draft")} />} />
-        <Detail label="Vacancies" value={numberValue(job, ["number_of_vacancies", "vacancies"]).toString()} />
-        <Detail label="Deadline" value={dateText(job.deadline)} />
+        <Detail label="Vacancies" value={numberValue(job, ["vacancies"]).toString()} />
+        <Detail label="Deadline" value={dateText(job.application_deadline)} />
         <Detail label="Salary" value={moneyText(job)} />
         <Detail label="Skill Level" value={textValue(job, ["skill_level"])} />
         <Detail label="Job Type" value={textValue(job, ["job_type"])} />
@@ -77,4 +77,3 @@ function Detail({ label, value }: { label: string; value: string | React.ReactNo
     </div>
   );
 }
-

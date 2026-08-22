@@ -26,14 +26,14 @@ export function JobForm({ action, job, submitLabel }: JobFormProps) {
         <Field name="currency" label="Currency" defaultValue={textValue(job, ["currency"], "KES")} />
         <Field name="salary_period" label="Salary Period" defaultValue={textValue(job, ["salary_period"], "")} />
         <Field
-          name="number_of_vacancies"
+          name="vacancies"
           label="Number of Vacancies"
           type="number"
           min="1"
-          defaultValue={textValue(job, ["number_of_vacancies", "vacancies"], "1")}
+          defaultValue={textValue(job, ["vacancies"], "1")}
           required
         />
-        <Field name="deadline" label="Application Deadline" type="date" defaultValue={textValue(job, ["deadline"], "")} />
+        <Field name="application_deadline" label="Application Deadline" type="date" defaultValue={textValue(job, ["application_deadline"], "")} />
       </div>
 
       <label className="grid gap-2 text-sm font-semibold text-slate-700">
@@ -117,4 +117,3 @@ function Checkbox({ name, label, checked }: { name: string; label: string; check
     </label>
   );
 }
-

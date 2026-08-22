@@ -32,8 +32,8 @@ export function validateJobPayload(payload: Record<string, unknown>) {
     errors.push("Maximum salary must be greater than or equal to minimum salary.");
   }
 
-  if (payload.deadline) {
-    const parsed = new Date(String(payload.deadline));
+  if (payload.application_deadline) {
+    const parsed = new Date(String(payload.application_deadline));
     if (Number.isNaN(parsed.getTime())) errors.push("Deadline is not a valid date.");
   }
 
@@ -42,7 +42,7 @@ export function validateJobPayload(payload: Record<string, unknown>) {
 
 export function validateJobForPublication(job: Record<string, unknown>) {
   const errors: string[] = [];
-  const requiredFields = ["title", "slug", "country", "description", "number_of_vacancies"];
+  const requiredFields = ["title", "slug", "country", "description", "vacancies"];
 
   for (const field of requiredFields) {
     if (!job[field]) {
@@ -55,8 +55,8 @@ export function validateJobForPublication(job: Record<string, unknown>) {
     errors.push("Job description must be at least 80 characters before publication.");
   }
 
-  if (job.deadline) {
-    const deadline = new Date(String(job.deadline));
+  if (job.application_deadline) {
+    const deadline = new Date(String(job.application_deadline));
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (!Number.isNaN(deadline.getTime()) && deadline < today) {
@@ -139,4 +139,3 @@ function numberOrNull(value: unknown) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
-

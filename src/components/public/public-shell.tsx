@@ -1,0 +1,99 @@
+import Link from "next/link";
+import { CONTACT, SITE_NAME } from "@/lib/public/site";
+
+const nav = [
+  ["Home", "/"],
+  ["Jobs", "/jobs"],
+  ["Countries", "/countries"],
+  ["Services", "/services"],
+  ["How It Works", "/how-it-works"],
+  ["About", "/about"],
+  ["Employers", "/employers"],
+  ["Blog", "/blog"],
+];
+
+export function PublicShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-white text-slate-900">
+      <div className="bg-[#071A3D] px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#F2D675]">
+        International Recruitment | Skilled & Unskilled Opportunities | Ethical Candidate Support
+      </div>
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
+          <Link href="/" className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-md bg-[#071A3D] text-lg font-black text-[#D4AF37]">RS</span>
+            <span>
+              <span className="block text-base font-black text-[#071A3D]">{SITE_NAME}</span>
+              <span className="block text-xs font-semibold uppercase tracking-wide text-slate-500">redstone.co.ke</span>
+            </span>
+          </Link>
+          <nav className="hidden items-center gap-5 text-sm font-semibold text-slate-700 lg:flex">
+            {nav.map(([label, href]) => (
+              <Link key={href} href={href} className="transition hover:text-[#B8860B]">
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <div className="hidden items-center gap-2 md:flex">
+            <Link href="/login" className="rounded-md border border-slate-300 px-4 py-2 text-sm font-bold text-[#071A3D]">Login</Link>
+            <Link href="/apply" className="rounded-md bg-[#D4AF37] px-4 py-2 text-sm font-black text-[#071A3D]">Apply Now</Link>
+          </div>
+          <details className="relative lg:hidden">
+            <summary className="list-none rounded-md border border-slate-300 px-3 py-2 text-sm font-bold text-[#071A3D]">Menu</summary>
+            <div className="absolute right-0 mt-3 grid w-72 gap-1 rounded-md border border-slate-200 bg-white p-3 shadow-xl">
+              {nav.map(([label, href]) => (
+                <Link key={href} href={href} className="rounded-md px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  {label}
+                </Link>
+              ))}
+              <Link href="/apply" className="rounded-md bg-[#D4AF37] px-3 py-3 text-sm font-black text-[#071A3D]">Apply Now</Link>
+              <Link href="/login" className="rounded-md border border-slate-200 px-3 py-3 text-sm font-bold text-[#071A3D]">Login</Link>
+            </div>
+          </details>
+        </div>
+      </header>
+      <main>{children}</main>
+      <Footer />
+    </div>
+  );
+}
+
+function Footer() {
+  const columns = [
+    ["Company", [["About", "/about"], ["Services", "/services"], ["How It Works", "/how-it-works"], ["Contact", "/contact"]]],
+    ["Jobs", [["All Jobs", "/jobs"], ["Skilled Jobs", "/skilled-jobs"], ["Unskilled Jobs", "/unskilled-jobs"], ["Countries", "/countries"]]],
+    ["Support", [["FAQ", "/faq"], ["Fraud Awareness", "/fraud-awareness"], ["Complaints", "/complaints"], ["Accessibility", "/accessibility"]]],
+    ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"], ["Cookie Policy", "/cookies"]]],
+  ] as const;
+
+  return (
+    <footer className="bg-[#071A3D] text-white">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+        <div>
+          <p className="text-xl font-black text-[#F2D675]">{SITE_NAME}</p>
+          <p className="mt-4 max-w-sm text-sm leading-6 text-slate-200">
+            Responsible recruitment support for candidates and employers. Only trust communications sent through Red Stone&apos;s official contact channels.
+          </p>
+          <div className="mt-5 space-y-1 text-sm text-slate-200">
+            {CONTACT.phones.map((phone) => <p key={phone}>{phone}</p>)}
+            <p><a href={`mailto:${CONTACT.emails.general}`}>{CONTACT.emails.general}</a></p>
+            <p><a href={`mailto:${CONTACT.emails.jobs}`}>{CONTACT.emails.jobs}</a></p>
+            <p><a href={`mailto:${CONTACT.emails.employers}`}>{CONTACT.emails.employers}</a></p>
+          </div>
+        </div>
+        {columns.map(([title, links]) => (
+          <div key={title}>
+            <p className="font-black text-[#F2D675]">{title}</p>
+            <div className="mt-4 grid gap-2 text-sm text-slate-200">
+              {links.map(([label, href]) => <Link key={href} href={href} className="hover:text-white">{label}</Link>)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-slate-300">
+        © {new Date().getFullYear()} Red Stone Employment Agency. Job and immigration outcomes are not guaranteed.
+      </div>
+    </footer>
+  );
+}
+
