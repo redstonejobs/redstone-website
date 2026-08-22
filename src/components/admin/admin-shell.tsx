@@ -11,6 +11,7 @@ const navItems = [
   { label: "Employers", href: "/admin/employers" },
   { label: "Documents", href: "/admin/documents" },
   { label: "Staff", href: "/admin/staff", adminOnly: true },
+  { label: "Audit", href: "/admin/audit", adminOnly: true },
 ];
 
 type AdminShellProps = {

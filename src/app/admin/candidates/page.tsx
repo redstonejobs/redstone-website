@@ -39,7 +39,9 @@ export default async function CandidatesPage({ searchParams }: PageProps) {
         emptyMessage="Candidate profiles will appear here after registration."
         renderRow={(candidate: Row) => (
           <tr key={textValue(candidate, ["id"])}>
-            <td className="px-4 py-3 font-medium text-[#071A3D]">{textValue(candidate, ["full_name"])}</td>
+            <td className="px-4 py-3 font-medium text-[#071A3D]">
+              <Link href={`/admin/candidates/${textValue(candidate, ["id"])}`}>{textValue(candidate, ["full_name"])}</Link>
+            </td>
             <td className="px-4 py-3 text-slate-600">{textValue(candidate, ["phone"])}</td>
             <td className="px-4 py-3 text-slate-600">{textValue(candidate, ["nationality"])}</td>
             <td className="px-4 py-3 text-slate-600">{textValue(candidate, ["city", "country"])}</td>
@@ -53,4 +55,4 @@ export default async function CandidatesPage({ searchParams }: PageProps) {
     </div>
   );
 }
-
+import Link from "next/link";

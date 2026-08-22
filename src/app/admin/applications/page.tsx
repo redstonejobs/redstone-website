@@ -3,8 +3,8 @@ import { AdminTable } from "@/components/admin/admin-table";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { Pagination } from "@/components/admin/pagination";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { fetchRows, getPage, getParam } from "@/lib/admin/data";
-import { dateText, textValue } from "@/lib/admin/format";
+import { fetchApplicationsWithRelations, getPage, getParam } from "@/lib/admin/data";
+import { dateText, nestedRow, textValue } from "@/lib/admin/format";
 import { APPLICATION_STATUSES } from "@/lib/admin/status";
 import type { Row } from "@/lib/admin/types";
 
@@ -14,11 +14,9 @@ type PageProps = {
 
 export default async function ApplicationsPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
-  const result = await fetchRows({
-    table: "applications",
+  const result = await fetchApplicationsWithRelations({
     page: getPage(params),
     query: getParam(params, "q"),
-    searchColumns: ["status", "cover_letter", "candidate_notes", "internal_notes"],
     filters: {
       status: getParam(params, "status"),
       assigned_staff_id: getParam(params, "assigned_staff"),
@@ -44,30 +42,34 @@ export default async function ApplicationsPage({ searchParams }: PageProps) {
         rows={result.rows}
         emptyTitle="No applications found"
         emptyMessage="Applications will appear here when candidates submit them."
-        renderRow={(application: Row) => (
-          <tr key={textValue(application, ["id"])}>
-            <td className="px-4 py-3 font-medium text-[#071A3D]">
-              {textValue(application, ["candidate_name", "candidate_id"], "Candidate")}
-            </td>
-            <td className="px-4 py-3 text-slate-600">{textValue(application, ["job_title", "job_id"], "Job")}</td>
-            <td className="px-4 py-3 text-slate-600">
-              {textValue(application, ["country", "destination", "city"], "Not set")}
-            </td>
-            <td className="px-4 py-3"><StatusBadge status={textValue(application, ["status"], "draft")} /></td>
-            <td className="px-4 py-3 text-slate-600">{textValue(application, ["assigned_staff_id"], "Unassigned")}</td>
-            <td className="px-4 py-3 text-slate-600">{dateText(application.submitted_at ?? application.created_at)}</td>
-            <td className="px-4 py-3 text-slate-600">{dateText(application.updated_at)}</td>
-            <td className="px-4 py-3">
-              <Link href={`/admin/applications/${textValue(application, ["id"])}`} className="font-semibold text-[#071A3D]">
-                View
-              </Link>
-            </td>
-          </tr>
-        )}
+        renderRow={(application: Row) => {
+          const candidate = nestedRow(application, "candidate");
+          const job = nestedRow(application, "job");
+          const employer = nestedRow(application, "employer");
+          const assigned = nestedRow(application, "assigned_staff");
+
+          return (
+            <tr key={textValue(application, ["id"])}>
+              <td className="px-4 py-3 font-medium text-[#071A3D]">
+                {textValue(candidate, ["full_name"], textValue(application, ["candidate_id"], "Candidate"))}
+              </td>
+              <td className="px-4 py-3 text-slate-600">{textValue(job, ["title"], textValue(application, ["job_id"], "Job"))}</td>
+              <td className="px-4 py-3 text-slate-600">{textValue(job, ["country", "city"], "Not set")}</td>
+              <td className="px-4 py-3"><StatusBadge status={textValue(application, ["status"], "draft")} /></td>
+              <td className="px-4 py-3 text-slate-600">{textValue(assigned, ["full_name"], "Unassigned")}</td>
+              <td className="px-4 py-3 text-slate-600">{textValue(employer, ["company_name"], "Employer")}</td>
+              <td className="px-4 py-3 text-slate-600">{dateText(application.updated_at)}</td>
+              <td className="px-4 py-3">
+                <Link href={`/admin/applications/${textValue(application, ["id"])}`} className="font-semibold text-[#071A3D]">
+                  View
+                </Link>
+              </td>
+            </tr>
+          );
+        }}
       />
 
       <Pagination page={result.page} pageSize={result.pageSize} count={result.count} basePath="/admin/applications" />
     </div>
   );
 }
-

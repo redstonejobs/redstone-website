@@ -38,6 +38,17 @@ export default async function AdminPage() {
         <QuickActions />
       </AdminSection>
 
+      <AdminSection title="Needs Attention" description="Operational queues that should be reviewed by recruitment staff.">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          {dashboard.needsAttention.map((item) => (
+            <div key={item.label} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase text-slate-500">{item.label}</p>
+              <p className="mt-2 text-2xl font-bold text-[#071A3D]">{item.value ?? "Unavailable"}</p>
+            </div>
+          ))}
+        </div>
+      </AdminSection>
+
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <AdminSection title="Recent Applications" description="Latest candidate submissions and case activity.">
           <AdminTable
@@ -157,6 +168,48 @@ export default async function AdminPage() {
           )}
         />
       </AdminSection>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <AdminSection title="Upcoming Deadlines">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            {dashboard.upcomingDeadlines.length === 0 ? <p className="text-sm text-slate-500">No deadlines in the next 14 days.</p> : null}
+            <div className="space-y-3">
+              {dashboard.upcomingDeadlines.map((job) => (
+                <div key={textValue(job, ["id"])} className="flex justify-between gap-4">
+                  <span className="text-sm font-semibold text-[#071A3D]">{textValue(job, ["title"])}</span>
+                  <span className="text-sm text-slate-500">{dateText(job.deadline)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AdminSection>
+        <AdminSection title="Recruiter Workload">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            {dashboard.activeStaff.length === 0 ? <p className="text-sm text-slate-500">No active staff roles found.</p> : null}
+            <div className="space-y-3">
+              {dashboard.activeStaff.map((staffRole) => (
+                <div key={textValue(staffRole, ["id"])} className="flex justify-between gap-4">
+                  <span className="text-sm font-semibold text-[#071A3D]">{textValue(staffRole, ["user_id"])}</span>
+                  <span className="text-sm text-slate-500">{textValue(staffRole, ["role"])}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AdminSection>
+        <AdminSection title="Recent Admin Activity">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            {dashboard.recentAudit.length === 0 ? <p className="text-sm text-slate-500">No audit entries yet.</p> : null}
+            <div className="space-y-3">
+              {dashboard.recentAudit.map((entry) => (
+                <div key={textValue(entry, ["id"])}>
+                  <p className="text-sm font-semibold text-[#071A3D]">{textValue(entry, ["action"])}</p>
+                  <p className="text-xs text-slate-500">{dateText(entry.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </AdminSection>
+      </div>
     </div>
   );
 }

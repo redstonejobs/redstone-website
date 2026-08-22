@@ -32,10 +32,20 @@ export type AdminContext = {
 
 export type Row = Record<string, unknown>;
 
+export type Capability =
+  | "jobs.read"
+  | "jobs.write"
+  | "applications.read"
+  | "applications.update"
+  | "employers.write"
+  | "employers.verify"
+  | "documents.verify"
+  | "staff.manage"
+  | "audit.read";
+
 export type CountMetric = {
   label: string;
   value: number | null;
   href?: string;
   tone?: "navy" | "gold" | "blue" | "green" | "amber" | "red" | "slate";
 };
-

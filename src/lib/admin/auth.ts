@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import type { AdminContext, Profile, StaffRole, StaffRoleName } from "./types";
+import type { AdminContext, Capability, Profile, StaffRole, StaffRoleName } from "./types";
 
 const ADMIN_PROFILE_TYPES = new Set(["admin", "super_admin"]);
 const STAFF_PROFILE_TYPES = new Set(["staff", "admin", "super_admin"]);
@@ -145,6 +145,42 @@ export function canManageStaff(context: AdminContext) {
   );
 }
 
+export function hasCapability(context: AdminContext, capability: Capability) {
+  const roles = new Set(context.staffRoles.map((staffRole) => staffRole.role).filter(Boolean));
+  const isAdmin = roles.has("admin") || roles.has("super_admin");
+  const isSuperAdmin = roles.has("super_admin");
+
+  switch (capability) {
+    case "jobs.read":
+    case "applications.read":
+      return roles.size > 0;
+    case "jobs.write":
+    case "applications.update":
+    case "employers.write":
+    case "documents.verify":
+      return isAdmin || roles.has("recruiter") || roles.has("hr");
+    case "employers.verify":
+    case "audit.read":
+      return isAdmin;
+    case "staff.manage":
+      return isAdmin || isSuperAdmin;
+    default:
+      return false;
+  }
+}
+
+export function canManageEmployer(context: AdminContext) {
+  return hasCapability(context, "employers.write");
+}
+
+export function canReviewDocuments(context: AdminContext) {
+  return hasCapability(context, "documents.verify");
+}
+
+export function canChangeApplicationStatus(context: AdminContext) {
+  return hasCapability(context, "applications.update");
+}
+
 function getHighestRole(staffRoles: StaffRole[]) {
   for (const role of ROLE_PRIORITY) {
     if (staffRoles.some((staffRole) => staffRole.active === true && staffRole.role === role)) {
@@ -154,4 +190,3 @@ function getHighestRole(staffRoles: StaffRole[]) {
 
   return "staff";
 }
-

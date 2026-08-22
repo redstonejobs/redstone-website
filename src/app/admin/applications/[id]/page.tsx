@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { updateApplicationStatus } from "@/lib/admin/actions";
-import { fetchById, fetchRows } from "@/lib/admin/data";
-import { dateText, textValue } from "@/lib/admin/format";
+import { addApplicationNote, assignApplication, updateApplicationStatus } from "@/lib/admin/actions";
+import { attachApplicationRelations, fetchById, fetchDocumentsWithRelations, fetchRows } from "@/lib/admin/data";
+import { dateText, nestedRow, textValue } from "@/lib/admin/format";
 import { APPLICATION_STATUSES } from "@/lib/admin/status";
 import type { Row } from "@/lib/admin/types";
 
@@ -25,12 +25,16 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
       orderBy: "created_at",
       ascending: true,
     }),
-    fetchRows({
-      table: "application_documents",
-      filters: { application_id: id },
-      orderBy: "created_at",
-      ascending: false,
-    }),
+    fetchDocumentsWithRelations({ page: 1, filters: { application_id: id } }),
+  ]);
+  const related = (await attachApplicationRelations({ rows: [application] })).rows[0];
+  const candidate = nestedRow(related, "candidate");
+  const job = nestedRow(related, "job");
+  const employer = nestedRow(related, "employer");
+  const assigned = nestedRow(related, "assigned_staff");
+  const [staff, notes] = await Promise.all([
+    fetchRows({ table: "staff_roles", filters: { active: "true" }, page: 1 }),
+    fetchRows({ table: "application_notes", filters: { application_id: id }, page: 1 }),
   ]);
 
   return (
@@ -42,29 +46,44 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Candidate Summary">
-          <Field label="Candidate" value={textValue(application, ["candidate_name", "candidate_id"], "Candidate")} />
-          <Field label="Nationality" value={textValue(application, ["nationality"])} />
-          <Field label="Phone" value={textValue(application, ["phone"])} />
-          <Field label="Location" value={textValue(application, ["city", "country"])} />
+          <Field label="Candidate" value={textValue(candidate, ["full_name"], textValue(application, ["candidate_id"], "Candidate"))} />
+          <Field label="Nationality" value={textValue(candidate, ["nationality"])} />
+          <Field label="Phone" value={textValue(candidate, ["phone"])} />
+          <Field label="Location" value={textValue(candidate, ["city", "country"])} />
         </Panel>
         <Panel title="Job Summary">
-          <Field label="Job" value={textValue(application, ["job_title", "job_id"], "Job")} />
-          <Field label="Destination" value={textValue(application, ["destination", "country", "city"])} />
-          <Field label="Employer" value={textValue(application, ["employer_name", "employer_id"])} />
-          <Field label="Deadline" value={dateText(application.deadline)} />
+          <Field label="Job" value={textValue(job, ["title"], textValue(application, ["job_id"], "Job"))} />
+          <Field label="Destination" value={textValue(job, ["country", "city"])} />
+          <Field label="Employer" value={textValue(employer, ["company_name"], "Employer")} />
+          <Field label="Deadline" value={dateText(job?.deadline)} />
         </Panel>
         <Panel title="Application Details">
           <Field label="Status" value={<StatusBadge status={textValue(application, ["status"], "draft")} />} />
           <Field label="Submitted" value={dateText(application.submitted_at ?? application.created_at)} />
           <Field label="Reviewed" value={dateText(application.reviewed_at)} />
-          <Field label="Assigned Staff" value={textValue(application, ["assigned_staff_id"], "Unassigned")} />
+          <Field label="Assigned Staff" value={textValue(assigned, ["full_name"], "Unassigned")} />
         </Panel>
       </div>
 
       <Panel title="Internal Recruitment Notes">
+        <form action={addApplicationNote.bind(null, id)} className="mb-4 grid gap-3">
+          <label className="grid gap-2 text-sm font-semibold text-slate-700">
+            Add Note
+            <textarea name="note" rows={4} className="rounded-md border border-slate-300 px-3 py-2" required />
+          </label>
+          <button type="submit" className="w-fit rounded-md bg-[#071A3D] px-4 py-3 text-sm font-semibold text-white">Add Note</button>
+        </form>
         <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
           {textValue(application, ["internal_notes"], "No internal notes saved.")}
         </p>
+        <div className="mt-4 space-y-3">
+          {notes.rows.map((note) => (
+            <div key={textValue(note, ["id"])} className="rounded-md border border-slate-200 p-3">
+              <p className="text-sm text-slate-700">{textValue(note, ["note"])}</p>
+              <p className="mt-2 text-xs text-slate-500">{dateText(note.created_at)}</p>
+            </div>
+          ))}
+        </div>
       </Panel>
 
       <Panel title="Status Update Control">
@@ -81,6 +100,24 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
           </label>
           <button type="submit" className="self-end rounded-md bg-[#071A3D] px-4 py-3 text-sm font-semibold text-white">
             Update Status
+          </button>
+        </form>
+      </Panel>
+
+      <Panel title="Assign Staff">
+        <form action={assignApplication.bind(null, id)} className="flex flex-col gap-3 sm:flex-row">
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Staff User ID
+            <select name="assigned_staff_id" className="min-h-11 rounded-md border border-slate-300 bg-white px-3">
+              {staff.rows.map((staffRole) => (
+                <option key={textValue(staffRole, ["id"])} value={textValue(staffRole, ["user_id"])}>
+                  {textValue(staffRole, ["user_id"])} ({textValue(staffRole, ["role"])})
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="self-end rounded-md bg-[#071A3D] px-4 py-3 text-sm font-semibold text-white">
+            Assign
           </button>
         </form>
       </Panel>
@@ -137,4 +174,3 @@ function Field({ label, value }: { label: string; value: string | React.ReactNod
     </div>
   );
 }
-

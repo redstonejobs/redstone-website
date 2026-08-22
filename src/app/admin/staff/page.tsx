@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AdminTable } from "@/components/admin/admin-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { requireAdmin } from "@/lib/admin/auth";
@@ -29,7 +30,9 @@ export default async function StaffPage() {
         emptyMessage="Staff role records will appear here when administrators create them."
         renderRow={(staffRole: Row) => (
           <tr key={textValue(staffRole, ["id"])}>
-            <td className="px-4 py-3 font-medium text-[#071A3D]">{textValue(staffRole, ["user_id"])}</td>
+            <td className="px-4 py-3 font-medium text-[#071A3D]">
+              <Link href={`/admin/staff/${textValue(staffRole, ["user_id"])}`}>{textValue(staffRole, ["user_id"])}</Link>
+            </td>
             <td className="px-4 py-3 text-slate-600">{textValue(staffRole, ["role"])}</td>
             <td className="px-4 py-3">
               <StatusBadge status={staffRole.active === false ? "inactive" : "active"} />
@@ -41,4 +44,3 @@ export default async function StaffPage() {
     </div>
   );
 }
-
