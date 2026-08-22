@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { fetchRows, getPage, getParam } from "@/lib/admin/data";
 import { dateText, numberValue, textValue } from "@/lib/admin/format";
 import type { Row } from "@/lib/admin/types";
+import { SKILL_LEVELS, skillLevelLabel } from "@/lib/jobs/catalogue";
 
 type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -43,7 +44,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
         searchPlaceholder="Search title, country, category"
         filters={[
           { name: "status", label: "Status", options: ["draft", "published", "paused", "closed", "archived"] },
-          { name: "skill_level", label: "Skill", options: ["skilled", "unskilled"] },
+          { name: "skill_level", label: "Skill", options: SKILL_LEVELS.map((item) => item.value) },
           { name: "country", label: "Country", options: [] },
         ]}
       />
@@ -58,7 +59,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
             <td className="px-4 py-3 font-medium text-[#071A3D]">{textValue(job, ["title"])}</td>
             <td className="px-4 py-3 text-slate-600">{textValue(job, ["country"])}</td>
             <td className="px-4 py-3 text-slate-600">{textValue(job, ["category"])}</td>
-            <td className="px-4 py-3 text-slate-600">{textValue(job, ["skill_level"])}</td>
+            <td className="px-4 py-3 text-slate-600">{skillLevelLabel(job.skill_level)}</td>
             <td className="px-4 py-3 text-slate-600">{numberValue(job, ["vacancies"])}</td>
             <td className="px-4 py-3"><StatusBadge status={textValue(job, ["status"], "draft")} /></td>
             <td className="px-4 py-3 text-slate-600">{dateText(job.application_deadline)}</td>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { JobForm } from "@/components/admin/job-form";
 import { updateJob } from "@/lib/admin/actions";
-import { fetchById } from "@/lib/admin/data";
+import { fetchJobForEdit } from "@/lib/admin/data";
 import { textValue } from "@/lib/admin/format";
 
 type PageProps = {
@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function EditJobPage({ params }: PageProps) {
   const { id } = await params;
-  const { data: job, error } = await fetchById("jobs", id);
+  const { data: job, error } = await fetchJobForEdit(id);
 
   if (error || !job) {
     notFound();
@@ -26,4 +26,3 @@ export default async function EditJobPage({ params }: PageProps) {
     </div>
   );
 }
-

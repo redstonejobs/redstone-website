@@ -4,6 +4,8 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { duplicateJob, setJobStatus } from "@/lib/admin/actions";
 import { fetchById } from "@/lib/admin/data";
 import { booleanText, dateText, moneyText, numberValue, textValue } from "@/lib/admin/format";
+import { benefitStatusLabel, skillLevelLabel } from "@/lib/jobs/catalogue";
+import { formatContract, formatProcessingTime } from "@/lib/jobs/costs";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -28,6 +30,9 @@ export default async function JobDetailPage({ params }: PageProps) {
           <Link href={`/admin/jobs/${id}/edit`} className="rounded-md bg-[#071A3D] px-4 py-3 text-sm font-semibold text-white">
             Edit
           </Link>
+          <Link href={`/admin/jobs/${id}/preview`} className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-[#071A3D]">
+            Preview
+          </Link>
           <form action={duplicateJob.bind(null, id)}>
             <button className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-[#071A3D]" type="submit">
               Duplicate
@@ -41,8 +46,10 @@ export default async function JobDetailPage({ params }: PageProps) {
         <Detail label="Vacancies" value={numberValue(job, ["vacancies"]).toString()} />
         <Detail label="Deadline" value={dateText(job.application_deadline)} />
         <Detail label="Salary" value={moneyText(job)} />
-        <Detail label="Skill Level" value={textValue(job, ["skill_level"])} />
+        <Detail label="Skill Level" value={skillLevelLabel(job.skill_level)} />
         <Detail label="Job Type" value={textValue(job, ["job_type"])} />
+        <Detail label="Contract" value={formatContract(job)} />
+        <Detail label="Processing" value={formatProcessingTime(job)} />
         <Detail label="Visa Sponsorship" value={booleanText(job, ["visa_sponsorship"])} />
         <Detail label="Accommodation" value={booleanText(job, ["accommodation"])} />
         <Detail label="Transport" value={booleanText(job, ["transport"])} />
@@ -51,6 +58,18 @@ export default async function JobDetailPage({ params }: PageProps) {
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-lg font-bold text-[#071A3D]">Description</h2>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">{textValue(job, ["description"], "No description saved.")}</p>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-bold text-[#071A3D]">Benefits</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <Detail label="Sponsorship" value={benefitStatusLabel(job.sponsorship_status)} />
+          <Detail label="Accommodation" value={benefitStatusLabel(job.accommodation_status)} />
+          <Detail label="Meals" value={benefitStatusLabel(job.meals_status)} />
+          <Detail label="Transport" value={benefitStatusLabel(job.transport_status)} />
+          <Detail label="Medical" value={benefitStatusLabel(job.medical_insurance_status)} />
+          <Detail label="Air Ticket" value={benefitStatusLabel(job.air_ticket_status)} />
+        </div>
       </section>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">

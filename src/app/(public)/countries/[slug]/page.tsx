@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { Band, Hero, InfoGrid, ProcessSteps, SectionHeading } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
-import { getCountry } from "@/lib/public/countries";
+import { getConfiguredCountry, getCountry } from "@/lib/public/countries";
 import { getJobsForCountry } from "@/lib/public/jobs";
+import { DEFAULT_PROCESSING_TEXT, formatMoney, PROGRAMME_FEE_DISCLAIMER, PROCESSING_TIME_DISCLAIMER } from "@/lib/jobs/costs";
 import { canonical } from "@/lib/public/site";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -22,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CountryDetailPage({ params }: Props) {
   const { slug } = await params;
-  const country = getCountry(slug);
+  const country = await getConfiguredCountry(slug);
   if (!country) notFound();
   const { jobs } = await getJobsForCountry(country.name);
 
@@ -41,6 +42,8 @@ export default async function CountryDetailPage({ params }: Props) {
         <InfoGrid items={[
           { title: "Recruitment Overview", body: country.shortDescription },
           { title: "Common Sectors", body: country.sectors.join(", ") },
+          { title: country.feeLabel, body: `${formatMoney(country.baseRecruitmentFee, country.feeCurrency)}. ${PROGRAMME_FEE_DISCLAIMER}` },
+          { title: "Estimated Processing Time", body: `${processing(country)}. ${PROCESSING_TIME_DISCLAIMER}` },
           { title: "Document Guidance", body: "Candidates are commonly asked for identity records, CVs, certificates, references and employment history." },
           { title: "Candidate Preparation", body: country.preparationTips.join(" ") },
           { title: "Important Disclaimer", body: "Entry, work permit and visa requirements are determined by the relevant government authorities and may change. Candidates should verify current requirements through official sources." },
@@ -53,4 +56,12 @@ export default async function CountryDetailPage({ params }: Props) {
       </Band>
     </>
   );
+}
+
+function processing(country: { processingTimeMin: number | null; processingTimeMax: number | null; processingTimeUnit: string | null; processingTimeNote: string | null }) {
+  if (country.processingTimeMin && country.processingTimeMax && country.processingTimeUnit) {
+    return `${country.processingTimeMin}-${country.processingTimeMax} ${country.processingTimeUnit}`;
+  }
+  if (country.processingTimeNote) return country.processingTimeNote;
+  return DEFAULT_PROCESSING_TEXT;
 }

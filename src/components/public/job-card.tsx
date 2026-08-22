@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { dateText } from "@/lib/admin/format";
+import { formatContract, formatProcessingTime } from "@/lib/jobs/costs";
+import { skillLevelLabel } from "@/lib/jobs/catalogue";
 import { formatSalary, jobHref, type PublicJob } from "@/lib/public/jobs";
 
 export function JobCard({ job }: { job: PublicJob }) {
   const salary = formatSalary(job);
   const badges = [
-    job.skill_level,
+    skillLevelLabel(job.skill_level),
     job.visa_sponsorship ? "Visa Sponsorship" : null,
     job.accommodation ? "Accommodation" : null,
     job.transport ? "Transport" : null,
@@ -23,11 +25,17 @@ export function JobCard({ job }: { job: PublicJob }) {
         {job.employer?.company_name ? <p className="mt-1 text-sm text-slate-500">{job.employer.company_name}</p> : null}
         <div className="mt-4 grid gap-2 text-sm text-slate-700">
           {salary ? <p><strong>Salary:</strong> {salary}</p> : null}
+          {!salary ? <p><strong>Salary:</strong> To be confirmed by employer</p> : null}
+          <p><strong>Contract:</strong> {formatContract(job as unknown as Record<string, unknown>)}</p>
+          <p><strong>Processing:</strong> {formatProcessingTime(job as unknown as Record<string, unknown>)}</p>
           {job.vacancies ? <p><strong>Vacancies:</strong> {job.vacancies}</p> : null}
           {job.application_deadline ? <p><strong>Deadline:</strong> {dateText(job.application_deadline)}</p> : null}
         </div>
       </div>
-      <Link href={jobHref(job)} className="mt-5 rounded-md bg-[#071A3D] px-4 py-3 text-center text-sm font-black text-white">View Job</Link>
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        <Link href={jobHref(job)} className="rounded-md bg-[#071A3D] px-4 py-3 text-center text-sm font-black text-white">View Details</Link>
+        <Link href={`/apply/${job.slug}`} className="rounded-md border border-[#D4AF37] px-4 py-3 text-center text-sm font-black text-[#071A3D]">Apply</Link>
+      </div>
     </article>
   );
 }
@@ -40,4 +48,3 @@ export function EmptyJobsState() {
     </div>
   );
 }
-

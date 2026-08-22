@@ -24,12 +24,39 @@ export function validateJobPayload(payload: Record<string, unknown>) {
   const status = stringValue(payload.status) || "draft";
   const salaryMin = numberOrNull(payload.salary_min);
   const salaryMax = numberOrNull(payload.salary_max);
+  const vacancies = numberOrNull(payload.vacancies);
 
   if (!title) errors.push("Job title is required.");
   if (!slug) errors.push("Slug is required.");
   if (!isJobStatus(status)) errors.push("Invalid job status.");
   if (salaryMin !== null && salaryMax !== null && salaryMax < salaryMin) {
     errors.push("Maximum salary must be greater than or equal to minimum salary.");
+  }
+  if (vacancies !== null && vacancies <= 0) errors.push("Vacancies must be greater than zero.");
+  if (payload.salary_period && !["hour", "day", "week", "month", "year"].includes(String(payload.salary_period))) {
+    errors.push("Invalid salary period.");
+  }
+  if (payload.processing_time_unit && !["days", "weeks", "months"].includes(String(payload.processing_time_unit))) {
+    errors.push("Invalid processing time unit.");
+  }
+  if (payload.contract_duration_unit && !["months", "years"].includes(String(payload.contract_duration_unit))) {
+    errors.push("Invalid contract duration unit.");
+  }
+  for (const key of [
+    "sponsorship_status",
+    "accommodation_status",
+    "meals_status",
+    "transport_status",
+    "medical_insurance_status",
+    "air_ticket_status",
+    "training_status",
+  ]) {
+    if (
+      payload[key] &&
+      !["included", "not_included", "allowance", "employer_specific", "not_confirmed"].includes(String(payload[key]))
+    ) {
+      errors.push(`Invalid ${key}.`);
+    }
   }
 
   if (payload.application_deadline) {
@@ -42,7 +69,7 @@ export function validateJobPayload(payload: Record<string, unknown>) {
 
 export function validateJobForPublication(job: Record<string, unknown>) {
   const errors: string[] = [];
-  const requiredFields = ["title", "slug", "country", "description", "vacancies"];
+  const requiredFields = ["title", "slug", "country", "category", "skill_level", "description", "vacancies", "application_deadline"];
 
   for (const field of requiredFields) {
     if (!job[field]) {
@@ -62,6 +89,10 @@ export function validateJobForPublication(job: Record<string, unknown>) {
     if (!Number.isNaN(deadline.getTime()) && deadline < today) {
       errors.push("Published jobs cannot have a past deadline.");
     }
+  }
+  const vacancies = numberOrNull(job.vacancies);
+  if (vacancies === null || vacancies <= 0) {
+    errors.push("Published jobs require at least one vacancy.");
   }
 
   return errors.length ? fail(errors) : ok(job);

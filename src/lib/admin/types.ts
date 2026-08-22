@@ -47,7 +47,9 @@ export type Capability =
   | "employers.verify"
   | "documents.verify"
   | "staff.manage"
-  | "audit.read";
+  | "audit.read"
+  | "countries.manage"
+  | "fees.manage";
 
 export type CountMetric = {
   label: string;

@@ -45,6 +45,22 @@ function optionalNumber(formData: FormData, key: string) {
   return parsed;
 }
 
+function optionalInteger(formData: FormData, key: string) {
+  const raw = value(formData, key);
+
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = Number(raw);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${key} must be a whole number zero or greater.`);
+  }
+
+  return parsed;
+}
+
 function requiredPositiveInteger(formData: FormData, key: string) {
   const parsed = Number(value(formData, key));
 
@@ -57,6 +73,10 @@ function requiredPositiveInteger(formData: FormData, key: string) {
 
 function checkbox(formData: FormData, key: string) {
   return formData.get(key) === "on";
+}
+
+function selected(formData: FormData, key: string, fallback = "") {
+  return value(formData, key) || fallback || null;
 }
 
 function requireConfirmation(formData: FormData) {
@@ -85,17 +105,51 @@ function jobPayload(formData: FormData, creatorId?: string) {
     category: value(formData, "category") || null,
     job_type: value(formData, "job_type") || null,
     skill_level: value(formData, "skill_level") || null,
+    short_description: value(formData, "short_description") || null,
     description: value(formData, "description") || null,
+    responsibilities: value(formData, "responsibilities") || null,
+    requirements: value(formData, "requirements") || null,
+    experience_requirements: value(formData, "experience_requirements") || null,
+    education_requirements: value(formData, "education_requirements") || null,
+    language_requirements: value(formData, "language_requirements") || null,
+    physical_requirements: value(formData, "physical_requirements") || null,
+    additional_requirements: value(formData, "additional_requirements") || null,
     salary_min: optionalNumber(formData, "salary_min"),
     salary_max: optionalNumber(formData, "salary_max"),
     currency: value(formData, "currency") || null,
-    salary_period: value(formData, "salary_period") || null,
+    salary_period: selected(formData, "salary_period"),
+    salary_confirmed: checkbox(formData, "salary_confirmed"),
+    salary_note: value(formData, "salary_note") || null,
+    contract_type: selected(formData, "contract_type"),
+    contract_duration_value: optionalInteger(formData, "contract_duration_value"),
+    contract_duration_unit: selected(formData, "contract_duration_unit"),
+    contract_note: value(formData, "contract_note") || null,
+    working_hours_per_week: optionalNumber(formData, "working_hours_per_week"),
+    work_schedule: value(formData, "work_schedule") || null,
+    overtime_note: value(formData, "overtime_note") || null,
     vacancies: requiredPositiveInteger(formData, "vacancies"),
     application_deadline: applicationDeadline || null,
     visa_sponsorship: checkbox(formData, "visa_sponsorship"),
     accommodation: checkbox(formData, "accommodation"),
     transport: checkbox(formData, "transport"),
     meals: checkbox(formData, "meals"),
+    sponsorship_status: selected(formData, "sponsorship_status", "not_confirmed"),
+    accommodation_status: selected(formData, "accommodation_status", "not_confirmed"),
+    meals_status: selected(formData, "meals_status", "not_confirmed"),
+    transport_status: selected(formData, "transport_status", "not_confirmed"),
+    medical_insurance_status: selected(formData, "medical_insurance_status", "not_confirmed"),
+    air_ticket_status: selected(formData, "air_ticket_status", "not_confirmed"),
+    training_status: selected(formData, "training_status", "not_confirmed"),
+    annual_leave_note: value(formData, "annual_leave_note") || null,
+    other_benefits: value(formData, "other_benefits") || null,
+    country_fee_override: optionalNumber(formData, "country_fee_override"),
+    country_fee_override_currency: value(formData, "country_fee_override_currency") || null,
+    country_fee_override_note: value(formData, "country_fee_override_note") || null,
+    fee_relationship: selected(formData, "fee_relationship", "not_confirmed"),
+    processing_time_min: optionalInteger(formData, "processing_time_min"),
+    processing_time_max: optionalInteger(formData, "processing_time_max"),
+    processing_time_unit: selected(formData, "processing_time_unit"),
+    processing_time_note: value(formData, "processing_time_note") || null,
     status,
   };
 
@@ -111,6 +165,51 @@ function jobPayload(formData: FormData, creatorId?: string) {
   return assertValid(validateJobPayload(payload));
 }
 
+function documentRequirementsPayload(formData: FormData, jobId: string) {
+  const raw = value(formData, "document_requirements");
+  return raw
+    .split(/\r?\n/)
+    .map((line, index) => {
+      const [documentType, required = "required", fee = "fee", responsibility = "candidate", ...notes] = line
+        .split("|")
+        .map((part) => part.trim());
+
+      if (!documentType) return null;
+
+      return {
+        job_id: jobId,
+        document_type: documentType,
+        required: required !== "optional",
+        fee_applicable: fee !== "no_fee",
+        candidate_can_provide_existing: true,
+        cost_responsibility: responsibility || "candidate",
+        notes: notes.join(" | ") || null,
+        sort_order: (index + 1) * 10,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+}
+
+async function replaceJobDocumentRequirements(jobId: string, formData: FormData) {
+  const supabase = await createClient();
+  const rows = documentRequirementsPayload(formData, jobId);
+  const { error: deleteError } = await supabase.from("job_document_requirements").delete().eq("job_id", jobId);
+
+  if (deleteError) {
+    throw new Error("Unable to update job document requirements.");
+  }
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const { error } = await supabase.from("job_document_requirements").insert(rows);
+
+  if (error) {
+    throw new Error("Unable to save job document requirements.");
+  }
+}
+
 export async function createJob(formData: FormData) {
   const context = await requireAdmin();
   const supabase = await createClient();
@@ -123,6 +222,8 @@ export async function createJob(formData: FormData) {
   if (error) {
     throw new Error("Unable to create job. Check required fields and your permissions.");
   }
+
+  await replaceJobDocumentRequirements(data.id, formData);
 
   await logAuditEvent(context, {
     action: "job_created",
@@ -137,11 +238,18 @@ export async function createJob(formData: FormData) {
 export async function updateJob(id: string, formData: FormData) {
   const context = await requireAdmin();
   const supabase = await createClient();
+  const { data: before } = await supabase
+    .from("jobs")
+    .select("salary_min, salary_max, salary_confirmed, country_fee_override, processing_time_min, processing_time_max, processing_time_unit, sponsorship_status, accommodation_status, meals_status, transport_status, medical_insurance_status, air_ticket_status")
+    .eq("id", id)
+    .maybeSingle<Record<string, unknown>>();
   const { error } = await supabase.from("jobs").update(jobPayload(formData)).eq("id", id);
 
   if (error) {
     throw new Error("Unable to update job. Check required fields and your permissions.");
   }
+
+  await replaceJobDocumentRequirements(id, formData);
 
   await logAuditEvent(context, {
     action: "job_updated",
@@ -150,7 +258,72 @@ export async function updateJob(id: string, formData: FormData) {
     description: "Job updated",
   });
 
+  await logJobChangeAudits(context, id, before ?? {}, jobPayload(formData));
+
   redirect(`/admin/jobs/${id}`);
+}
+
+export async function updateCountrySetting(id: string, formData: FormData) {
+  const context = await requireAdmin();
+  if (!hasCapability(context, "countries.manage") || !hasCapability(context, "fees.manage")) {
+    throw new Error("You are not allowed to manage country fees.");
+  }
+
+  const supabase = await createClient();
+  const payload = {
+    country_name: value(formData, "country_name"),
+    slug: value(formData, "slug"),
+    country_code: value(formData, "country_code"),
+    region: value(formData, "region"),
+    base_recruitment_fee: optionalNumber(formData, "base_recruitment_fee"),
+    fee_currency: value(formData, "fee_currency") || "KES",
+    fee_label: value(formData, "fee_label") || "Estimated Programme Cost",
+    processing_time_min: optionalInteger(formData, "processing_time_min"),
+    processing_time_max: optionalInteger(formData, "processing_time_max"),
+    processing_time_unit: selected(formData, "processing_time_unit"),
+    processing_time_note: value(formData, "processing_time_note") || null,
+    is_active: checkbox(formData, "is_active"),
+    is_featured: checkbox(formData, "is_featured"),
+    display_order: optionalInteger(formData, "display_order") ?? 100,
+  };
+  const { data: before } = await supabase.from("country_recruitment_settings").select("*").eq("id", id).maybeSingle<Record<string, unknown>>();
+  const { error } = await supabase.from("country_recruitment_settings").update(payload).eq("id", id);
+
+  if (error) {
+    throw new Error("Unable to update country settings.");
+  }
+
+  await logAuditEvent(context, {
+    action: before?.base_recruitment_fee !== payload.base_recruitment_fee ? "country_fee_updated" : "country_updated",
+    entityType: "country_recruitment_setting",
+    entityId: id,
+    description: "Country recruitment settings updated",
+    metadata: {
+      before: {
+        base_recruitment_fee: before?.base_recruitment_fee ?? null,
+        processing_time_min: before?.processing_time_min ?? null,
+        processing_time_max: before?.processing_time_max ?? null,
+        is_active: before?.is_active ?? null,
+        is_featured: before?.is_featured ?? null,
+      },
+      after: {
+        base_recruitment_fee: payload.base_recruitment_fee,
+        processing_time_min: payload.processing_time_min,
+        processing_time_max: payload.processing_time_max,
+        is_active: payload.is_active,
+        is_featured: payload.is_featured,
+      },
+    },
+  });
+
+  if (before?.processing_time_min !== payload.processing_time_min || before?.processing_time_max !== payload.processing_time_max) {
+    await logAuditEvent(context, {
+      action: "country_processing_time_updated",
+      entityType: "country_recruitment_setting",
+      entityId: id,
+      description: "Country processing estimate updated",
+    });
+  }
 }
 
 export async function setJobStatus(id: string, status: string) {
@@ -169,7 +342,7 @@ export async function setJobStatus(id: string, status: string) {
   if (status === "published") {
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .select("title, slug, country, description, vacancies, application_deadline")
+      .select("title, slug, country, category, skill_level, description, vacancies, application_deadline")
       .eq("id", id)
       .maybeSingle<Record<string, unknown>>();
 
@@ -201,7 +374,7 @@ export async function duplicateJob(id: string) {
   const { data: job, error } = await supabase
     .from("jobs")
     .select(
-      "title, slug, employer_id, country, city, category, job_type, skill_level, description, salary_min, salary_max, currency, salary_period, vacancies, application_deadline, visa_sponsorship, accommodation, transport, meals"
+      "title, slug, employer_id, country, city, category, job_type, skill_level, short_description, description, responsibilities, requirements, experience_requirements, education_requirements, language_requirements, physical_requirements, additional_requirements, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, working_hours_per_week, work_schedule, overtime_note, vacancies, application_deadline, visa_sponsorship, accommodation, transport, meals, sponsorship_status, accommodation_status, meals_status, transport_status, medical_insurance_status, air_ticket_status, training_status, annual_leave_note, other_benefits, country_fee_override, country_fee_override_currency, country_fee_override_note, fee_relationship, processing_time_min, processing_time_max, processing_time_unit, processing_time_note"
     )
     .eq("id", id)
     .maybeSingle();
@@ -225,6 +398,58 @@ export async function duplicateJob(id: string) {
   }
 
   redirect(`/admin/jobs/${data.id}/edit`);
+}
+
+async function logJobChangeAudits(
+  context: Awaited<ReturnType<typeof requireAdmin>>,
+  jobId: string,
+  before: Record<string, unknown>,
+  after: Record<string, unknown>
+) {
+  const changes = [
+    {
+      action: "job_salary_changed",
+      keys: ["salary_min", "salary_max", "salary_confirmed"],
+      description: "Job salary configuration changed",
+    },
+    {
+      action: "job_fee_override_updated",
+      keys: ["country_fee_override", "country_fee_override_currency"],
+      description: "Job programme fee override changed",
+    },
+    {
+      action: "job_processing_estimate_changed",
+      keys: ["processing_time_min", "processing_time_max", "processing_time_unit"],
+      description: "Job processing estimate changed",
+    },
+    {
+      action: "job_benefits_changed",
+      keys: ["sponsorship_status", "accommodation_status", "meals_status", "transport_status", "medical_insurance_status", "air_ticket_status"],
+      description: "Job benefits changed",
+    },
+    {
+      action: "job_required_documents_changed",
+      keys: [],
+      description: "Job document requirements were refreshed",
+    },
+  ];
+
+  for (const change of changes) {
+    const changed = change.keys.length === 0 || change.keys.some((key) => before[key] !== after[key]);
+    if (!changed) continue;
+    await logAuditEvent(context, {
+      action: change.action,
+      entityType: "job",
+      entityId: jobId,
+      description: change.description,
+      metadata: change.keys.length
+        ? {
+            before: Object.fromEntries(change.keys.map((key) => [key, before[key] ?? null])),
+            after: Object.fromEntries(change.keys.map((key) => [key, after[key] ?? null])),
+          }
+        : undefined,
+    });
+  }
 }
 
 export async function updateApplicationStatus(id: string, formData: FormData) {

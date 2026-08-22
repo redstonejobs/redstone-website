@@ -64,6 +64,8 @@ export const ROLE_CAPABILITIES: Record<StaffRoleName, Capability[]> = {
     "employers.verify",
     "staff.manage",
     "audit.read",
+    "countries.manage",
+    "fees.manage",
   ],
   super_admin: [
     "jobs.read",
@@ -81,6 +83,8 @@ export const ROLE_CAPABILITIES: Record<StaffRoleName, Capability[]> = {
     "employers.verify",
     "staff.manage",
     "audit.read",
+    "countries.manage",
+    "fees.manage",
   ],
 };
 

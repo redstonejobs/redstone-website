@@ -4,7 +4,7 @@ import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { Band, ContactCTA, Hero, InfoGrid, ProcessSteps, SectionHeading } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
 import { BLOG_POSTS } from "@/lib/public/blog";
-import { COUNTRIES } from "@/lib/public/countries";
+import { getCountriesWithPublishedCounts } from "@/lib/public/countries";
 import { getFeaturedJobs } from "@/lib/public/jobs";
 import { CONTACT, RECRUITMENT_DISCLAIMER, SITE_NAME, SITE_URL } from "@/lib/public/site";
 
@@ -13,7 +13,7 @@ const unskilled = ["Housekeeping", "Cleaning", "Warehouse Support", "Factory Wor
 const process = ["Registration", "Profile Review", "Job Matching", "Employer Selection", "Interview", "Documentation", "Visa / Work Permit", "Travel Preparation", "Deployment"];
 
 export default async function HomePage() {
-  const { jobs } = await getFeaturedJobs(6);
+  const [{ jobs }, countries] = await Promise.all([getFeaturedJobs(6), getCountriesWithPublishedCounts()]);
 
   return (
     <>
@@ -21,8 +21,8 @@ export default async function HomePage() {
       <Hero eyebrow="Responsible international recruitment" title="Connecting Talent. Building Futures." body="Red Stone Employment Agency connects qualified candidates with legitimate employment opportunities while helping employers access responsible, professional recruitment support." primary={{ label: "Browse Jobs", href: "/jobs" }} secondary={{ label: "Start Application", href: "/apply" }} />
       <Band><div className="grid gap-4 md:grid-cols-4">{["Ethical Recruitment", "Candidate Support", "Employer Screening", "International Opportunities"].map((item) => <div key={item} className="rounded-md border border-slate-200 bg-white p-5 text-center text-sm font-black text-[#071A3D] shadow-sm">{item}</div>)}</div></Band>
       <Band tone="grey"><SectionHeading eyebrow="Published vacancies" title="Featured Jobs" body="Only published vacancies from the Red Stone system appear here." /><div className="mt-10">{jobs.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{jobs.map((job) => <JobCard key={job.id} job={job} />)}</div> : <EmptyJobsState />}</div></Band>
-      <Band><div className="grid gap-8 lg:grid-cols-2"><CategoryPanel title="Skilled Jobs" items={skilled} href="/skilled-jobs" /><CategoryPanel title="Unskilled Jobs" items={unskilled} href="/unskilled-jobs" /></div></Band>
-      <Band tone="grey"><SectionHeading eyebrow="Destinations" title="Popular Destinations" body="Explore recruitment opportunities and preparation guidance. Work permit and visa decisions are made by relevant authorities." /><div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">{COUNTRIES.slice(0, 12).map((country) => <CountryCard key={country.slug} country={country} />)}</div></Band>
+      <Band><div className="grid gap-8 lg:grid-cols-2"><CategoryPanel title="Skilled Jobs" items={skilled} href="/skilled-jobs" /><CategoryPanel title="Entry-Level & General Jobs" items={unskilled} href="/unskilled-jobs" /></div></Band>
+      <Band tone="grey"><SectionHeading eyebrow="Destinations" title="Popular Destinations" body="Explore recruitment opportunities and preparation guidance. Work permit and visa decisions are made by relevant authorities." /><div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">{countries.slice(0, 12).map((country) => <CountryCard key={country.slug} country={country} />)}</div></Band>
       <Band><SectionHeading eyebrow="Process" title="How Recruitment Works" body="A structured process helps candidates and employers stay informed from registration to deployment." /><div className="mt-10"><ProcessSteps steps={process} /></div></Band>
       <Band tone="grey"><SectionHeading eyebrow="Why Red Stone" title="Professional recruitment support" /><div className="mt-10"><InfoGrid items={[
         { title: "Transparent Communication", body: "Clear guidance on applications, employer requirements and official next steps." },
@@ -49,4 +49,3 @@ function CategoryPanel({ title, items, href }: { title: string; items: string[];
     </div>
   );
 }
-

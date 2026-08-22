@@ -6,6 +6,7 @@ import { canManageStaff } from "@/lib/admin/auth";
 const navItems = [
   { label: "Dashboard", href: "/admin" },
   { label: "Jobs", href: "/admin/jobs" },
+  { label: "Countries", href: "/admin/countries", adminOnly: true },
   { label: "Applications", href: "/admin/applications" },
   { label: "Candidates", href: "/admin/candidates" },
   { label: "Employers", href: "/admin/employers" },

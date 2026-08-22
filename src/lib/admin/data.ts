@@ -86,6 +86,52 @@ export async function fetchById(table: string, id: string) {
   return supabase.from(table).select("*").eq("id", id).maybeSingle<Row>();
 }
 
+export async function fetchJobForEdit(id: string) {
+  const supabase = await createClient();
+  const [{ data: job, error }, { data: requirements }] = await Promise.all([
+    supabase.from("jobs").select("*").eq("id", id).maybeSingle<Row>(),
+    supabase
+      .from("job_document_requirements")
+      .select("document_type, required, fee_applicable, cost_responsibility, notes, sort_order")
+      .eq("job_id", id)
+      .order("sort_order", { ascending: true })
+      .returns<Row[]>(),
+  ]);
+
+  if (!job) return { data: job, error };
+
+  return {
+    data: {
+      ...job,
+      document_requirements_text: (requirements ?? [])
+        .map((row) =>
+          [
+            row.document_type,
+            row.required === false ? "optional" : "required",
+            row.fee_applicable === false ? "no_fee" : "fee",
+            row.cost_responsibility ?? "candidate",
+            row.notes ?? "",
+          ]
+            .filter((value) => value !== "")
+            .join("|")
+        )
+        .join("\n"),
+    },
+    error,
+  };
+}
+
+export async function fetchCountrySettings() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("country_recruitment_settings")
+    .select("*")
+    .order("display_order", { ascending: true })
+    .returns<Row[]>();
+
+  return { rows: data ?? [], error };
+}
+
 export async function fetchEmployersWithJobCounts(options: {
   page: number;
   query?: string;

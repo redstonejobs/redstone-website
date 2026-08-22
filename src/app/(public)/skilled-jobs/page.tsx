@@ -11,7 +11,11 @@ export const metadata: Metadata = {
 };
 
 export default async function SkilledJobsPage() {
-  const { jobs } = await getPublishedJobs({ skill: "skilled", page: "1" });
+  const [skilled, professional] = await Promise.all([
+    getPublishedJobs({ skill: "skilled", page: "1" }),
+    getPublishedJobs({ skill: "professional", page: "1" }),
+  ]);
+  const jobs = [...skilled.jobs, ...professional.jobs].slice(0, 9);
   return (
     <>
       <Hero eyebrow="Skilled roles" title="Skilled International Job Opportunities" body="Explore professional and technical categories where employers may require experience, certifications, licensing or language ability." primary={{ label: "Browse All Jobs", href: "/jobs" }} />
@@ -32,4 +36,3 @@ export default async function SkilledJobsPage() {
     </>
   );
 }
-

@@ -1,5 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
-import { slugify } from "./countries";
+import type { Row } from "@/lib/admin/types";
+import { calculateDocumentCosts, rowToFee, rowToRequirement } from "@/lib/jobs/costs";
+import { findCountry, getConfiguredCountries, slugify } from "./countries";
 
 export type PublicJob = {
   id: string;
@@ -12,16 +14,50 @@ export type PublicJob = {
   job_type: string | null;
   skill_level: string | null;
   description: string | null;
+  short_description: string | null;
+  responsibilities: string | null;
+  requirements: string | null;
+  experience_requirements: string | null;
+  education_requirements: string | null;
+  language_requirements: string | null;
+  physical_requirements: string | null;
+  additional_requirements: string | null;
   salary_min: number | null;
   salary_max: number | null;
   currency: string | null;
   salary_period: string | null;
+  salary_confirmed: boolean | null;
+  salary_note: string | null;
+  contract_type: string | null;
+  contract_duration_value: number | null;
+  contract_duration_unit: string | null;
+  contract_note: string | null;
+  working_hours_per_week: number | null;
+  work_schedule: string | null;
+  overtime_note: string | null;
   vacancies: number | null;
   application_deadline: string | null;
   visa_sponsorship: boolean | null;
   accommodation: boolean | null;
   transport: boolean | null;
   meals: boolean | null;
+  sponsorship_status: string | null;
+  accommodation_status: string | null;
+  meals_status: string | null;
+  transport_status: string | null;
+  medical_insurance_status: string | null;
+  air_ticket_status: string | null;
+  training_status: string | null;
+  annual_leave_note: string | null;
+  other_benefits: string | null;
+  country_fee_override: number | null;
+  country_fee_override_currency: string | null;
+  country_fee_override_note: string | null;
+  fee_relationship: string | null;
+  processing_time_min: number | null;
+  processing_time_max: number | null;
+  processing_time_unit: string | null;
+  processing_time_note: string | null;
   published_at: string | null;
   created_at: string | null;
   employer?: { company_name: string | null } | null;
@@ -33,6 +69,10 @@ export type JobSearchParams = {
   category?: string;
   skill?: string;
   sponsorship?: string;
+  accommodation?: string;
+  salary_min?: string;
+  salary_max?: string;
+  contract_type?: string;
   job_type?: string;
   sort?: string;
   page?: string;
@@ -49,16 +89,50 @@ const PUBLIC_JOB_SELECT = `
   job_type,
   skill_level,
   description,
+  short_description,
+  responsibilities,
+  requirements,
+  experience_requirements,
+  education_requirements,
+  language_requirements,
+  physical_requirements,
+  additional_requirements,
   salary_min,
   salary_max,
   currency,
   salary_period,
+  salary_confirmed,
+  salary_note,
+  contract_type,
+  contract_duration_value,
+  contract_duration_unit,
+  contract_note,
+  working_hours_per_week,
+  work_schedule,
+  overtime_note,
   vacancies,
   application_deadline,
   visa_sponsorship,
   accommodation,
   transport,
   meals,
+  sponsorship_status,
+  accommodation_status,
+  meals_status,
+  transport_status,
+  medical_insurance_status,
+  air_ticket_status,
+  training_status,
+  annual_leave_note,
+  other_benefits,
+  country_fee_override,
+  country_fee_override_currency,
+  country_fee_override_note,
+  fee_relationship,
+  processing_time_min,
+  processing_time_max,
+  processing_time_unit,
+  processing_time_note,
   published_at,
   created_at,
   employer:employers(company_name)
@@ -82,10 +156,24 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
   if (params.skill) query = query.eq("skill_level", params.skill);
   if (params.job_type) query = query.eq("job_type", params.job_type);
   if (params.sponsorship === "true") query = query.eq("visa_sponsorship", true);
+  if (params.accommodation === "true") query = query.eq("accommodation", true);
+  if (params.contract_type) query = query.eq("contract_type", params.contract_type);
+  if (params.salary_min) {
+    const min = Number(params.salary_min);
+    if (Number.isFinite(min) && min >= 0) query = query.gte("salary_max", min);
+  }
+  if (params.salary_max) {
+    const max = Number(params.salary_max);
+    if (Number.isFinite(max) && max >= 0) query = query.lte("salary_min", max);
+  }
 
   const sort = params.sort ?? "newest";
   if (sort === "deadline") {
     query = query.order("application_deadline", { ascending: true, nullsFirst: false });
+  } else if (sort === "salary_asc") {
+    query = query.order("salary_min", { ascending: true, nullsFirst: false });
+  } else if (sort === "salary_desc") {
+    query = query.order("salary_max", { ascending: false, nullsFirst: false });
   } else {
     query = query.order("published_at", { ascending: false, nullsFirst: false });
   }
@@ -127,15 +215,52 @@ export async function getJobsForCountry(country: string, limit = 6) {
   }));
 }
 
+export async function getJobCatalogueContext(job: PublicJob, candidateDocuments: Row[] = []) {
+  const supabase = await createClient();
+  const countries = await getConfiguredCountries();
+  const country = findCountry(countries, job.country);
+  const [{ data: requirements }, { data: fees }] = await Promise.all([
+    supabase
+      .from("job_document_requirements")
+      .select("id, job_id, document_type, required, fee_applicable, candidate_can_provide_existing, cost_responsibility, notes, sort_order")
+      .eq("job_id", job.id)
+      .order("sort_order", { ascending: true })
+      .returns<Row[]>(),
+    supabase
+      .from("document_fee_catalog")
+      .select("document_type, label, region, country_id, amount, currency, is_active")
+      .eq("is_active", true)
+      .returns<Row[]>(),
+  ]);
+  const requirementRows = requirements?.map(rowToRequirement) ?? [];
+  const feeRows = fees?.map(rowToFee) ?? [];
+
+  return {
+    country,
+    requirements: requirementRows,
+    fees: feeRows,
+    documentCosts: calculateDocumentCosts({
+      requirements: requirementRows,
+      feeCatalog: feeRows,
+      country,
+      candidateDocuments: candidateDocuments.map((document) => ({
+        document_type: typeof document.document_type === "string" ? document.document_type : null,
+        verification_status: typeof document.verification_status === "string" ? document.verification_status : null,
+      })),
+    }),
+  };
+}
+
 export function jobHref(job: PublicJob) {
   return `/jobs/${job.slug || slugify(job.title || String(job.id))}`;
 }
 
 export function formatSalary(job: PublicJob) {
+  if (job.salary_confirmed === false && !job.salary_min && !job.salary_max) return null;
   if (!job.salary_min && !job.salary_max) return null;
   const currency = job.currency ? `${job.currency} ` : "";
-  const period = job.salary_period ? ` / ${job.salary_period}` : "";
-  if (job.salary_min && job.salary_max) return `${currency}${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}${period}`;
+  const period = job.salary_period ? `/${job.salary_period}` : "";
+  if (job.salary_min && job.salary_max) return `${currency}${job.salary_min.toLocaleString()}-${job.salary_max.toLocaleString()}${period}`;
   return `${currency}${(job.salary_min ?? job.salary_max)?.toLocaleString()}${period}`;
 }
 
@@ -143,4 +268,3 @@ export function normalizePage(page?: string) {
   const parsed = Number(page);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
-
