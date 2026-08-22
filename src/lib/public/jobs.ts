@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import type { Row } from "@/lib/admin/types";
 import { calculateDocumentCosts, rowToFee, rowToRequirement } from "@/lib/jobs/costs";
+import { occupationSearchTerms } from "@/lib/jobs/catalogue";
 import { findCountry, getConfiguredCountries, slugify } from "./countries";
 
 export type PublicJob = {
@@ -149,7 +150,19 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
 
   if (params.q) {
     const safe = params.q.replaceAll("%", "").replaceAll(",", " ").trim();
-    if (safe) query = query.or(`title.ilike.%${safe}%,country.ilike.%${safe}%,category.ilike.%${safe}%`);
+    if (safe) {
+      const searchTerms = [...new Set([safe, ...occupationSearchTerms(safe)].map(safeSearchTerm).filter(Boolean))];
+      query = query.or(
+        searchTerms
+          .flatMap((term) => [
+            `title.ilike.%${term}%`,
+            `country.ilike.%${term}%`,
+            `category.ilike.%${term}%`,
+            `job_type.ilike.%${term}%`,
+          ])
+          .join(","),
+      );
+    }
   }
   if (params.country) query = query.eq("country", params.country);
   if (params.category) query = query.eq("category", params.category);
@@ -267,4 +280,8 @@ export function formatSalary(job: PublicJob) {
 export function normalizePage(page?: string) {
   const parsed = Number(page);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function safeSearchTerm(value: string) {
+  return value.replaceAll("%", "").replaceAll(",", " ").trim();
 }

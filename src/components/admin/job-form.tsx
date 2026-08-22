@@ -7,6 +7,7 @@ import {
   DOCUMENT_TYPES,
   FEE_RELATIONSHIPS,
   JOB_CATEGORIES,
+  JOB_OCCUPATIONS,
   SALARY_PERIODS,
   SKILL_LEVELS,
 } from "@/lib/jobs/catalogue";
@@ -25,9 +26,14 @@ type JobFormProps = {
 export function JobForm({ action, job, submitLabel }: JobFormProps) {
   return (
     <form action={action} className="grid gap-6">
+      <datalist id="admin-job-occupation-options">
+        {JOB_OCCUPATIONS.map((occupation) => (
+          <option key={occupation.slug} value={occupation.name} />
+        ))}
+      </datalist>
       <Panel title="Core Vacancy">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field name="title" label="Job Title" defaultValue={textValue(job, ["title"], "")} required />
+          <Field name="title" label="Job Title" defaultValue={textValue(job, ["title"], "")} list="admin-job-occupation-options" required />
           <Field name="slug" label="Slug" defaultValue={textValue(job, ["slug"], "")} required />
           <Field name="employer_id" label="Employer ID" defaultValue={textValue(job, ["employer_id"], "")} />
           <Select name="country" label="Country" defaultValue={textValue(job, ["country"], "")} options={COUNTRIES.map((country) => ({ value: country.name, label: country.name }))} />
@@ -133,6 +139,7 @@ function Field({
   defaultValue,
   required = false,
   min,
+  list,
 }: {
   name: string;
   label: string;
@@ -140,11 +147,12 @@ function Field({
   defaultValue: string;
   required?: boolean;
   min?: string;
+  list?: string;
 }) {
   return (
     <label className="grid gap-2 text-sm font-semibold text-slate-700">
       {label}
-      <input name={name} type={type} defaultValue={defaultValue} required={required} min={min} className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-normal outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/30" />
+      <input name={name} type={type} defaultValue={defaultValue} required={required} min={min} list={list} className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-normal outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/30" />
     </label>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { JobSearch } from "@/components/public/job-search";
 import { Band, Hero } from "@/components/public/sections";
+import { JOB_OCCUPATIONS } from "@/lib/jobs/catalogue";
 import { getPublishedJobs } from "@/lib/public/jobs";
 import { getConfiguredCountries } from "@/lib/public/countries";
 import { canonical } from "@/lib/public/site";
@@ -22,6 +23,7 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   const queryWithoutPage = new URLSearchParams(
     Object.entries(params).filter((entry): entry is [string, string] => entry[0] !== "page" && typeof entry[1] === "string" && entry[1] !== "")
   );
+  const occupationGroups = catalogueGroups();
 
   return (
     <>
@@ -37,6 +39,24 @@ export default async function JobsPage({ searchParams }: JobsProps) {
           {result.page < totalPages ? <a className="rounded-md border px-4 py-2" href={`/jobs?${pageQuery(queryWithoutPage, result.page + 1)}`}>Next</a> : null}
         </div>
       </Band>
+      <Band>
+        <div>
+          <p className="text-sm font-black uppercase text-[#B8860B]">Catalogue</p>
+          <h2 className="mt-2 text-3xl font-black text-[#071A3D]">Job Categories / Occupations We Recruit For</h2>
+          <p className="mt-3 max-w-3xl text-slate-600">
+            These are recruitment categories and occupation types, not current vacancies. Apply buttons appear only on published job vacancies above.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {occupationGroups.map((group) => (
+            <section key={group.category} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="text-base font-black text-[#071A3D]">{group.category}</h3>
+              <p className="mt-1 text-xs font-bold uppercase text-slate-500">{group.skillLabel}</p>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{group.occupations.slice(0, 6).join(", ")}{group.occupations.length > 6 ? ` and ${group.occupations.length - 6} more` : ""}</p>
+            </section>
+          ))}
+        </div>
+      </Band>
     </>
   );
 }
@@ -45,4 +65,26 @@ function pageQuery(params: URLSearchParams, page: number) {
   const next = new URLSearchParams(params);
   next.set("page", String(page));
   return next.toString();
+}
+
+function catalogueGroups() {
+  const labels: Record<string, string> = {
+    unskilled: "Entry Level",
+    semi_skilled: "Semi-Skilled",
+    skilled: "Skilled",
+    professional: "Professional",
+  };
+  const groups = new Map<string, { category: string; skillLabel: string; occupations: string[] }>();
+
+  for (const occupation of JOB_OCCUPATIONS) {
+    const group = groups.get(occupation.category) ?? {
+      category: occupation.category,
+      skillLabel: labels[occupation.skill_level] ?? occupation.skill_level,
+      occupations: [],
+    };
+    group.occupations.push(occupation.name);
+    groups.set(occupation.category, group);
+  }
+
+  return [...groups.values()];
 }

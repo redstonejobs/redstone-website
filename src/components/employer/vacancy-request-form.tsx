@@ -1,12 +1,17 @@
 import type { Row } from "@/lib/admin/types";
 import { textValue } from "@/lib/admin/format";
-import { BENEFIT_STATUSES, CONTRACT_TYPES, JOB_CATEGORIES, SALARY_PERIODS, SKILL_LEVELS } from "@/lib/jobs/catalogue";
+import { BENEFIT_STATUSES, CONTRACT_TYPES, JOB_CATEGORIES, JOB_OCCUPATIONS, SALARY_PERIODS, SKILL_LEVELS } from "@/lib/jobs/catalogue";
 
 export function VacancyRequestForm({ request, action }: { request?: Row | null; action: (formData: FormData) => void | Promise<void> }) {
   return (
     <form action={action} className="grid gap-5 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
+      <datalist id="employer-job-occupation-options">
+        {JOB_OCCUPATIONS.map((occupation) => (
+          <option key={occupation.slug} value={occupation.name} />
+        ))}
+      </datalist>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field name="title" label="Job Title" defaultValue={textValue(request, ["title"], "")} required />
+        <Field name="title" label="Job Title" defaultValue={textValue(request, ["title"], "")} list="employer-job-occupation-options" required />
         <Select name="category" label="Category" defaultValue={textValue(request, ["category"], "")} options={JOB_CATEGORIES.map((item) => String(item))} />
         <Select name="skill_level" label="Skill Level" defaultValue={textValue(request, ["skill_level"], "")} options={SKILL_LEVELS.map((item) => item.value)} labels={Object.fromEntries(SKILL_LEVELS.map((item) => [item.value, item.label]))} />
         <Field name="country" label="Country" defaultValue={textValue(request, ["country"], "")} />
@@ -44,8 +49,8 @@ export function VacancyRequestForm({ request, action }: { request?: Row | null; 
   );
 }
 
-function Field({ name, label, defaultValue, type = "text", min, required = false }: { name: string; label: string; defaultValue: string; type?: string; min?: string; required?: boolean }) {
-  return <label className="grid gap-2 text-sm font-semibold capitalize text-slate-700">{label}<input name={name} type={type} min={min} required={required} defaultValue={defaultValue} className="min-h-11 rounded-md border border-slate-300 px-3 font-normal outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/30" /></label>;
+function Field({ name, label, defaultValue, type = "text", min, required = false, list }: { name: string; label: string; defaultValue: string; type?: string; min?: string; required?: boolean; list?: string }) {
+  return <label className="grid gap-2 text-sm font-semibold capitalize text-slate-700">{label}<input name={name} type={type} min={min} required={required} list={list} defaultValue={defaultValue} className="min-h-11 rounded-md border border-slate-300 px-3 font-normal outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/30" /></label>;
 }
 
 function Textarea({ name, label, defaultValue, rows = 5 }: { name: string; label: string; defaultValue: string; rows?: number }) {
