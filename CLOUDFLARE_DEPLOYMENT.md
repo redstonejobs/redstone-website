@@ -20,6 +20,12 @@ Do not run this until deployment is approved:
 npm run deploy
 ```
 
+## Cloudflare Git Settings
+
+- Build command: `npm run build:cloudflare`
+- Deploy command: `npx opennextjs-cloudflare deploy`
+- Version command: `npx opennextjs-cloudflare upload`
+
 ## Domain Setup
 
 Before routing production traffic:
