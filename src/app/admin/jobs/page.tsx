@@ -35,9 +35,14 @@ export default async function JobsPage({ searchParams }: PageProps) {
           <h1 className="text-3xl font-bold text-[#071A3D]">Jobs</h1>
           <p className="mt-1 text-sm text-slate-600">Search, filter and manage vacancies.</p>
         </div>
-        <Link href="/admin/jobs/new" className="rounded-md bg-[#D4AF37] px-4 py-3 text-sm font-semibold text-[#071A3D]">
-          Create Job
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/jobs/bulk-create" className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-[#071A3D]">
+            Bulk Create
+          </Link>
+          <Link href="/admin/jobs/new" className="rounded-md bg-[#D4AF37] px-4 py-3 text-sm font-semibold text-[#071A3D]">
+            Create Job
+          </Link>
+        </div>
       </div>
 
       <FilterBar

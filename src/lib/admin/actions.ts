@@ -2,6 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { BULK_JOB_LIMIT, bulkJobCheckboxValue, bulkJobFieldValue } from "@/lib/admin/bulk-jobs";
+import { JOB_OCCUPATIONS } from "@/lib/jobs/catalogue";
+import { slugify } from "@/lib/public/countries";
 import { logAuditEvent } from "./audit";
 import {
   hasCapability,
@@ -83,6 +86,19 @@ function requireConfirmation(formData: FormData) {
   if (formData.get("confirm") !== "yes") {
     throw new Error("Confirmation is required.");
   }
+}
+
+function requireSelectedJobIds(formData: FormData) {
+  const ids = formData
+    .getAll("job_id")
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter(Boolean);
+
+  if (ids.length === 0) {
+    throw new Error("Select at least one job.");
+  }
+
+  return ids;
 }
 
 function uuidValue(formData: FormData, key: string) {
@@ -167,6 +183,10 @@ function jobPayload(formData: FormData, creatorId?: string) {
 
 function documentRequirementsPayload(formData: FormData, jobId: string) {
   const raw = value(formData, "document_requirements");
+  return documentRequirementsRowsFromText(raw, jobId);
+}
+
+function documentRequirementsRowsFromText(raw: string, jobId: string) {
   return raw
     .split(/\r?\n/)
     .map((line, index) => {
@@ -210,6 +230,192 @@ async function replaceJobDocumentRequirements(jobId: string, formData: FormData)
   }
 }
 
+async function insertJobDocumentRequirementRows(rows: ReturnType<typeof documentRequirementsRowsFromText>) {
+  if (rows.length === 0) {
+    return;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("job_document_requirements").insert(rows);
+
+  if (error) {
+    throw new Error("Unable to save job document requirements.");
+  }
+}
+
+function optionalBulkNumber(formData: FormData, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
+  const raw = bulkJobFieldValue(formData, occupation, key);
+
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = Number(raw);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${occupation.name}: ${key} must be zero or greater.`);
+  }
+
+  return parsed;
+}
+
+function optionalBulkInteger(formData: FormData, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
+  const raw = bulkJobFieldValue(formData, occupation, key);
+
+  if (!raw) {
+    return null;
+  }
+
+  const parsed = Number(raw);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${occupation.name}: ${key} must be a whole number zero or greater.`);
+  }
+
+  return parsed;
+}
+
+function requiredBulkPositiveInteger(formData: FormData, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
+  const parsed = Number(bulkJobFieldValue(formData, occupation, key));
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${occupation.name}: ${key} must be greater than zero.`);
+  }
+
+  return parsed;
+}
+
+function bulkJobPayload({
+  formData,
+  occupation,
+  creatorId,
+  country,
+  employerId,
+  sequence,
+  nonce,
+}: {
+  formData: FormData;
+  occupation: (typeof JOB_OCCUPATIONS)[number];
+  creatorId: string;
+  country: string;
+  employerId: string;
+  sequence: number;
+  nonce: number;
+}) {
+  const title = bulkJobFieldValue(formData, occupation, "title") || occupation.name;
+  const city = bulkJobFieldValue(formData, occupation, "city");
+  const deadline = bulkJobFieldValue(formData, occupation, "application_deadline");
+  const salaryTbd = bulkJobCheckboxValue(formData, occupation, "salary_tbd");
+  const salaryMin = optionalBulkNumber(formData, occupation, "salary_min");
+  const salaryMax = optionalBulkNumber(formData, occupation, "salary_max");
+  const currency = bulkJobFieldValue(formData, occupation, "currency");
+  const salaryConfirmed = !salaryTbd && bulkJobCheckboxValue(formData, occupation, "salary_confirmed");
+
+  if (!deadline) {
+    throw new Error(`${occupation.name}: application deadline is required.`);
+  }
+
+  if (!salaryTbd && (!salaryConfirmed || (salaryMin === null && salaryMax === null))) {
+    throw new Error(`${occupation.name}: enter confirmed salary details or mark salary as TBD.`);
+  }
+
+  if (!salaryTbd && !currency) {
+    throw new Error(`${occupation.name}: salary currency is required when salary is confirmed.`);
+  }
+
+  const payload: Record<string, unknown> = {
+    title,
+    slug: [
+      slugify(title),
+      slugify(country),
+      deadline.replaceAll("-", ""),
+      nonce.toString(36),
+      String(sequence + 1),
+    ].filter(Boolean).join("-"),
+    employer_id: employerId,
+    country,
+    city: city || null,
+    category: bulkJobFieldValue(formData, occupation, "category") || occupation.category,
+    job_type: bulkJobFieldValue(formData, occupation, "job_type") || null,
+    skill_level: bulkJobFieldValue(formData, occupation, "skill_level") || occupation.skill_level,
+    short_description: bulkJobFieldValue(formData, occupation, "short_description") || null,
+    description: bulkJobFieldValue(formData, occupation, "description") || null,
+    responsibilities: bulkJobFieldValue(formData, occupation, "responsibilities") || null,
+    requirements: bulkJobFieldValue(formData, occupation, "requirements") || null,
+    experience_requirements: bulkJobFieldValue(formData, occupation, "experience_requirements") || null,
+    education_requirements: bulkJobFieldValue(formData, occupation, "education_requirements") || null,
+    language_requirements: bulkJobFieldValue(formData, occupation, "language_requirements") || null,
+    physical_requirements: bulkJobFieldValue(formData, occupation, "physical_requirements") || null,
+    additional_requirements: bulkJobFieldValue(formData, occupation, "additional_requirements") || null,
+    salary_min: salaryTbd ? null : salaryMin,
+    salary_max: salaryTbd ? null : salaryMax,
+    currency: salaryTbd ? currency || null : currency,
+    salary_period: bulkJobFieldValue(formData, occupation, "salary_period") || null,
+    salary_confirmed: salaryConfirmed,
+    salary_note: salaryTbd
+      ? bulkJobFieldValue(formData, occupation, "salary_note") || "To be confirmed by employer."
+      : bulkJobFieldValue(formData, occupation, "salary_note") || null,
+    contract_type: bulkJobFieldValue(formData, occupation, "contract_type") || null,
+    contract_duration_value: optionalBulkInteger(formData, occupation, "contract_duration_value"),
+    contract_duration_unit: bulkJobFieldValue(formData, occupation, "contract_duration_unit") || null,
+    contract_note: bulkJobFieldValue(formData, occupation, "contract_note") || null,
+    working_hours_per_week: optionalBulkNumber(formData, occupation, "working_hours_per_week"),
+    work_schedule: bulkJobFieldValue(formData, occupation, "work_schedule") || null,
+    overtime_note: bulkJobFieldValue(formData, occupation, "overtime_note") || null,
+    vacancies: requiredBulkPositiveInteger(formData, occupation, "vacancies"),
+    application_deadline: deadline,
+    visa_sponsorship: bulkJobCheckboxValue(formData, occupation, "visa_sponsorship"),
+    accommodation: bulkJobCheckboxValue(formData, occupation, "accommodation"),
+    transport: bulkJobCheckboxValue(formData, occupation, "transport"),
+    meals: bulkJobCheckboxValue(formData, occupation, "meals"),
+    sponsorship_status: bulkJobFieldValue(formData, occupation, "sponsorship_status") || "not_confirmed",
+    accommodation_status: bulkJobFieldValue(formData, occupation, "accommodation_status") || "not_confirmed",
+    meals_status: bulkJobFieldValue(formData, occupation, "meals_status") || "not_confirmed",
+    transport_status: bulkJobFieldValue(formData, occupation, "transport_status") || "not_confirmed",
+    medical_insurance_status: bulkJobFieldValue(formData, occupation, "medical_insurance_status") || "not_confirmed",
+    air_ticket_status: bulkJobFieldValue(formData, occupation, "air_ticket_status") || "not_confirmed",
+    training_status: bulkJobFieldValue(formData, occupation, "training_status") || "not_confirmed",
+    annual_leave_note: bulkJobFieldValue(formData, occupation, "annual_leave_note") || null,
+    other_benefits: bulkJobFieldValue(formData, occupation, "other_benefits") || null,
+    country_fee_override: optionalBulkNumber(formData, occupation, "country_fee_override"),
+    country_fee_override_currency: bulkJobFieldValue(formData, occupation, "country_fee_override_currency") || null,
+    country_fee_override_note: bulkJobFieldValue(formData, occupation, "country_fee_override_note") || null,
+    fee_relationship: bulkJobFieldValue(formData, occupation, "fee_relationship") || "not_confirmed",
+    processing_time_min: optionalBulkInteger(formData, occupation, "processing_time_min"),
+    processing_time_max: optionalBulkInteger(formData, occupation, "processing_time_max"),
+    processing_time_unit: bulkJobFieldValue(formData, occupation, "processing_time_unit") || null,
+    processing_time_note: bulkJobFieldValue(formData, occupation, "processing_time_note") || null,
+    status: "draft",
+    created_by: creatorId,
+    published_at: null,
+  };
+
+  return assertValid(validateJobPayload(payload));
+}
+
+async function findDuplicateBulkJob(payload: Record<string, unknown>) {
+  const supabase = await createClient();
+  let request = supabase
+    .from("jobs")
+    .select("id")
+    .eq("employer_id", String(payload.employer_id))
+    .eq("country", String(payload.country))
+    .eq("title", String(payload.title))
+    .eq("vacancies", Number(payload.vacancies))
+    .eq("application_deadline", String(payload.application_deadline))
+    .neq("status", "archived")
+    .limit(1);
+
+  request = payload.city ? request.eq("city", String(payload.city)) : request.is("city", null);
+  const { data, error } = await request.maybeSingle<{ id: string }>();
+
+  if (error) {
+    throw new Error("Unable to check for duplicate vacancies.");
+  }
+
+  return data?.id ?? null;
+}
+
 export async function createJob(formData: FormData) {
   const context = await requireAdmin();
   const supabase = await createClient();
@@ -233,6 +439,118 @@ export async function createJob(formData: FormData) {
   });
 
   redirect(`/admin/jobs/${data.id}`);
+}
+
+export async function bulkCreateJobs(formData: FormData) {
+  const context = await requireAdmin();
+
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to create jobs.");
+  }
+
+  const country = value(formData, "country");
+  const employerId = value(formData, "employer_id");
+  const occupationSlugs = formData
+    .getAll("occupation_slug")
+    .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+    .filter(Boolean);
+
+  if (!country) {
+    throw new Error("Country is required.");
+  }
+
+  if (!employerId) {
+    throw new Error("Employer is required.");
+  }
+
+  if (occupationSlugs.length === 0) {
+    throw new Error("Select at least one occupation.");
+  }
+
+  if (occupationSlugs.length > BULK_JOB_LIMIT) {
+    throw new Error(`Create ${BULK_JOB_LIMIT} or fewer vacancies at a time.`);
+  }
+
+  const selectedOccupations = occupationSlugs.map((slug) => {
+    const occupation = JOB_OCCUPATIONS.find((item) => item.slug === slug);
+    if (!occupation) {
+      throw new Error("A selected occupation is not in the approved catalogue.");
+    }
+    return occupation;
+  });
+
+  const supabase = await createClient();
+  const { data: employer, error: employerError } = await supabase
+    .from("employers")
+    .select("id, company_name, is_active")
+    .eq("id", employerId)
+    .maybeSingle<{ id: string; company_name: string | null; is_active: boolean | null }>();
+
+  if (employerError || !employer || employer.is_active !== true) {
+    throw new Error("Select an active employer before creating vacancies.");
+  }
+
+  const nonce = Date.now();
+  const createdIds: string[] = [];
+  const createdTitles: string[] = [];
+
+  for (const [index, occupation] of selectedOccupations.entries()) {
+    const payload = bulkJobPayload({
+      formData,
+      occupation,
+      creatorId: context.user.id,
+      country,
+      employerId,
+      sequence: index,
+      nonce,
+    });
+    const duplicateId = await findDuplicateBulkJob(payload);
+
+    if (duplicateId) {
+      throw new Error(`${payload.title} already exists for this employer, country, vacancy count and deadline.`);
+    }
+
+    const { data, error } = await supabase.from("jobs").insert(payload).select("id, title").single();
+
+    if (error || !data) {
+      throw new Error(`Unable to create draft vacancy for ${occupation.name}.`);
+    }
+
+    const documentRows = documentRequirementsRowsFromText(
+      bulkJobFieldValue(formData, occupation, "document_requirements"),
+      data.id
+    );
+    await insertJobDocumentRequirementRows(documentRows);
+
+    createdIds.push(data.id);
+    createdTitles.push(String(data.title ?? occupation.name));
+
+    await logAuditEvent(context, {
+      action: "job_created",
+      entityType: "job",
+      entityId: data.id,
+      description: "Draft job created through bulk workflow",
+      metadata: {
+        occupation_slug: occupation.slug,
+        bulk_create: true,
+      },
+    });
+  }
+
+  await logAuditEvent(context, {
+    action: "bulk_job_creation",
+    entityType: "job",
+    description: `Bulk draft job creation: ${createdIds.length} vacancies`,
+    metadata: {
+      job_ids: createdIds,
+      titles: createdTitles,
+      country,
+      employer_id: employerId,
+      employer_name: employer.company_name,
+    },
+  });
+
+  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(createdIds.join(","))}`);
 }
 
 export async function updateJob(id: string, formData: FormData) {
@@ -366,6 +684,75 @@ export async function setJobStatus(id: string, status: string) {
     entityId: id,
     description: `Job status changed to ${status}`,
   });
+}
+
+export async function bulkSetJobStatus(status: string, formData: FormData) {
+  requireConfirmation(formData);
+  const context = await requireAdmin();
+
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to update jobs.");
+  }
+
+  if (!["draft", "published", "paused", "closed", "archived"].includes(status)) {
+    throw new Error("Invalid job status.");
+  }
+
+  const ids = requireSelectedJobIds(formData);
+  const supabase = await createClient();
+  const { data: jobs, error: jobsError } = await supabase
+    .from("jobs")
+    .select("id, title, slug, country, category, skill_level, description, vacancies, application_deadline, status")
+    .in("id", ids)
+    .returns<Record<string, unknown>[]>();
+
+  if (jobsError || !jobs || jobs.length !== ids.length) {
+    throw new Error("Unable to load every selected job for status validation.");
+  }
+
+  if (status === "published") {
+    for (const job of jobs) {
+      assertValid(validateJobForPublication(job));
+    }
+  }
+
+  const payload: Record<string, unknown> = { status };
+  if (status === "published") {
+    payload.published_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase.from("jobs").update(payload).in("id", ids);
+
+  if (error) {
+    throw new Error("Unable to update selected job statuses.");
+  }
+
+  for (const job of jobs) {
+    await logAuditEvent(context, {
+      action: status === "published" ? "job_published" : status === "closed" ? "job_closed" : "job_updated",
+      entityType: "job",
+      entityId: String(job.id),
+      description: `Bulk job status changed to ${status}`,
+      metadata: {
+        previous_status: job.status ?? null,
+        new_status: status,
+        bulk_status_change: true,
+      },
+    });
+  }
+
+  await logAuditEvent(context, {
+    action: status === "published" ? "bulk_publication" : "bulk_status_change",
+    entityType: "job",
+    description: `Bulk job status change to ${status}: ${ids.length} vacancies`,
+    metadata: {
+      job_ids: ids,
+      new_status: status,
+      previous_statuses: jobs.map((job) => ({ id: job.id, status: job.status ?? null })),
+    },
+  });
+
+  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(ids.join(","))}`);
 }
 
 export async function duplicateJob(id: string) {
