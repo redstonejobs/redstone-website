@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ContactForm } from "@/components/public/contact-form";
 import { Band, Hero, InfoGrid, ProcessSteps, SectionHeading } from "@/components/public/sections";
 import { canonical, CONTACT } from "@/lib/public/site";
@@ -8,7 +9,13 @@ export const metadata: Metadata = { title: "Employers", description: "Recruitmen
 export default function EmployersPage() {
   return (
     <>
-      <Hero eyebrow="Employers" title="Hire through Red Stone." body="Red Stone supports employers with candidate sourcing, screening, interview coordination and recruitment administration." primary={{ label: "Request Recruitment Support", href: "#employer-form" }} />
+      <Hero eyebrow="Employers" title="Hire through Red Stone." body="Red Stone supports employers with candidate sourcing, screening, interview coordination and recruitment administration." primary={{ label: "Register as Employer", href: "/employer/register" }} secondary={{ label: "Employer Login", href: "/login?next=/employer" }} />
+      <Band>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Link href="/employer/register" className="rounded-md bg-[#071A3D] p-6 text-white shadow-sm"><h2 className="text-xl font-black">Create Employer Account</h2><p className="mt-2 text-sm text-slate-200">Register your company and complete Red Stone verification before submitting vacancy requests.</p></Link>
+          <Link href="/login?next=/employer" className="rounded-md border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-black text-[#071A3D]">Employer Portal Login</h2><p className="mt-2 text-sm text-slate-600">Access company profile, vacancy requests and applicant review after sign-in.</p></Link>
+        </div>
+      </Band>
       <Band>
         <InfoGrid items={[
           { title: "International Recruitment Support", body: "Structured support for employers sourcing workers across skilled and general categories." },
@@ -35,4 +42,3 @@ export default function EmployersPage() {
     </>
   );
 }
-

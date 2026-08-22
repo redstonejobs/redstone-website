@@ -10,6 +10,7 @@ const navItems = [
   { label: "Applications", href: "/admin/applications" },
   { label: "Candidates", href: "/admin/candidates" },
   { label: "Employers", href: "/admin/employers" },
+  { label: "Employer Requests", href: "/admin/employer-job-requests" },
   { label: "Documents", href: "/admin/documents" },
   { label: "Staff", href: "/admin/staff", adminOnly: true },
   { label: "Audit", href: "/admin/audit", adminOnly: true },

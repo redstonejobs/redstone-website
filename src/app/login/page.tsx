@@ -68,6 +68,7 @@ function LoginForm() {
           </form>
           <div className="mt-6 flex flex-wrap justify-between gap-3 text-sm font-semibold">
             <Link href="/register" className="text-[#071A3D]">Create candidate account</Link>
+            <Link href="/employer/register" className="text-[#071A3D]">Create employer account</Link>
             <Link href="/forgot-password" className="text-[#B8860B]">Forgot password?</Link>
           </div>
         </div>

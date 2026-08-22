@@ -44,6 +44,9 @@ export async function updateSession(request: NextRequest) {
   const protectedPath =
     request.nextUrl.pathname.startsWith("/admin") ||
     request.nextUrl.pathname.startsWith("/candidate") ||
+    (request.nextUrl.pathname.startsWith("/employer") &&
+      !request.nextUrl.pathname.startsWith("/employer/register") &&
+      !request.nextUrl.pathname.startsWith("/employer/verify-email")) ||
     protectedCandidateApply;
 
   if (protectedPath && (error || !data?.claims)) {

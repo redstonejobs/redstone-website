@@ -74,10 +74,13 @@ export async function routeAuthenticatedUser(next?: string | null) {
     redirect(safeNextPath(next, "/candidate"));
   }
 
+  if (profile.profile_type === "employer" && profile.is_active === true) {
+    redirect(safeNextPath(next, "/employer"));
+  }
+
   if (["staff", "admin", "super_admin"].includes(profile.profile_type ?? "")) {
     redirect("/admin");
   }
 
   redirect("/login?error=account_not_active");
 }
-

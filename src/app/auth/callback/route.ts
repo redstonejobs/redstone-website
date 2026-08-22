@@ -29,6 +29,10 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL(safeNextPath(requestUrl.searchParams.get("next"), "/candidate"), requestUrl.origin));
       }
 
+      if (profile?.profile_type === "employer" && profile.is_active === true) {
+        return NextResponse.redirect(new URL(safeNextPath(requestUrl.searchParams.get("next"), "/employer"), requestUrl.origin));
+      }
+
       if (["staff", "admin", "super_admin"].includes(profile?.profile_type ?? "")) {
         return NextResponse.redirect(new URL("/admin", requestUrl.origin));
       }

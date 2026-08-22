@@ -725,6 +725,40 @@ export async function setEmployerState(id: string, state: "verified" | "rejected
   });
 }
 
+export async function setEmployerJobRequestState(
+  id: string,
+  state: "under_review" | "changes_requested" | "approved" | "rejected",
+  formData: FormData
+) {
+  requireConfirmation(formData);
+  const context = await requireAdmin();
+  if (!hasCapability(context, "employers.write")) {
+    throw new Error("You are not allowed to review employer job requests.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("employer_job_requests")
+    .update({
+      status: state,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: context.user.id,
+      admin_notes: value(formData, "admin_notes") || null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    throw new Error("Unable to update employer job request.");
+  }
+
+  await logAuditEvent(context, {
+    action: `employer_job_request_${state}`,
+    entityType: "employer_job_request",
+    entityId: id,
+    description: `Employer job request marked ${state}`,
+  });
+}
+
 export async function verifyDocument(id: string, formData: FormData) {
   requireConfirmation(formData);
   const context = await requireStaff();
