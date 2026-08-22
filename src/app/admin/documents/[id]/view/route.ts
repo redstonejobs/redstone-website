@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/admin/auth";
+import { adminWarn } from "@/lib/admin/logger";
+import { assertValid, sanitizeStoragePath } from "@/lib/admin/validation";
 import { createClient } from "@/utils/supabase/server";
 
 type RouteContext = {
@@ -12,7 +14,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const supabase = await createClient();
   const { data: document, error } = await supabase
     .from("application_documents")
-    .select("*")
+    .select("id, bucket, storage_bucket, storage_path, file_path, path")
     .eq("id", id)
     .maybeSingle<Record<string, unknown>>();
 
@@ -23,13 +25,22 @@ export async function GET(_request: Request, context: RouteContext) {
   const bucket = String(document.bucket ?? document.storage_bucket ?? "candidate-documents");
   const path = String(document.storage_path ?? document.file_path ?? document.path ?? "");
 
-  if (bucket !== "candidate-documents" || !path || path.includes("..")) {
+  if (bucket !== "candidate-documents") {
+    adminWarn("blocked document bucket", { document_id: id, bucket });
+    return NextResponse.json({ error: "Document cannot be opened." }, { status: 400 });
+  }
+
+  let safePath: string;
+  try {
+    safePath = assertValid(sanitizeStoragePath(path));
+  } catch {
+    adminWarn("blocked document path", { document_id: id });
     return NextResponse.json({ error: "Document cannot be opened." }, { status: 400 });
   }
 
   const { data, error: signedUrlError } = await supabase.storage
     .from("candidate-documents")
-    .createSignedUrl(path, 300);
+    .createSignedUrl(safePath, 300);
 
   if (signedUrlError || !data?.signedUrl) {
     return NextResponse.json({ error: "Unable to create a temporary document link." }, { status: 400 });

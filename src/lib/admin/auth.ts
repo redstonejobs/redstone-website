@@ -1,29 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import type { AdminContext, Capability, Profile, StaffRole, StaffRoleName } from "./types";
-
-const ADMIN_PROFILE_TYPES = new Set(["admin", "super_admin"]);
-const STAFF_PROFILE_TYPES = new Set(["staff", "admin", "super_admin"]);
-const ADMIN_STAFF_ROLES = new Set(["admin", "super_admin"]);
-const STAFF_ROLES = new Set([
-  "staff",
-  "moderator",
-  "recruiter",
-  "hr",
-  "finance",
-  "admin",
-  "super_admin",
-]);
-
-const ROLE_PRIORITY: StaffRoleName[] = [
-  "super_admin",
-  "admin",
-  "finance",
-  "hr",
-  "recruiter",
-  "moderator",
-  "staff",
-];
+import {
+  ADMIN_STAFF_ROLES,
+  ROLE_CAPABILITIES,
+  ROLE_PRIORITY,
+  isAdminProfileType,
+  isStaffProfileType,
+  isStaffRole,
+} from "./constants";
+import type { AdminContext, Capability, Profile, StaffRole } from "./types";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -81,12 +66,12 @@ export async function requireStaff(): Promise<AdminContext> {
   const hasStaffProfile =
     profile.is_active === true &&
     profile.profile_type !== null &&
-    STAFF_PROFILE_TYPES.has(profile.profile_type);
+    isStaffProfileType(profile.profile_type);
   const hasStaffRole = activeRoles.some(
     (staffRole) =>
       staffRole.active === true &&
       staffRole.role !== null &&
-      STAFF_ROLES.has(staffRole.role)
+      isStaffRole(staffRole.role)
   );
 
   if (!hasStaffProfile || !hasStaffRole) {
@@ -108,12 +93,12 @@ export async function requireAdmin(): Promise<AdminContext> {
   const context = await requireStaff();
   const hasAdminProfile =
     context.profile.profile_type !== null &&
-    ADMIN_PROFILE_TYPES.has(context.profile.profile_type);
+    isAdminProfileType(context.profile.profile_type);
   const hasAdminRole = context.staffRoles.some(
     (staffRole) =>
       staffRole.active === true &&
       staffRole.role !== null &&
-      ADMIN_STAFF_ROLES.has(staffRole.role)
+      (ADMIN_STAFF_ROLES as readonly string[]).includes(staffRole.role)
   );
 
   if (!hasAdminProfile || !hasAdminRole) {
@@ -141,32 +126,18 @@ export function canManageStaff(context: AdminContext) {
     (staffRole) =>
       staffRole.active === true &&
       staffRole.role !== null &&
-      ADMIN_STAFF_ROLES.has(staffRole.role)
+      (ADMIN_STAFF_ROLES as readonly string[]).includes(staffRole.role)
   );
 }
 
 export function hasCapability(context: AdminContext, capability: Capability) {
-  const roles = new Set(context.staffRoles.map((staffRole) => staffRole.role).filter(Boolean));
-  const isAdmin = roles.has("admin") || roles.has("super_admin");
-  const isSuperAdmin = roles.has("super_admin");
-
-  switch (capability) {
-    case "jobs.read":
-    case "applications.read":
-      return roles.size > 0;
-    case "jobs.write":
-    case "applications.update":
-    case "employers.write":
-    case "documents.verify":
-      return isAdmin || roles.has("recruiter") || roles.has("hr");
-    case "employers.verify":
-    case "audit.read":
-      return isAdmin;
-    case "staff.manage":
-      return isAdmin || isSuperAdmin;
-    default:
+  return context.staffRoles.some((staffRole) => {
+    if (staffRole.active !== true || !isStaffRole(staffRole.role)) {
       return false;
-  }
+    }
+
+    return ROLE_CAPABILITIES[staffRole.role].includes(capability);
+  });
 }
 
 export function canManageEmployer(context: AdminContext) {

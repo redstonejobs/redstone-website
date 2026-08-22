@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { logAuditEvent } from "./audit";
 import {
+  hasCapability,
   canChangeApplicationStatus,
   canManageEmployer,
   canManageStaff,
@@ -12,7 +13,16 @@ import {
   requireStaff,
   requireSuperAdmin,
 } from "./auth";
-import { APPLICATION_STATUSES } from "./status";
+import { adminWarn } from "./logger";
+import {
+  assertValid,
+  validateEmployerPayload,
+  validateEmployerTransition,
+  validateJobForPublication,
+  validateJobPayload,
+  validateStaffRole,
+} from "./validation";
+import { canOverrideApplicationTransition, canTransitionApplicationStatus, isApplicationStatus } from "./workflow";
 
 function value(formData: FormData, key: string) {
   const entry = formData.get(key);
@@ -66,22 +76,6 @@ function jobPayload(formData: FormData, creatorId?: string) {
   const deadline = value(formData, "deadline");
   const status = value(formData, "status") || "draft";
 
-  if (!title) {
-    throw new Error("Job title is required.");
-  }
-
-  if (!slug) {
-    throw new Error("Slug is required.");
-  }
-
-  if (deadline) {
-    const deadlineDate = new Date(deadline);
-
-    if (Number.isNaN(deadlineDate.getTime())) {
-      throw new Error("Deadline is not a valid date.");
-    }
-  }
-
   const payload: Record<string, unknown> = {
     title,
     slug,
@@ -110,10 +104,11 @@ function jobPayload(formData: FormData, creatorId?: string) {
   }
 
   if (status === "published") {
+    assertValid(validateJobForPublication(payload));
     payload.published_at = new Date().toISOString();
   }
 
-  return payload;
+  return assertValid(validateJobPayload(payload));
 }
 
 export async function createJob(formData: FormData) {
@@ -140,7 +135,7 @@ export async function createJob(formData: FormData) {
 }
 
 export async function updateJob(id: string, formData: FormData) {
-  await requireAdmin();
+  const context = await requireAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").update(jobPayload(formData)).eq("id", id);
 
@@ -148,7 +143,7 @@ export async function updateJob(id: string, formData: FormData) {
     throw new Error("Unable to update job. Check required fields and your permissions.");
   }
 
-  await logAuditEvent(await requireAdmin(), {
+  await logAuditEvent(context, {
     action: "job_updated",
     entityType: "job",
     entityId: id,
@@ -160,10 +155,29 @@ export async function updateJob(id: string, formData: FormData) {
 
 export async function setJobStatus(id: string, status: string) {
   const context = await requireAdmin();
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to update jobs.");
+  }
+
+  if (!["draft", "published", "paused", "closed", "archived"].includes(status)) {
+    throw new Error("Invalid job status.");
+  }
+
   const supabase = await createClient();
   const payload: Record<string, unknown> = { status };
 
   if (status === "published") {
+    const { data: job, error: jobError } = await supabase
+      .from("jobs")
+      .select("title, slug, country, description, number_of_vacancies, deadline")
+      .eq("id", id)
+      .maybeSingle<Record<string, unknown>>();
+
+    if (jobError || !job) {
+      throw new Error("Unable to validate this job for publication.");
+    }
+
+    assertValid(validateJobForPublication(job));
     payload.published_at = new Date().toISOString();
   }
 
@@ -184,7 +198,13 @@ export async function setJobStatus(id: string, status: string) {
 export async function duplicateJob(id: string) {
   const context = await requireAdmin();
   const supabase = await createClient();
-  const { data: job, error } = await supabase.from("jobs").select("*").eq("id", id).maybeSingle();
+  const { data: job, error } = await supabase
+    .from("jobs")
+    .select(
+      "title, slug, employer_id, country, city, category, job_type, skill_level, description, salary_min, salary_max, currency, salary_period, number_of_vacancies, deadline, visa_sponsorship, accommodation, transport, meals"
+    )
+    .eq("id", id)
+    .maybeSingle();
 
   if (error || !job) {
     throw new Error("Unable to duplicate job.");
@@ -210,30 +230,70 @@ export async function duplicateJob(id: string) {
 export async function updateApplicationStatus(id: string, formData: FormData) {
   const context = await requireStaff();
   const status = value(formData, "status");
+  const overrideReason = value(formData, "override_reason");
 
-  if (!canChangeApplicationStatus(context) || !APPLICATION_STATUSES.includes(status as never)) {
+  if (!canChangeApplicationStatus(context) || !isApplicationStatus(status)) {
     throw new Error("You are not allowed to set this application status.");
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: application, error: applicationError } = await supabase
     .from("applications")
-    .update({
-      status,
-      reviewed_at: new Date().toISOString(),
-      assigned_staff_id: context.user.id,
-    })
-    .eq("id", id);
+    .select("id, status")
+    .eq("id", id)
+    .maybeSingle<Record<string, unknown>>();
 
-  if (error) {
+  if (applicationError || !application) {
+    throw new Error("Application was not found.");
+  }
+
+  const previousStatus = typeof application.status === "string" ? application.status : null;
+  const transitionAllowed = canTransitionApplicationStatus(previousStatus, status);
+  const overrideAllowed = !transitionAllowed && canOverrideApplicationTransition(context, overrideReason);
+
+  if (!transitionAllowed && !overrideAllowed) {
+    adminWarn("application status transition blocked", {
+      application_id: id,
+      actor_user_id: context.user.id,
+      previous_status: previousStatus,
+      requested_status: status,
+    });
+    throw new Error("That application status transition is not allowed. Super admin overrides require a reason.");
+  }
+
+  const { error: workflowError } = await supabase.rpc("admin_update_application_status", {
+    p_application_id: id,
+    p_new_status: status,
+    p_changed_by: context.user.id,
+    p_reason: overrideReason || null,
+    p_metadata: {
+      override: overrideAllowed,
+      actor_role: context.highestRole,
+    },
+  });
+
+  if (workflowError) {
+    adminWarn("application status workflow failed", {
+      application_id: id,
+      actor_user_id: context.user.id,
+      previous_status: previousStatus,
+      requested_status: status,
+      error: workflowError.message,
+    });
     throw new Error("Unable to update application status.");
   }
 
   await logAuditEvent(context, {
-    action: "application_status_changed",
+    action: overrideAllowed ? "application_status_override" : "application_status_changed",
     entityType: "application",
     entityId: id,
     description: `Application status changed to ${status}`,
+    metadata: {
+      previous_status: previousStatus,
+      new_status: status,
+      override: overrideAllowed,
+      override_reason: overrideAllowed ? overrideReason : null,
+    },
   });
 }
 
@@ -258,18 +318,34 @@ export async function assignApplication(id: string, formData: FormData) {
     throw new Error("Target staff member is not active.");
   }
 
-  const { error } = await supabase.from("applications").update({ assigned_staff_id: staffId }).eq("id", id);
+  const { data: assignmentRows, error: assignmentError } = await supabase.rpc("admin_assign_application", {
+    p_application_id: id,
+    p_assigned_staff_id: staffId,
+    p_changed_by: context.user.id,
+    p_reason: value(formData, "assignment_reason") || null,
+  });
 
-  if (error) {
+  if (assignmentError) {
+    adminWarn("application assignment workflow failed", {
+      application_id: id,
+      actor_user_id: context.user.id,
+      assigned_staff_id: staffId,
+      error: assignmentError.message,
+    });
     throw new Error("Unable to assign application.");
   }
+
+  const previousStaffId =
+    Array.isArray(assignmentRows) && typeof assignmentRows[0]?.previous_staff_id === "string"
+      ? assignmentRows[0].previous_staff_id
+      : null;
 
   await logAuditEvent(context, {
     action: "application_assigned",
     entityType: "application",
     entityId: id,
     description: "Application assigned",
-    metadata: { assigned_staff_id: staffId },
+    metadata: { previous_staff_id: previousStaffId, assigned_staff_id: staffId },
   });
 }
 
@@ -331,19 +407,7 @@ function employerPayload(formData: FormData) {
   const email = value(formData, "email");
   const website = value(formData, "website");
 
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Enter a valid employer email.");
-  }
-
-  if (website) {
-    try {
-      new URL(website);
-    } catch {
-      throw new Error("Enter a valid website URL.");
-    }
-  }
-
-  return {
+  return assertValid(validateEmployerPayload({
     company_name: value(formData, "company_name"),
     registration_number: value(formData, "registration_number") || null,
     website: website || null,
@@ -354,9 +418,9 @@ function employerPayload(formData: FormData) {
     address: value(formData, "address") || null,
     description: value(formData, "description") || null,
     verification_status: value(formData, "verification_status") || "pending",
-    is_active: formData.get("is_active") !== "off",
+    is_active: checkbox(formData, "is_active"),
     owner_user_id: uuidValue(formData, "owner_user_id"),
-  };
+  }));
 }
 
 export async function createEmployer(formData: FormData) {
@@ -406,10 +470,14 @@ export async function setEmployerState(id: string, state: "verified" | "rejected
   requireConfirmation(formData);
   const context = await requireAdmin();
   const supabase = await createClient();
-  const current = await supabase.from("employers").select("id").eq("id", id).maybeSingle();
+  const current = await supabase.from("employers").select("id, verification_status, is_active").eq("id", id).maybeSingle();
 
   if (!current.data) {
     throw new Error("Employer was not found.");
+  }
+
+  if (state === "verified" || state === "rejected") {
+    assertValid(validateEmployerTransition(String(current.data.verification_status ?? "pending"), state));
   }
 
   const payload =
@@ -502,18 +570,16 @@ export async function assignStaffRole(targetUserId: string, formData: FormData) 
     throw new Error("You are not allowed to assign this role.");
   }
 
-  if (!["staff", "moderator", "recruiter", "hr", "finance", "admin", "super_admin"].includes(role)) {
-    throw new Error("Invalid role.");
-  }
+  const validRole = assertValid(validateStaffRole(role));
 
-  if (role === "super_admin") {
+  if (validRole === "super_admin") {
     await requireSuperAdmin();
   }
 
   const supabase = await createClient();
   const { error } = await supabase.from("staff_roles").insert({
     user_id: targetUserId,
-    role,
+    role: validRole,
     active: true,
   });
 
@@ -524,8 +590,8 @@ export async function assignStaffRole(targetUserId: string, formData: FormData) 
   await logAuditEvent(context, {
     action: "staff_role_assigned",
     entityType: "staff_role",
-    description: `Assigned ${role}`,
-    metadata: { target_user_id: targetUserId, role },
+    description: `Assigned ${validRole}`,
+    metadata: { target_user_id: targetUserId, role: validRole },
   });
 }
 

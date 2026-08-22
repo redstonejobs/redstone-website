@@ -87,7 +87,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
       </Panel>
 
       <Panel title="Status Update Control">
-        <form action={updateApplicationStatus.bind(null, id)} className="flex flex-col gap-3 sm:flex-row">
+        <form action={updateApplicationStatus.bind(null, id)} className="grid gap-3 md:grid-cols-[minmax(180px,240px)_1fr_auto]">
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
             New Status
             <select name="status" defaultValue={textValue(application, ["status"], "submitted")} className="min-h-11 rounded-md border border-slate-300 bg-white px-3">
@@ -98,6 +98,14 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
               ))}
             </select>
           </label>
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Override Reason
+            <input
+              name="override_reason"
+              className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-normal"
+              placeholder="Required only for super admin overrides"
+            />
+          </label>
           <button type="submit" className="self-end rounded-md bg-[#071A3D] px-4 py-3 text-sm font-semibold text-white">
             Update Status
           </button>
@@ -105,7 +113,7 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
       </Panel>
 
       <Panel title="Assign Staff">
-        <form action={assignApplication.bind(null, id)} className="flex flex-col gap-3 sm:flex-row">
+        <form action={assignApplication.bind(null, id)} className="grid gap-3 md:grid-cols-[minmax(220px,320px)_1fr_auto]">
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
             Staff User ID
             <select name="assigned_staff_id" className="min-h-11 rounded-md border border-slate-300 bg-white px-3">
@@ -115,6 +123,10 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            Assignment Reason
+            <input name="assignment_reason" className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-normal" />
           </label>
           <button type="submit" className="self-end rounded-md bg-[#071A3D] px-4 py-3 text-sm font-semibold text-white">
             Assign
@@ -130,8 +142,11 @@ export default async function ApplicationDetailPage({ params }: PageProps) {
             <ol className="space-y-3">
               {history.rows.map((item: Row) => (
                 <li key={textValue(item, ["id"])} className="border-l-2 border-[#D4AF37] pl-3">
-                  <p className="text-sm font-semibold text-[#071A3D]">{textValue(item, ["status", "new_status"])}</p>
+                  <p className="text-sm font-semibold text-[#071A3D]">
+                    {textValue(item, ["previous_status"], "Not set")} to {textValue(item, ["new_status", "status"])}
+                  </p>
                   <p className="text-xs text-slate-500">{dateText(item.created_at)}</p>
+                  {item.reason ? <p className="mt-1 text-xs text-slate-600">{textValue(item, ["reason"])}</p> : null}
                 </li>
               ))}
             </ol>

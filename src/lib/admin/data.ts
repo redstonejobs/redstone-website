@@ -288,25 +288,25 @@ export async function getDashboardData() {
     countRows("applications", { status: "deployed" }),
     supabase
       .from("applications")
-      .select("*")
+      .select("id, status, candidate_id, job_id, assigned_staff_id, submitted_at, reviewed_at, created_at")
       .order("created_at", { ascending: false })
       .limit(6)
       .returns<Row[]>(),
     supabase
       .from("jobs")
-      .select("*")
+      .select("id, title, status, country, city, deadline, created_at")
       .order("created_at", { ascending: false })
       .limit(6)
       .returns<Row[]>(),
     supabase
       .from("application_documents")
-      .select("*")
+      .select("id, application_id, file_name, document_type, verification_status, verified_by, created_at")
       .order("created_at", { ascending: false })
       .limit(6)
       .returns<Row[]>(),
     supabase
       .from("employers")
-      .select("*")
+      .select("id, company_name, verification_status, country, city, is_active, created_at")
       .order("created_at", { ascending: false })
       .limit(6)
       .returns<Row[]>(),
@@ -316,7 +316,7 @@ export async function getDashboardData() {
       .is("assigned_staff_id", null),
     supabase
       .from("jobs")
-      .select("*")
+      .select("id, title, status, country, city, deadline")
       .gte("deadline", new Date().toISOString().slice(0, 10))
       .lte("deadline", new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
       .order("deadline", { ascending: true })
@@ -324,13 +324,13 @@ export async function getDashboardData() {
       .returns<Row[]>(),
     supabase
       .from("admin_audit_logs")
-      .select("*")
+      .select("id, actor_user_id, actor_role, action, entity_type, entity_id, description, created_at")
       .order("created_at", { ascending: false })
       .limit(6)
       .returns<Row[]>(),
     supabase
       .from("staff_roles")
-      .select("*")
+      .select("id, user_id, role, active, created_at")
       .eq("active", true)
       .limit(8)
       .returns<Row[]>(),
