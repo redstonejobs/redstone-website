@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
   const supabase = createClient();
 
   const [email, setEmail] = useState("");
@@ -41,7 +43,8 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.assign("/admin");
+    router.replace("/admin");
+    router.refresh();
   }
 
   return (

@@ -1,190 +1,162 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
-
-type Profile = {
-  full_name: string | null;
-  profile_type: string | null;
-  is_active: boolean | null;
-};
-
-type StaffRole = {
-  role: string | null;
-  active: boolean | null;
-};
-
-const ADMIN_ROLES = new Set(["admin", "super_admin"]);
-
-function redirectWithLog(reason: string, destination: string): never {
-  console.log("[admin auth] redirect", {
-    reason,
-    destination,
-  });
-
-  redirect(destination);
-}
+import Link from "next/link";
+import { AdminTable } from "@/components/admin/admin-table";
+import { EmptyState } from "@/components/admin/empty-state";
+import { ErrorState } from "@/components/admin/error-state";
+import { MetricCard } from "@/components/admin/metric-card";
+import { QuickActions } from "@/components/admin/quick-actions";
+import { AdminSection } from "@/components/admin/section";
+import { StatusBadge } from "@/components/admin/status-badge";
+import { getDashboardData } from "@/lib/admin/data";
+import { dateText, numberValue, textValue } from "@/lib/admin/format";
+import { labelForStatus } from "@/lib/admin/status";
+import type { Row } from "@/lib/admin/types";
 
 export default async function AdminPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  console.log("[admin auth] authenticated user", {
-    id: user?.id ?? null,
-    email: user?.email ?? null,
-    error: userError?.message ?? null,
-  });
-
-  if (!user) {
-    redirectWithLog("No authenticated Supabase user", "/login");
-  }
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("full_name, profile_type, is_active")
-    .eq("id", user.id)
-    .maybeSingle<Profile>();
-
-  console.log("[admin auth] profile query", {
-    error: error?.message ?? null,
-    data: profile,
-  });
-
-  if (error || !profile) {
-    redirectWithLog(
-      error ? "Profile query failed" : "No profile row found",
-      "/"
-    );
-  }
-
-  const { data: staffRoles, error: staffRolesError } = await supabase
-    .from("staff_roles")
-    .select("role, active")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .returns<StaffRole[]>();
-
-  console.log("[admin auth] staff_roles query", {
-    error: staffRolesError?.message ?? null,
-    data: staffRoles,
-  });
-
-  if (staffRolesError) {
-    redirectWithLog("Staff role query failed", "/");
-  }
-
-  const profileIsActive = profile.is_active === true;
-  const hasProfileAdminRole =
-    profileIsActive &&
-    profile.profile_type !== null &&
-    ADMIN_ROLES.has(profile.profile_type);
-  const hasStaffAdminRole =
-    staffRoles?.some(
-      (staffRole) =>
-        staffRole.active === true &&
-        staffRole.role !== null &&
-        ADMIN_ROLES.has(staffRole.role)
-    ) ?? false;
-
-  if (!profileIsActive) {
-    redirectWithLog("Profile is not active", "/");
-  }
-
-  if (!hasProfileAdminRole) {
-    redirectWithLog("Profile type is not admin or super_admin", "/");
-  }
-
-  if (!hasStaffAdminRole) {
-    redirectWithLog("No active admin or super_admin staff role", "/");
-  }
-
-  console.log("[admin auth] access granted", {
-    userId: user.id,
-    profileType: profile.profile_type,
-  });
+  const dashboard = await getDashboardData();
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <header className="bg-[#071A3D] px-6 py-6 text-white">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[#D4AF37]">
-            Red Stone Employment Agency
-          </p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#B8860B]">Operations</p>
+        <h1 className="text-3xl font-bold text-[#071A3D]">Administration Dashboard</h1>
+        <p className="max-w-3xl text-sm text-slate-600">
+          Live recruitment metrics and queues from the Red Stone Supabase database.
+        </p>
+      </div>
 
-          <h1 className="mt-2 text-3xl font-bold">
-            Administration Dashboard
-          </h1>
+      {dashboard.errors.length > 0 ? (
+        <ErrorState message="Some dashboard sections could not be loaded. Counts marked unavailable are not fabricated." />
+      ) : null}
 
-          <p className="mt-2 text-sm text-slate-300">
-            Signed in as {user.email}
-          </p>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {dashboard.metrics.map((metric) => (
+          <MetricCard key={metric.label} metric={metric} />
+        ))}
+      </div>
 
-          <p className="mt-1 text-sm text-[#D4AF37]">
-            Role: {profile.profile_type}
-          </p>
-        </div>
-      </header>
+      <AdminSection title="Admin Quick Actions">
+        <QuickActions />
+      </AdminSection>
 
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <DashboardCard title="Jobs" value="0" />
-          <DashboardCard title="Applications" value="0" />
-          <DashboardCard title="Candidates" value="0" />
-          <DashboardCard title="Employers" value="0" />
-        </div>
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <AdminSection title="Recent Applications" description="Latest candidate submissions and case activity.">
+          <AdminTable
+            columns={["Candidate", "Job", "Destination", "Status", "Submitted"]}
+            rows={dashboard.recentApplications}
+            emptyTitle="No recent applications"
+            emptyMessage="Applications will appear here when candidates submit them."
+            renderRow={(application: Row) => {
+              return (
+                <tr key={textValue(application, ["id"])}>
+                  <td className="px-4 py-3 font-medium text-[#071A3D]">
+                    {textValue(application, ["candidate_name", "candidate_id"], "Candidate")}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {textValue(application, ["job_title", "job_id"], "Job not set")}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {textValue(application, ["country", "destination", "city"], "Destination not set")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={textValue(application, ["status"], "draft")} />
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {dateText(application.submitted_at ?? application.created_at)}
+                  </td>
+                </tr>
+              );
+            }}
+          />
+        </AdminSection>
 
-        <div className="mt-8 rounded-2xl bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-[#071A3D]">
-            Welcome to Red Stone
-          </h2>
-
-          <p className="mt-3 text-slate-600">
-            The secure administration system is connected to Supabase and your
-            administrator account has been authenticated successfully.
-          </p>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <AdminLink title="Manage Jobs" description="Create and manage vacancies." />
-            <AdminLink title="Applications" description="Review candidate applications." />
-            <AdminLink title="Candidates" description="Manage candidate records." />
-            <AdminLink title="Employers" description="Manage employer accounts." />
-            <AdminLink title="Documents" description="Review uploaded documents." />
-            <AdminLink title="Staff" description="Manage Red Stone staff access." />
+        <AdminSection title="Recruitment Pipeline" description="Current application counts by status.">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="space-y-3">
+              {dashboard.pipeline.map((item) => (
+                <div key={item.status} className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-slate-600">{labelForStatus(item.status)}</span>
+                  <span className="font-semibold text-[#071A3D]">
+                    {item.count === null ? "Unavailable" : item.count}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-    </main>
-  );
-}
+        </AdminSection>
+      </div>
 
-function DashboardCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm">
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      <p className="mt-2 text-3xl font-bold text-[#071A3D]">{value}</p>
-    </div>
-  );
-}
+      <div className="grid gap-6 xl:grid-cols-2">
+        <AdminSection
+          title="Latest Jobs"
+          description="Newest vacancies by creation date."
+          action={<Link href="/admin/jobs" className="text-sm font-semibold text-[#071A3D]">View all</Link>}
+        >
+          <AdminTable
+            columns={["Title", "Country", "Employer", "Vacancies", "Status", "Deadline"]}
+            rows={dashboard.latestJobs}
+            emptyTitle="No jobs found"
+            emptyMessage="Create a job when a real vacancy is ready to manage."
+            renderRow={(job: Row) => (
+              <tr key={textValue(job, ["id"])}>
+                <td className="px-4 py-3 font-medium text-[#071A3D]">{textValue(job, ["title"])}</td>
+                <td className="px-4 py-3 text-slate-600">{textValue(job, ["country"])}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {textValue(job, ["employer_name", "employer_id"], "Employer not set")}
+                </td>
+                <td className="px-4 py-3 text-slate-600">{numberValue(job, ["number_of_vacancies", "vacancies"])}</td>
+                <td className="px-4 py-3"><StatusBadge status={textValue(job, ["status"], "draft")} /></td>
+                <td className="px-4 py-3 text-slate-600">{dateText(job.deadline)}</td>
+              </tr>
+            )}
+          />
+        </AdminSection>
 
-function AdminLink({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-xl border border-slate-200 p-5">
-      <h3 className="font-bold text-[#071A3D]">{title}</h3>
-      <p className="mt-2 text-sm text-slate-600">{description}</p>
+        <AdminSection title="Document Verification Queue">
+          {dashboard.documentQueue.length === 0 ? (
+            <EmptyState title="No pending documents" message="Pending private document checks will appear here." />
+          ) : (
+            <AdminTable
+              columns={["Candidate", "Type", "Status", "Uploaded"]}
+              rows={dashboard.documentQueue}
+              emptyTitle="No pending documents"
+              emptyMessage="Pending private document checks will appear here."
+              renderRow={(document: Row) => (
+                <tr key={textValue(document, ["id"])}>
+                  <td className="px-4 py-3 font-medium text-[#071A3D]">
+                    {textValue(document, ["candidate_name", "candidate_id"], "Candidate")}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{textValue(document, ["document_type", "type"])}</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={textValue(document, ["verification_status", "status"], "pending")} />
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{dateText(document.created_at)}</td>
+                </tr>
+              )}
+            />
+          )}
+        </AdminSection>
+      </div>
+
+      <AdminSection title="Employer Verification Queue">
+        <AdminTable
+          columns={["Company", "Country", "Status", "Created"]}
+          rows={dashboard.employerQueue}
+          emptyTitle="No employers awaiting review"
+          emptyMessage="Employer records will appear here when they are created."
+          renderRow={(employer: Row) => (
+            <tr key={textValue(employer, ["id"])}>
+              <td className="px-4 py-3 font-medium text-[#071A3D]">
+                {textValue(employer, ["company_name", "name"])}
+              </td>
+              <td className="px-4 py-3 text-slate-600">{textValue(employer, ["country"])}</td>
+              <td className="px-4 py-3">
+                <StatusBadge status={textValue(employer, ["verification_status", "status"], "pending")} />
+              </td>
+              <td className="px-4 py-3 text-slate-600">{dateText(employer.created_at)}</td>
+            </tr>
+          )}
+        />
+      </AdminSection>
     </div>
   );
 }
