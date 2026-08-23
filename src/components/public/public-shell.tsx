@@ -63,15 +63,16 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 
 function Footer() {
   const columns = [
-    ["Company", [["About", "/about"], ["Services", "/services"], ["How It Works", "/how-it-works"], ["Contact", "/contact"]]],
-    ["Jobs", [["All Jobs", "/jobs"], ["Skilled Jobs", "/skilled-jobs"], ["Unskilled Jobs", "/unskilled-jobs"], ["Countries", "/countries"]]],
-    ["Support", [["FAQ", "/faq"], ["Fraud Awareness", "/fraud-awareness"], ["Complaints", "/complaints"], ["Accessibility", "/accessibility"]]],
-    ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"], ["Cookie Policy", "/cookies"]]],
+    ["Company", [["About", "/about"], ["Mission & Vision", "/mission-vision"], ["Why Red Stone", "/why-red-stone"], ["Our Commitment", "/our-commitment"]]],
+    ["Candidates", [["All Jobs", "/jobs"], ["Apply", "/apply"], ["Candidate Protection", "/candidate-protection"], ["Recruitment Process", "/recruitment-process"], ["FAQ", "/faq"]]],
+    ["Employers", [["Employers", "/employers"], ["Employer Services", "/employer-services"], ["Register", "/employer/register"], ["Login", "/login"]]],
+    ["Trust & Safety", [["Ethical Recruitment", "/ethical-recruitment"], ["Compliance", "/compliance"], ["Safety", "/safety"], ["Official Channels", "/official-channels"], ["Fraud Awareness", "/fraud-awareness"], ["Complaints", "/complaints"]]],
+    ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"], ["Cookie Policy", "/cookies"], ["Accessibility", "/accessibility"]]],
   ] as const;
 
   return (
     <footer className="bg-[#071A3D] text-white">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.4fr_repeat(5,1fr)]">
         <div>
           <RedstoneLogo
             href="/"

@@ -3,14 +3,14 @@ import { CompanyInfoPage } from "@/components/public/company-info-page";
 import { getCompanyPage } from "@/lib/public/company-pages";
 import { canonical } from "@/lib/public/site";
 
-const page = getCompanyPage("about");
+const page = getCompanyPage("why-red-stone");
 
 export const metadata: Metadata = {
-  title: "About Us",
+  title: "Why Red Stone",
   description: page.description,
-  alternates: { canonical: canonical("/about") },
+  alternates: { canonical: canonical("/why-red-stone") },
 };
 
-export default function AboutPage() {
+export default function WhyRedStonePage() {
   return <CompanyInfoPage page={page} />;
 }
