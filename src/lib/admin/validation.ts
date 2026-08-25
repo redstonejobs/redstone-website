@@ -1,5 +1,6 @@
 import { isStaffRole } from "./constants";
 import { canTransitionEmployerVerification, isJobStatus } from "./workflow";
+import { resolveOccupationJobContent, type JobContentCandidate } from "@/lib/jobs/catalogue";
 
 export type ValidationResult<T> =
   | { ok: true; value: T }
@@ -69,7 +70,9 @@ export function validateJobPayload(payload: Record<string, unknown>) {
 
 export function validateJobForPublication(job: Record<string, unknown>) {
   const errors: string[] = [];
-  const requiredFields = ["title", "slug", "country", "category", "skill_level", "description", "vacancies", "application_deadline"];
+  const occupationContent = resolveOccupationJobContent(job as JobContentCandidate);
+  const description = stringValue(job.description) || (occupationContent.occupation ? occupationContent.full_description : "");
+  const requiredFields = ["title", "slug", "country", "category", "skill_level", "vacancies", "application_deadline"];
 
   for (const field of requiredFields) {
     if (!job[field]) {
@@ -77,7 +80,10 @@ export function validateJobForPublication(job: Record<string, unknown>) {
     }
   }
 
-  const description = stringValue(job.description);
+  if (!description) {
+    errors.push("description is required before publication.");
+  }
+
   if (description && description.length < 80) {
     errors.push("Job description must be at least 80 characters before publication.");
   }

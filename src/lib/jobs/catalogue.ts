@@ -5,6 +5,17 @@ export type CatalogueOption = {
 
 export type SkillLevelValue = "unskilled" | "semi_skilled" | "skilled" | "professional";
 
+export type OccupationContent = {
+  short_description: string;
+  full_description: string;
+  responsibilities: readonly string[];
+  requirements: readonly string[];
+  experience_guidance: string;
+  education_guidance: string;
+  language_guidance: string;
+  physical_requirements: string;
+};
+
 export type JobOccupation = {
   name: string;
   slug: string;
@@ -13,7 +24,7 @@ export type JobOccupation = {
   is_active: true;
   sort_order: number;
   keywords: readonly string[];
-};
+} & OccupationContent;
 
 export const ENTRY_LEVEL_JOB_CATEGORIES = [
   "General Support & Maintenance",
@@ -418,15 +429,22 @@ const occupationSkillOverrides = {
 } as const satisfies Partial<Record<string, SkillLevelValue>>;
 
 export const JOB_OCCUPATIONS = occupationGroups.flatMap((group, groupIndex) =>
-  group.occupations.map((name, occupationIndex) => ({
-    name,
-    slug: occupationSlug(name),
-    category: group.category,
-    skill_level: (occupationSkillOverrides as Partial<Record<string, SkillLevelValue>>)[name] ?? group.skill_level,
-    is_active: true,
-    sort_order: (groupIndex + 1) * 1000 + occupationIndex + 1,
-    keywords: [...group.keywords, ...occupationKeywords(name)],
-  })),
+  group.occupations.map((name, occupationIndex) => {
+    const occupation = {
+      name,
+      slug: occupationSlug(name),
+      category: group.category,
+      skill_level: (occupationSkillOverrides as Partial<Record<string, SkillLevelValue>>)[name] ?? group.skill_level,
+      is_active: true,
+      sort_order: (groupIndex + 1) * 1000 + occupationIndex + 1,
+      keywords: [...group.keywords, ...occupationKeywords(name)],
+    };
+
+    return {
+      ...occupation,
+      ...occupationContent(occupation),
+    };
+  }),
 ) as JobOccupation[];
 
 export const JOB_OCCUPATION_OPTIONS = JOB_OCCUPATIONS.map((occupation) => ({
@@ -455,6 +473,93 @@ export function occupationSearchTerms(query: string) {
   }
 
   return [...terms].slice(0, 20);
+}
+
+export type JobContentSource = "job" | "occupation" | "fallback";
+
+export type ResolvedJobContent = {
+  occupation: JobOccupation | null;
+  source: Record<keyof OccupationContent, JobContentSource>;
+} & OccupationContent;
+
+export type JobContentCandidate = {
+  title?: string | null;
+  slug?: string | null;
+  job_type?: string | null;
+  category?: string | null;
+  skill_level?: string | null;
+  short_description?: string | null;
+  description?: string | null;
+  responsibilities?: string | null;
+  requirements?: string | null;
+  experience_requirements?: string | null;
+  education_requirements?: string | null;
+  language_requirements?: string | null;
+  physical_requirements?: string | null;
+};
+
+export function findOccupationBySlug(slug: string | null | undefined) {
+  const normalized = typeof slug === "string" ? slug.trim() : "";
+  if (!normalized) return null;
+  return JOB_OCCUPATIONS.find((occupation) => occupation.slug === normalized) ?? null;
+}
+
+export function findOccupationForJob(job: JobContentCandidate) {
+  const title = normalizeSearchText(job.title ?? "");
+  const jobType = normalizeSearchText(job.job_type ?? "");
+  const slug = typeof job.slug === "string" ? job.slug.trim().toLowerCase() : "";
+  const exact = JOB_OCCUPATIONS.find((occupation) => {
+    const name = normalizeSearchText(occupation.name);
+    return name === title || name === jobType || slug.startsWith(occupation.slug);
+  });
+  if (exact) return exact;
+
+  const category = normalizeSearchText(job.category ?? "");
+  const categoryMatches = JOB_OCCUPATIONS.filter((occupation) => normalizeSearchText(occupation.category) === category);
+  if (categoryMatches.length === 1) return categoryMatches[0];
+
+  const skillLevel = job.skill_level ?? "";
+  return categoryMatches.find((occupation) => occupation.skill_level === skillLevel) ?? null;
+}
+
+export function resolveOccupationJobContent(job: JobContentCandidate): ResolvedJobContent {
+  const occupation = findOccupationForJob(job);
+  const fallback = genericOccupationContent(job.title || job.job_type || "This role");
+
+  return {
+    occupation,
+    short_description: resolveText(job.short_description, occupation?.short_description, fallback.short_description),
+    full_description: resolveText(job.description, occupation?.full_description, fallback.full_description),
+    responsibilities: resolveList(job.responsibilities, occupation?.responsibilities, fallback.responsibilities),
+    requirements: resolveList(job.requirements, occupation?.requirements, fallback.requirements),
+    experience_guidance: resolveText(job.experience_requirements, occupation?.experience_guidance, fallback.experience_guidance),
+    education_guidance: resolveText(job.education_requirements, occupation?.education_guidance, fallback.education_guidance),
+    language_guidance: resolveText(job.language_requirements, occupation?.language_guidance, fallback.language_guidance),
+    physical_requirements: resolveText(job.physical_requirements, occupation?.physical_requirements, fallback.physical_requirements),
+    source: {
+      short_description: sourceFor(job.short_description, occupation?.short_description),
+      full_description: sourceFor(job.description, occupation?.full_description),
+      responsibilities: sourceFor(job.responsibilities, occupation?.responsibilities?.join("\n")),
+      requirements: sourceFor(job.requirements, occupation?.requirements?.join("\n")),
+      experience_guidance: sourceFor(job.experience_requirements, occupation?.experience_guidance),
+      education_guidance: sourceFor(job.education_requirements, occupation?.education_guidance),
+      language_guidance: sourceFor(job.language_requirements, occupation?.language_guidance),
+      physical_requirements: sourceFor(job.physical_requirements, occupation?.physical_requirements),
+    },
+  };
+}
+
+export function occupationContentAsText(content: ResolvedJobContent | JobOccupation) {
+  return {
+    short_description: content.short_description,
+    description: "full_description" in content ? content.full_description : "",
+    responsibilities: listText(content.responsibilities),
+    requirements: listText(content.requirements),
+    experience_requirements: content.experience_guidance,
+    education_requirements: content.education_guidance,
+    language_requirements: content.language_guidance,
+    physical_requirements: content.physical_requirements,
+  };
 }
 
 export const SALARY_PERIODS = [
@@ -553,6 +658,195 @@ function occupationKeywords(name: string) {
   if (normalized.includes("cctv")) keywords.add("surveillance");
 
   return [...keywords];
+}
+
+function occupationContent(occupation: { name: string; category: string; skill_level: SkillLevelValue }): OccupationContent {
+  const { name, category, skill_level: skillLevel } = occupation;
+  const lowerCategory = category.toLowerCase();
+  const role = lowerRole(name);
+
+  if (skillLevel === "professional") {
+    return {
+      short_description: `${name} roles support ${lowerCategory} operations through professional practice, sound judgement, accurate records and collaboration with employers, colleagues and service users.`,
+      full_description: `${name} opportunities may involve professional planning, delivery, monitoring and reporting within ${lowerCategory} environments. Candidates are generally expected to apply relevant education, technical knowledge and workplace standards while adapting to employer procedures and destination requirements. The role may include reviewing information, solving work-related problems, maintaining accurate records, communicating with supervisors or clients and contributing to safe, ethical and efficient operations. Exact duties, seniority, reporting lines and compliance requirements vary by vacancy, employer and destination. Final selection normally depends on verified qualifications, relevant experience, references, interview performance and any professional recognition process that applies to the position.`,
+      responsibilities: [
+        `Plan and deliver ${role} duties according to employer procedures and professional standards`,
+        "Maintain accurate records, reports and documentation where required",
+        "Coordinate with supervisors, colleagues, clients or service users",
+        "Apply relevant technical knowledge to solve routine and complex work issues",
+        "Follow workplace safety, confidentiality and quality procedures",
+        "Use approved systems, tools or equipment responsibly",
+        "Support continuous improvement and reliable service delivery",
+      ],
+      requirements: [
+        "Relevant education, training or professional background may be required",
+        "Professional registration or recognition requirements may apply depending on the destination and employer",
+        "Ability to keep accurate records and follow documented procedures",
+        "Good judgement, communication and teamwork in a professional setting",
+        "Previous experience may be preferred by some employers",
+        "Requirements vary by vacancy, employer and destination",
+      ],
+      experience_guidance: "Previous experience in a related professional setting may be preferred, especially where the vacancy involves independent judgement, supervision, compliance duties or direct client service.",
+      education_guidance: "Relevant diploma, degree, professional training or equivalent background may be required depending on the employer, seniority of the role and destination recognition process.",
+      language_guidance: "Language requirements vary by employer and country. Candidates may need to demonstrate clear workplace communication and the ability to understand instructions, records and safety information.",
+      physical_requirements: physicalGuidance(name, category, skillLevel),
+    };
+  }
+
+  if (skillLevel === "skilled" || skillLevel === "semi_skilled") {
+    return {
+      short_description: `${name} roles apply practical trade, technical or supervisory skills to support safe, reliable and quality-focused ${lowerCategory} work for an employer.`,
+      full_description: `${name} opportunities may involve skilled practical work, equipment use, inspection, maintenance, production, service delivery or team coordination within ${lowerCategory} settings. Candidates are generally expected to follow employer procedures, work safely, protect tools and materials, report issues and maintain consistent quality. Some vacancies may require trade knowledge, equipment familiarity, diagnostic ability, documentation or supervision of junior workers. Exact duties and standards vary by employer, destination and worksite. Selection may consider relevant training, experience, references, safety awareness and the ability to communicate clearly with supervisors and team members.`,
+      responsibilities: [
+        `Carry out ${role} duties using approved methods, tools or equipment`,
+        "Inspect work areas, materials or equipment before and during tasks",
+        "Follow safety procedures, quality standards and supervisor instructions",
+        "Identify faults, risks or delays and report them promptly",
+        "Maintain tools, equipment and work areas in good order",
+        "Record completed work, incidents or maintenance needs where required",
+        "Support team coordination and efficient workflow",
+      ],
+      requirements: [
+        "Relevant trade training, technical knowledge or practical background may be required",
+        "Relevant trade training or certification may be required",
+        "Ability to use appropriate tools, equipment or systems safely",
+        "Strong safety awareness and attention to quality",
+        "Previous experience may be preferred by some employers",
+        "Requirements vary by vacancy, employer and destination",
+      ],
+      experience_guidance: "Hands-on experience in a similar role may be preferred, particularly where the work involves tools, equipment, diagnostics, maintenance, quality checks or supervision.",
+      education_guidance: "Trade training, vocational education, technical certificates or equivalent practical background may be considered depending on the vacancy and destination.",
+      language_guidance: "Language requirements vary by employer and country. Clear communication is usually important for safety instructions, work orders, reporting and teamwork.",
+      physical_requirements: physicalGuidance(name, category, skillLevel),
+    };
+  }
+
+  return {
+    short_description: `${name} roles support ${lowerCategory} operations by completing assigned tasks safely, reliably and according to employer instructions and workplace standards.`,
+    full_description: `${name} opportunities may involve routine support work in ${lowerCategory} environments where reliability, punctuality, cleanliness, teamwork and willingness to follow instructions are important. Duties are usually assigned by supervisors and may include preparing work areas, moving materials, cleaning, serving customers, supporting production, assisting skilled staff or keeping facilities organised. Candidates should be ready to learn employer procedures, follow safety and hygiene rules and communicate basic work updates when needed. Exact duties, shifts and workplace conditions vary by vacancy, employer and destination. Previous experience may help, but many entry-level roles focus on attitude, attendance, basic communication and physical readiness where relevant.`,
+    responsibilities: [
+      `Complete assigned ${role} tasks according to supervisor instructions`,
+      "Keep work areas clean, organised and safe",
+      "Handle materials, supplies or equipment carefully",
+      "Follow workplace safety, hygiene and conduct procedures",
+      "Report problems, hazards or maintenance concerns promptly",
+      "Work respectfully with supervisors, colleagues and customers where relevant",
+      "Maintain punctuality, reliability and a cooperative attitude",
+    ],
+    requirements: [
+      "Reliable, punctual and able to follow instructions",
+      "Good personal hygiene and professional conduct where relevant",
+      "Ability to work safely as part of a team",
+      "Basic communication for workplace instructions and reporting",
+      "Previous experience may be preferred by some employers",
+      "Requirements vary by vacancy, employer and destination",
+    ],
+    experience_guidance: "Previous experience may be helpful but is not always required for entry-level roles. Employers may place greater weight on reliability, attendance, willingness to learn and safe work habits.",
+    education_guidance: "Formal education requirements vary by employer and destination. Basic literacy, numeracy or task-specific training may be requested for some vacancies.",
+    language_guidance: "Language requirements vary by employer and country. Basic workplace communication is commonly useful for understanding instructions, safety information and supervisor feedback.",
+    physical_requirements: physicalGuidance(name, category, skillLevel),
+  };
+}
+
+function genericOccupationContent(title: string): OccupationContent {
+  return {
+    short_description: `${title} opportunities may involve employer-assigned duties carried out safely, reliably and according to confirmed vacancy requirements.`,
+    full_description: `${title} opportunities are assessed according to the confirmed vacancy details supplied by the employer. Candidates should review the role information carefully, keep their profile accurate and follow official recruitment instructions. Duties, experience expectations, education requirements, documents, schedules and workplace conditions vary by employer and destination. Red Stone presents available information for candidate planning, but final selection and any destination-specific process depend on the employer and relevant authorities. Candidates should avoid relying on unofficial promises and should use official communication channels throughout the recruitment process.`,
+    responsibilities: [
+      "Follow employer instructions and confirmed workplace procedures",
+      "Complete assigned duties safely and responsibly",
+      "Communicate work updates or concerns through the correct channels",
+      "Maintain professional conduct and accurate personal information",
+      "Prepare requested documents only through official recruitment guidance",
+    ],
+    requirements: [
+      "Requirements vary by vacancy, employer and destination",
+      "Candidates should keep identity, profile and supporting documents accurate",
+      "Previous experience may be preferred by some employers",
+      "Education or training requirements depend on the confirmed vacancy",
+    ],
+    experience_guidance: "Experience expectations vary by employer and vacancy. Candidates should rely on the confirmed job record and employer review process.",
+    education_guidance: "Education requirements vary by role, employer and destination. Any required documents should be confirmed through official channels.",
+    language_guidance: "Language requirements vary by employer and country. Candidates should be ready to follow workplace instructions and communicate clearly where required.",
+    physical_requirements: "Physical or occupational requirements vary by vacancy and workplace. Candidates should review confirmed employer requirements before applying.",
+  };
+}
+
+function physicalGuidance(name: string, category: string, skillLevel: SkillLevelValue) {
+  const text = normalizeSearchText(`${name} ${category}`);
+  const physical = [
+    "clean",
+    "housekeep",
+    "farm",
+    "forestry",
+    "construction",
+    "loader",
+    "warehouse",
+    "factory",
+    "driver",
+    "operator",
+    "kitchen",
+    "laundry",
+    "car wash",
+    "garbage",
+    "security",
+    "maintenance",
+    "caretaker",
+    "groundskeeper",
+    "porter",
+    "waiter",
+    "nurse",
+    "caregiver",
+    "technician",
+    "welder",
+    "plumber",
+    "electrician",
+    "carpenter",
+    "mason",
+    "scaffold",
+    "tiler",
+  ].some((word) => text.includes(word));
+
+  if (physical) {
+    return "The role may involve standing, walking, lifting, repetitive tasks, use of tools or work in active environments depending on the vacancy. Candidates should review confirmed employer requirements and disclose any relevant limitations honestly.";
+  }
+
+  if (skillLevel === "professional") {
+    return "Physical requirements are usually role-specific and may relate to workplace attendance, screen-based work, site visits or safe movement within employer facilities. Confirmed vacancy details should be reviewed before applying.";
+  }
+
+  return "Physical requirements vary by employer and worksite. Some roles may involve standing, lifting, carrying, cleaning or other routine manual tasks.";
+}
+
+function lowerRole(name: string) {
+  return name.replace(/\s*\([^)]*\)/g, "").toLowerCase();
+}
+
+function listText(items: readonly string[]) {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+
+function resolveText(jobText: string | null | undefined, occupationText: string | null | undefined, fallbackText: string) {
+  return jobText?.trim() || occupationText?.trim() || fallbackText;
+}
+
+function resolveList(jobText: string | null | undefined, occupationItems: readonly string[] | undefined, fallbackItems: readonly string[]) {
+  if (jobText?.trim()) return splitList(jobText);
+  if (occupationItems?.length) return occupationItems;
+  return fallbackItems;
+}
+
+function splitList(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-*]\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function sourceFor(jobText: string | null | undefined, occupationText: string | null | undefined) {
+  if (jobText?.trim()) return "job";
+  if (occupationText?.trim()) return "occupation";
+  return "fallback";
 }
 
 function normalizeSearchText(value: string) {

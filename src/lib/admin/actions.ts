@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { BULK_JOB_LIMIT, bulkJobCheckboxValue, bulkJobFieldValue } from "@/lib/admin/bulk-jobs";
 import { JOB_OCCUPATIONS } from "@/lib/jobs/catalogue";
 import { slugify } from "@/lib/public/countries";
@@ -17,6 +18,7 @@ import {
   requireSuperAdmin,
 } from "./auth";
 import { adminWarn } from "./logger";
+import { sendStaffWelcomeNotification } from "@/lib/admin/staff-notifications";
 import {
   assertValid,
   validateEmployerPayload,
@@ -25,6 +27,11 @@ import {
   validateJobPayload,
   validateStaffRole,
 } from "./validation";
+import {
+  cancelGlobalJobMatrixRun,
+  createGlobalJobMatrixRun,
+  processGlobalJobMatrixBatch,
+} from "./global-job-matrix";
 import { canOverrideApplicationTransition, canTransitionApplicationStatus, isApplicationStatus } from "./workflow";
 
 function value(formData: FormData, key: string) {
@@ -243,8 +250,8 @@ async function insertJobDocumentRequirementRows(rows: ReturnType<typeof document
   }
 }
 
-function optionalBulkNumber(formData: FormData, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
-  const raw = bulkJobFieldValue(formData, occupation, key);
+function optionalBulkNumber(formData: FormData, draftKey: string, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
+  const raw = bulkJobFieldValue(formData, draftKey, key);
 
   if (!raw) {
     return null;
@@ -259,8 +266,8 @@ function optionalBulkNumber(formData: FormData, occupation: (typeof JOB_OCCUPATI
   return parsed;
 }
 
-function optionalBulkInteger(formData: FormData, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
-  const raw = bulkJobFieldValue(formData, occupation, key);
+function optionalBulkInteger(formData: FormData, draftKey: string, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
+  const raw = bulkJobFieldValue(formData, draftKey, key);
 
   if (!raw) {
     return null;
@@ -275,8 +282,8 @@ function optionalBulkInteger(formData: FormData, occupation: (typeof JOB_OCCUPAT
   return parsed;
 }
 
-function requiredBulkPositiveInteger(formData: FormData, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
-  const parsed = Number(bulkJobFieldValue(formData, occupation, key));
+function requiredBulkPositiveInteger(formData: FormData, draftKey: string, occupation: (typeof JOB_OCCUPATIONS)[number], key: string) {
+  const parsed = Number(bulkJobFieldValue(formData, draftKey, key));
 
   if (!Number.isInteger(parsed) || parsed <= 0) {
     throw new Error(`${occupation.name}: ${key} must be greater than zero.`);
@@ -287,29 +294,37 @@ function requiredBulkPositiveInteger(formData: FormData, occupation: (typeof JOB
 
 function bulkJobPayload({
   formData,
+  draftKey,
   occupation,
   creatorId,
-  country,
-  employerId,
   sequence,
   nonce,
 }: {
   formData: FormData;
+  draftKey: string;
   occupation: (typeof JOB_OCCUPATIONS)[number];
   creatorId: string;
-  country: string;
-  employerId: string;
   sequence: number;
   nonce: number;
 }) {
-  const title = bulkJobFieldValue(formData, occupation, "title") || occupation.name;
-  const city = bulkJobFieldValue(formData, occupation, "city");
-  const deadline = bulkJobFieldValue(formData, occupation, "application_deadline");
-  const salaryTbd = bulkJobCheckboxValue(formData, occupation, "salary_tbd");
-  const salaryMin = optionalBulkNumber(formData, occupation, "salary_min");
-  const salaryMax = optionalBulkNumber(formData, occupation, "salary_max");
-  const currency = bulkJobFieldValue(formData, occupation, "currency");
-  const salaryConfirmed = !salaryTbd && bulkJobCheckboxValue(formData, occupation, "salary_confirmed");
+  const country = bulkJobFieldValue(formData, draftKey, "country");
+  const employerId = bulkJobFieldValue(formData, draftKey, "employer_id");
+  const title = bulkJobFieldValue(formData, draftKey, "title") || occupation.name;
+  const city = bulkJobFieldValue(formData, draftKey, "city");
+  const deadline = bulkJobFieldValue(formData, draftKey, "application_deadline");
+  const salaryTbd = bulkJobCheckboxValue(formData, draftKey, "salary_tbd");
+  const salaryMin = optionalBulkNumber(formData, draftKey, occupation, "salary_min");
+  const salaryMax = optionalBulkNumber(formData, draftKey, occupation, "salary_max");
+  const currency = bulkJobFieldValue(formData, draftKey, "currency");
+  const salaryConfirmed = !salaryTbd && bulkJobCheckboxValue(formData, draftKey, "salary_confirmed");
+
+  if (!country) {
+    throw new Error(`${occupation.name}: country is required.`);
+  }
+
+  if (!employerId) {
+    throw new Error(`${occupation.name}: employer is required.`);
+  }
 
   if (!deadline) {
     throw new Error(`${occupation.name}: application deadline is required.`);
@@ -335,56 +350,56 @@ function bulkJobPayload({
     employer_id: employerId,
     country,
     city: city || null,
-    category: bulkJobFieldValue(formData, occupation, "category") || occupation.category,
-    job_type: bulkJobFieldValue(formData, occupation, "job_type") || null,
-    skill_level: bulkJobFieldValue(formData, occupation, "skill_level") || occupation.skill_level,
-    short_description: bulkJobFieldValue(formData, occupation, "short_description") || null,
-    description: bulkJobFieldValue(formData, occupation, "description") || null,
-    responsibilities: bulkJobFieldValue(formData, occupation, "responsibilities") || null,
-    requirements: bulkJobFieldValue(formData, occupation, "requirements") || null,
-    experience_requirements: bulkJobFieldValue(formData, occupation, "experience_requirements") || null,
-    education_requirements: bulkJobFieldValue(formData, occupation, "education_requirements") || null,
-    language_requirements: bulkJobFieldValue(formData, occupation, "language_requirements") || null,
-    physical_requirements: bulkJobFieldValue(formData, occupation, "physical_requirements") || null,
-    additional_requirements: bulkJobFieldValue(formData, occupation, "additional_requirements") || null,
+    category: bulkJobFieldValue(formData, draftKey, "category") || occupation.category,
+    job_type: bulkJobFieldValue(formData, draftKey, "job_type") || null,
+    skill_level: bulkJobFieldValue(formData, draftKey, "skill_level") || occupation.skill_level,
+    short_description: bulkJobFieldValue(formData, draftKey, "short_description") || null,
+    description: bulkJobFieldValue(formData, draftKey, "description") || null,
+    responsibilities: bulkJobFieldValue(formData, draftKey, "responsibilities") || null,
+    requirements: bulkJobFieldValue(formData, draftKey, "requirements") || null,
+    experience_requirements: bulkJobFieldValue(formData, draftKey, "experience_requirements") || null,
+    education_requirements: bulkJobFieldValue(formData, draftKey, "education_requirements") || null,
+    language_requirements: bulkJobFieldValue(formData, draftKey, "language_requirements") || null,
+    physical_requirements: bulkJobFieldValue(formData, draftKey, "physical_requirements") || null,
+    additional_requirements: bulkJobFieldValue(formData, draftKey, "additional_requirements") || null,
     salary_min: salaryTbd ? null : salaryMin,
     salary_max: salaryTbd ? null : salaryMax,
     currency: salaryTbd ? currency || null : currency,
-    salary_period: bulkJobFieldValue(formData, occupation, "salary_period") || null,
+    salary_period: bulkJobFieldValue(formData, draftKey, "salary_period") || null,
     salary_confirmed: salaryConfirmed,
     salary_note: salaryTbd
-      ? bulkJobFieldValue(formData, occupation, "salary_note") || "To be confirmed by employer."
-      : bulkJobFieldValue(formData, occupation, "salary_note") || null,
-    contract_type: bulkJobFieldValue(formData, occupation, "contract_type") || null,
-    contract_duration_value: optionalBulkInteger(formData, occupation, "contract_duration_value"),
-    contract_duration_unit: bulkJobFieldValue(formData, occupation, "contract_duration_unit") || null,
-    contract_note: bulkJobFieldValue(formData, occupation, "contract_note") || null,
-    working_hours_per_week: optionalBulkNumber(formData, occupation, "working_hours_per_week"),
-    work_schedule: bulkJobFieldValue(formData, occupation, "work_schedule") || null,
-    overtime_note: bulkJobFieldValue(formData, occupation, "overtime_note") || null,
-    vacancies: requiredBulkPositiveInteger(formData, occupation, "vacancies"),
+      ? bulkJobFieldValue(formData, draftKey, "salary_note") || "To be confirmed by employer."
+      : bulkJobFieldValue(formData, draftKey, "salary_note") || null,
+    contract_type: bulkJobFieldValue(formData, draftKey, "contract_type") || null,
+    contract_duration_value: optionalBulkInteger(formData, draftKey, occupation, "contract_duration_value"),
+    contract_duration_unit: bulkJobFieldValue(formData, draftKey, "contract_duration_unit") || null,
+    contract_note: bulkJobFieldValue(formData, draftKey, "contract_note") || null,
+    working_hours_per_week: optionalBulkNumber(formData, draftKey, occupation, "working_hours_per_week"),
+    work_schedule: bulkJobFieldValue(formData, draftKey, "work_schedule") || null,
+    overtime_note: bulkJobFieldValue(formData, draftKey, "overtime_note") || null,
+    vacancies: requiredBulkPositiveInteger(formData, draftKey, occupation, "vacancies"),
     application_deadline: deadline,
-    visa_sponsorship: bulkJobCheckboxValue(formData, occupation, "visa_sponsorship"),
-    accommodation: bulkJobCheckboxValue(formData, occupation, "accommodation"),
-    transport: bulkJobCheckboxValue(formData, occupation, "transport"),
-    meals: bulkJobCheckboxValue(formData, occupation, "meals"),
-    sponsorship_status: bulkJobFieldValue(formData, occupation, "sponsorship_status") || "not_confirmed",
-    accommodation_status: bulkJobFieldValue(formData, occupation, "accommodation_status") || "not_confirmed",
-    meals_status: bulkJobFieldValue(formData, occupation, "meals_status") || "not_confirmed",
-    transport_status: bulkJobFieldValue(formData, occupation, "transport_status") || "not_confirmed",
-    medical_insurance_status: bulkJobFieldValue(formData, occupation, "medical_insurance_status") || "not_confirmed",
-    air_ticket_status: bulkJobFieldValue(formData, occupation, "air_ticket_status") || "not_confirmed",
-    training_status: bulkJobFieldValue(formData, occupation, "training_status") || "not_confirmed",
-    annual_leave_note: bulkJobFieldValue(formData, occupation, "annual_leave_note") || null,
-    other_benefits: bulkJobFieldValue(formData, occupation, "other_benefits") || null,
-    country_fee_override: optionalBulkNumber(formData, occupation, "country_fee_override"),
-    country_fee_override_currency: bulkJobFieldValue(formData, occupation, "country_fee_override_currency") || null,
-    country_fee_override_note: bulkJobFieldValue(formData, occupation, "country_fee_override_note") || null,
-    fee_relationship: bulkJobFieldValue(formData, occupation, "fee_relationship") || "not_confirmed",
-    processing_time_min: optionalBulkInteger(formData, occupation, "processing_time_min"),
-    processing_time_max: optionalBulkInteger(formData, occupation, "processing_time_max"),
-    processing_time_unit: bulkJobFieldValue(formData, occupation, "processing_time_unit") || null,
-    processing_time_note: bulkJobFieldValue(formData, occupation, "processing_time_note") || null,
+    visa_sponsorship: bulkJobCheckboxValue(formData, draftKey, "visa_sponsorship"),
+    accommodation: bulkJobCheckboxValue(formData, draftKey, "accommodation"),
+    transport: bulkJobCheckboxValue(formData, draftKey, "transport"),
+    meals: bulkJobCheckboxValue(formData, draftKey, "meals"),
+    sponsorship_status: bulkJobFieldValue(formData, draftKey, "sponsorship_status") || "not_confirmed",
+    accommodation_status: bulkJobFieldValue(formData, draftKey, "accommodation_status") || "not_confirmed",
+    meals_status: bulkJobFieldValue(formData, draftKey, "meals_status") || "not_confirmed",
+    transport_status: bulkJobFieldValue(formData, draftKey, "transport_status") || "not_confirmed",
+    medical_insurance_status: bulkJobFieldValue(formData, draftKey, "medical_insurance_status") || "not_confirmed",
+    air_ticket_status: bulkJobFieldValue(formData, draftKey, "air_ticket_status") || "not_confirmed",
+    training_status: bulkJobFieldValue(formData, draftKey, "training_status") || "not_confirmed",
+    annual_leave_note: bulkJobFieldValue(formData, draftKey, "annual_leave_note") || null,
+    other_benefits: bulkJobFieldValue(formData, draftKey, "other_benefits") || null,
+    country_fee_override: optionalBulkNumber(formData, draftKey, occupation, "country_fee_override"),
+    country_fee_override_currency: bulkJobFieldValue(formData, draftKey, "country_fee_override_currency") || null,
+    country_fee_override_note: bulkJobFieldValue(formData, draftKey, "country_fee_override_note") || null,
+    fee_relationship: bulkJobFieldValue(formData, draftKey, "fee_relationship") || "not_confirmed",
+    processing_time_min: optionalBulkInteger(formData, draftKey, occupation, "processing_time_min"),
+    processing_time_max: optionalBulkInteger(formData, draftKey, occupation, "processing_time_max"),
+    processing_time_unit: bulkJobFieldValue(formData, draftKey, "processing_time_unit") || null,
+    processing_time_note: bulkJobFieldValue(formData, draftKey, "processing_time_note") || null,
     status: "draft",
     created_by: creatorId,
     published_at: null,
@@ -448,66 +463,112 @@ export async function bulkCreateJobs(formData: FormData) {
     throw new Error("You are not allowed to create jobs.");
   }
 
-  const country = value(formData, "country");
-  const employerId = value(formData, "employer_id");
-  const occupationSlugs = formData
-    .getAll("occupation_slug")
+  const draftKeys = formData
+    .getAll("draft_key")
     .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
     .filter(Boolean);
 
-  if (!country) {
-    throw new Error("Country is required.");
+  if (draftKeys.length === 0) {
+    throw new Error("Select at least one country, employer and occupation.");
   }
 
-  if (!employerId) {
-    throw new Error("Employer is required.");
-  }
-
-  if (occupationSlugs.length === 0) {
-    throw new Error("Select at least one occupation.");
-  }
-
-  if (occupationSlugs.length > BULK_JOB_LIMIT) {
+  if (draftKeys.length > BULK_JOB_LIMIT) {
     throw new Error(`Create ${BULK_JOB_LIMIT} or fewer vacancies at a time.`);
   }
 
-  const selectedOccupations = occupationSlugs.map((slug) => {
+  const supabase = await createClient();
+  const countries = new Set(
+    formData
+      .getAll("draft_key")
+      .map((entry) => (typeof entry === "string" ? bulkJobFieldValue(formData, entry, "country") : ""))
+      .filter(Boolean)
+  );
+  const employerIds = [
+    ...new Set(
+      draftKeys
+        .map((draftKey) => bulkJobFieldValue(formData, draftKey, "employer_id"))
+        .filter(Boolean)
+    ),
+  ];
+  const [{ data: countryRows, error: countryError }, { data: employerRows, error: employerError }] = await Promise.all([
+    countries.size
+      ? supabase
+          .from("country_recruitment_settings")
+          .select("country_name, is_active")
+          .in("country_name", [...countries])
+          .returns<{ country_name: string; is_active: boolean | null }[]>()
+      : Promise.resolve({ data: [], error: null }),
+    employerIds.length
+      ? supabase
+          .from("employers")
+          .select("id, company_name, is_active, verification_status")
+          .in("id", employerIds)
+          .returns<{ id: string; company_name: string | null; is_active: boolean | null; verification_status: string | null }[]>()
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (countryError) {
+    throw new Error("Unable to validate selected countries.");
+  }
+
+  if (employerError) {
+    throw new Error("Unable to validate selected employers.");
+  }
+
+  const activeCountries = new Set((countryRows ?? []).filter((country) => country.is_active !== false).map((country) => country.country_name));
+  const validEmployers = new Map(
+    (employerRows ?? [])
+      .filter((employer) => employer.is_active === true && employer.verification_status === "verified")
+      .map((employer) => [employer.id, employer])
+  );
+
+  for (const country of countries) {
+    if (!activeCountries.has(country)) {
+      throw new Error(`${country} is not an active country configuration.`);
+    }
+  }
+
+  for (const employerId of employerIds) {
+    if (!validEmployers.has(employerId)) {
+      throw new Error("Selected employers must be active and verified before creating vacancies.");
+    }
+  }
+
+  const selectedDrafts = draftKeys.map((draftKey) => {
+    const slug = bulkJobFieldValue(formData, draftKey, "occupation_slug");
     const occupation = JOB_OCCUPATIONS.find((item) => item.slug === slug);
+
     if (!occupation) {
       throw new Error("A selected occupation is not in the approved catalogue.");
     }
-    return occupation;
+
+    return { draftKey, occupation };
   });
-
-  const supabase = await createClient();
-  const { data: employer, error: employerError } = await supabase
-    .from("employers")
-    .select("id, company_name, is_active")
-    .eq("id", employerId)
-    .maybeSingle<{ id: string; company_name: string | null; is_active: boolean | null }>();
-
-  if (employerError || !employer || employer.is_active !== true) {
-    throw new Error("Select an active employer before creating vacancies.");
-  }
 
   const nonce = Date.now();
   const createdIds: string[] = [];
   const createdTitles: string[] = [];
+  const skippedDuplicates: { title: unknown; duplicate_id: string | null; country: unknown; employer_id: unknown }[] = [];
 
-  for (const [index, occupation] of selectedOccupations.entries()) {
+  for (const [index, { draftKey, occupation }] of selectedDrafts.entries()) {
     const payload = bulkJobPayload({
       formData,
+      draftKey,
       occupation,
       creatorId: context.user.id,
-      country,
-      employerId,
       sequence: index,
       nonce,
     });
     const duplicateId = await findDuplicateBulkJob(payload);
 
     if (duplicateId) {
-      throw new Error(`${payload.title} already exists for this employer, country, vacancy count and deadline.`);
+      skippedDuplicates.push({
+        title: payload.title,
+        duplicate_id: duplicateId,
+        country: payload.country,
+        employer_id: payload.employer_id,
+      });
+      continue;
     }
 
     const { data, error } = await supabase.from("jobs").insert(payload).select("id, title").single();
@@ -517,7 +578,7 @@ export async function bulkCreateJobs(formData: FormData) {
     }
 
     const documentRows = documentRequirementsRowsFromText(
-      bulkJobFieldValue(formData, occupation, "document_requirements"),
+      bulkJobFieldValue(formData, draftKey, "document_requirements"),
       data.id
     );
     await insertJobDocumentRequirementRows(documentRows);
@@ -532,6 +593,8 @@ export async function bulkCreateJobs(formData: FormData) {
       description: "Draft job created through bulk workflow",
       metadata: {
         occupation_slug: occupation.slug,
+        country: payload.country,
+        employer_id: payload.employer_id,
         bulk_create: true,
       },
     });
@@ -540,17 +603,135 @@ export async function bulkCreateJobs(formData: FormData) {
   await logAuditEvent(context, {
     action: "bulk_job_creation",
     entityType: "job",
-    description: `Bulk draft job creation: ${createdIds.length} vacancies`,
+    description: `Bulk draft job creation: ${createdIds.length} created, ${skippedDuplicates.length} skipped`,
     metadata: {
       job_ids: createdIds,
       titles: createdTitles,
-      country,
-      employer_id: employerId,
-      employer_name: employer.company_name,
+      selected_combinations: draftKeys.length,
+      skipped_duplicates: skippedDuplicates,
+      employer_ids: employerIds,
+      countries: [...countries],
     },
   });
 
-  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(createdIds.join(","))}`);
+  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(createdIds.join(","))}&selected=${draftKeys.length}&created=${createdIds.length}&skipped=${skippedDuplicates.length}`);
+}
+
+export async function bulkUpdateJobCommonValues(formData: FormData) {
+  requireConfirmation(formData);
+  const context = await requireAdmin();
+
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to update jobs.");
+  }
+
+  const ids = requireSelectedJobIds(formData);
+  const payload: Record<string, unknown> = {};
+  const city = value(formData, "city");
+  const deadline = value(formData, "application_deadline");
+  const currency = value(formData, "currency");
+  const salaryPeriod = value(formData, "salary_period");
+  const contractType = value(formData, "contract_type");
+  const workingHours = optionalNumber(formData, "working_hours_per_week");
+  const vacanciesRaw = value(formData, "vacancies");
+
+  if (city) payload.city = city;
+  if (deadline) payload.application_deadline = deadline;
+  if (currency) payload.currency = currency;
+  if (salaryPeriod) payload.salary_period = salaryPeriod;
+  if (contractType) payload.contract_type = contractType;
+  if (workingHours !== null) payload.working_hours_per_week = workingHours;
+  if (vacanciesRaw) payload.vacancies = requiredPositiveInteger(formData, "vacancies");
+  if (checkbox(formData, "salary_tbd")) {
+    payload.salary_confirmed = false;
+    payload.salary_min = null;
+    payload.salary_max = null;
+    payload.salary_note = "To be confirmed by employer.";
+  }
+
+  for (const key of [
+    "sponsorship_status",
+    "accommodation_status",
+    "meals_status",
+    "transport_status",
+    "medical_insurance_status",
+    "air_ticket_status",
+    "processing_time_unit",
+  ]) {
+    const current = value(formData, key);
+    if (current) payload[key] = current;
+  }
+
+  const processingMin = optionalInteger(formData, "processing_time_min");
+  const processingMax = optionalInteger(formData, "processing_time_max");
+  if (processingMin !== null) payload.processing_time_min = processingMin;
+  if (processingMax !== null) payload.processing_time_max = processingMax;
+
+  if (Object.keys(payload).length === 0) {
+    throw new Error("Enter at least one common value to update.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("jobs").update(payload).in("id", ids);
+
+  if (error) {
+    throw new Error("Unable to update generated jobs.");
+  }
+
+  await logAuditEvent(context, {
+    action: "bulk_job_common_values_updated",
+    entityType: "job",
+    description: `Bulk common values updated for ${ids.length} vacancies`,
+    metadata: {
+      job_ids: ids,
+      fields: Object.keys(payload),
+    },
+  });
+
+  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(ids.join(","))}&updated=1`);
+}
+
+export async function createGlobalJobPublicationRun(formData: FormData) {
+  const context = await requireAdmin();
+
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to create jobs.");
+  }
+
+  const runId = await createGlobalJobMatrixRun(context, formData);
+  redirect(`/admin/jobs/bulk-create?global_run=${runId}`);
+}
+
+export async function processGlobalJobPublicationBatch(formData: FormData) {
+  const context = await requireAdmin();
+
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to create jobs.");
+  }
+
+  const runId = value(formData, "run_id");
+  if (!runId) {
+    throw new Error("Publication run is required.");
+  }
+
+  await processGlobalJobMatrixBatch(context, runId);
+  redirect(`/admin/jobs/bulk-create?global_run=${runId}`);
+}
+
+export async function cancelGlobalJobPublicationRun(formData: FormData) {
+  const context = await requireAdmin();
+
+  if (!hasCapability(context, "jobs.write")) {
+    throw new Error("You are not allowed to create jobs.");
+  }
+
+  const runId = value(formData, "run_id");
+  if (!runId) {
+    throw new Error("Publication run is required.");
+  }
+
+  await cancelGlobalJobMatrixRun(context, runId);
+  redirect(`/admin/jobs/bulk-create?global_run=${runId}`);
 }
 
 export async function updateJob(id: string, formData: FormData) {
@@ -1280,4 +1461,990 @@ export async function revokeStaffRole(roleId: string, formData: FormData) {
     entityId: roleId,
     description: `Revoked ${targetRole.role}`,
   });
+}
+
+export async function createStaffAccount(formData: FormData) {
+  const context = await requireAdmin();
+
+  /* ==========================================================
+     1. AUTHORIZATION
+  ========================================================== */
+
+  if (!canManageStaff(context)) {
+    throw new Error(
+      "You are not allowed to create staff accounts."
+    );
+  }
+
+  if (
+    formData.get("authorization_confirmed") !== "true"
+  ) {
+    throw new Error(
+      "Administrative authorization confirmation is required."
+    );
+  }
+
+  /* ==========================================================
+     2. IDENTITY & CONTACT INFORMATION
+  ========================================================== */
+
+  const fullName = value(
+    formData,
+    "full_name"
+  );
+
+  const email = value(
+    formData,
+    "email"
+  ).toLowerCase();
+
+  const phone = value(
+    formData,
+    "phone"
+  );
+
+  const identityNumber = value(
+    formData,
+    "identity_number"
+  );
+
+  const dateOfBirth = value(
+    formData,
+    "date_of_birth"
+  );
+
+  const gender = value(
+    formData,
+    "gender"
+  );
+
+  /* ==========================================================
+     3. EMPLOYMENT INFORMATION
+  ========================================================== */
+
+  const requestedRole = value(
+    formData,
+    "role"
+  );
+
+  const jobTitle = value(
+    formData,
+    "job_title"
+  );
+
+  const department = value(
+    formData,
+    "department"
+  );
+
+  const employmentType = value(
+    formData,
+    "employment_type"
+  );
+
+  const dutyStation = value(
+    formData,
+    "duty_station"
+  );
+
+  const appointmentDate = value(
+    formData,
+    "appointment_date"
+  );
+
+  const employmentStartDate = value(
+    formData,
+    "employment_start_date"
+  );
+
+  const reportingOfficer = value(
+    formData,
+    "reporting_officer"
+  );
+
+  /* ==========================================================
+     4. COMPENSATION & WORKING CONDITIONS
+  ========================================================== */
+
+  const salaryAmount =
+    optionalNumber(
+      formData,
+      "salary_amount"
+    );
+
+  const salaryCurrency = value(
+    formData,
+    "salary_currency"
+  ).toUpperCase();
+
+  const salaryPeriod = value(
+    formData,
+    "salary_period"
+  );
+
+  const workingDaysPerWeek =
+    optionalInteger(
+      formData,
+      "working_days_per_week"
+    );
+
+  const workingHoursPerDay =
+    optionalNumber(
+      formData,
+      "working_hours_per_day"
+    );
+
+  const workingHoursPerWeek =
+    optionalNumber(
+      formData,
+      "working_hours_per_week"
+    );
+
+  const workSchedule = value(
+    formData,
+    "work_schedule"
+  );
+
+  const probationPeriodMonths =
+    optionalInteger(
+      formData,
+      "probation_period_months"
+    );
+
+  /* ==========================================================
+     5. REQUIRED FIELD VALIDATION
+  ========================================================== */
+
+  if (!fullName) {
+    throw new Error(
+      "Full legal name is required."
+    );
+  }
+
+  if (
+    !email ||
+    !email.includes("@")
+  ) {
+    throw new Error(
+      "A valid official email address is required."
+    );
+  }
+
+  if (!phone) {
+    throw new Error(
+      "Staff mobile number is required."
+    );
+  }
+
+  if (!requestedRole) {
+    throw new Error(
+      "A staff role is required."
+    );
+  }
+
+  if (!jobTitle) {
+    throw new Error(
+      "Job title is required."
+    );
+  }
+
+  if (!department) {
+    throw new Error(
+      "Department is required."
+    );
+  }
+
+  if (!dutyStation) {
+    throw new Error(
+      "Duty station is required."
+    );
+  }
+
+  if (!employmentType) {
+    throw new Error(
+      "Employment type is required."
+    );
+  }
+
+  if (!employmentStartDate) {
+    throw new Error(
+      "Employment start date is required."
+    );
+  }
+
+  /* ==========================================================
+     6. ROLE & ENUM VALIDATION
+  ========================================================== */
+
+  const validRole = assertValid(
+    validateStaffRole(requestedRole)
+  );
+
+  if (validRole === "super_admin") {
+    await requireSuperAdmin();
+  }
+
+  const allowedEmploymentTypes =
+    new Set([
+      "full_time",
+      "part_time",
+      "contract",
+      "temporary",
+      "intern",
+    ]);
+
+  if (
+    !allowedEmploymentTypes.has(
+      employmentType
+    )
+  ) {
+    throw new Error(
+      "Invalid employment type."
+    );
+  }
+
+  const allowedGenders =
+    new Set([
+      "female",
+      "male",
+      "other",
+      "prefer_not_to_say",
+    ]);
+
+  if (
+    gender &&
+    !allowedGenders.has(gender)
+  ) {
+    throw new Error(
+      "Invalid gender selection."
+    );
+  }
+
+  const allowedSalaryPeriods =
+    new Set([
+      "hourly",
+      "daily",
+      "weekly",
+      "monthly",
+      "annual",
+    ]);
+
+  if (
+    salaryPeriod &&
+    !allowedSalaryPeriods.has(
+      salaryPeriod
+    )
+  ) {
+    throw new Error(
+      "Invalid salary period."
+    );
+  }
+
+  const allowedWorkSchedules =
+    new Set([
+      "monday_friday",
+      "monday_saturday",
+      "shift",
+      "rotational",
+      "flexible",
+      "remote",
+      "hybrid",
+    ]);
+
+  if (
+    workSchedule &&
+    !allowedWorkSchedules.has(
+      workSchedule
+    )
+  ) {
+    throw new Error(
+      "Invalid work schedule."
+    );
+  }
+
+  if (
+    salaryAmount !== null &&
+    !salaryCurrency
+  ) {
+    throw new Error(
+      "Salary currency is required when salary is entered."
+    );
+  }
+
+  if (
+    salaryAmount !== null &&
+    !salaryPeriod
+  ) {
+    throw new Error(
+      "Salary period is required when salary is entered."
+    );
+  }
+
+  if (
+    workingDaysPerWeek !== null &&
+    (
+      workingDaysPerWeek < 1 ||
+      workingDaysPerWeek > 7
+    )
+  ) {
+    throw new Error(
+      "Working days per week must be between 1 and 7."
+    );
+  }
+
+  if (
+    workingHoursPerDay !== null &&
+    (
+      workingHoursPerDay <= 0 ||
+      workingHoursPerDay > 24
+    )
+  ) {
+    throw new Error(
+      "Working hours per day must be greater than 0 and no more than 24."
+    );
+  }
+
+  if (
+    workingHoursPerWeek !== null &&
+    (
+      workingHoursPerWeek <= 0 ||
+      workingHoursPerWeek > 168
+    )
+  ) {
+    throw new Error(
+      "Working hours per week must be greater than 0 and no more than 168."
+    );
+  }
+
+  if (
+    probationPeriodMonths !== null &&
+    (
+      probationPeriodMonths < 0 ||
+      probationPeriodMonths > 24
+    )
+  ) {
+    throw new Error(
+      "Probation period must be between 0 and 24 months."
+    );
+  }
+
+  /* ==========================================================
+     7. PRIVILEGED SUPABASE CLIENT
+  ========================================================== */
+
+  const adminClient =
+    createAdminClient();
+
+  const siteUrl =
+    process.env
+      .NEXT_PUBLIC_SITE_URL
+      ?.replace(/\/+$/, "") ||
+    "http://localhost:3000";
+
+  /* ==========================================================
+     8. CREATE SECURE STAFF AUTH ACCOUNT
+
+     Supabase creates the authentication user and produces
+     the secure invite/activation URL.
+
+     Supabase does NOT send the invitation email here.
+     Red Stone sends the activation URL through Resend later.
+  ========================================================== */
+
+  const {
+    data: invitation,
+    error: invitationError,
+  } =
+    await adminClient
+      .auth
+      .admin
+      .generateLink({
+        type: "invite",
+        email,
+
+        options: {
+          redirectTo:
+            `${siteUrl}/auth/callback?next=/login`,
+
+          data: {
+            full_name: fullName,
+            phone: phone || null,
+            profile_type: "staff",
+          },
+        },
+      });
+
+  if (
+    invitationError ||
+    !invitation.user ||
+    !invitation.properties
+      ?.action_link
+  ) {
+    const message =
+      invitationError?.message ||
+      "Unable to create the staff login account or secure activation link.";
+
+    const normalizedMessage =
+      message.toLowerCase();
+
+    if (
+      normalizedMessage.includes(
+        "already"
+      ) ||
+      normalizedMessage.includes(
+        "registered"
+      ) ||
+      normalizedMessage.includes(
+        "exists"
+      )
+    ) {
+      throw new Error(
+        "An account with this email address already exists."
+      );
+    }
+
+    throw new Error(message);
+  }
+
+  const userId =
+    invitation.user.id;
+
+  const activationUrl =
+    invitation.properties
+      .action_link;
+
+  let provisioningSucceeded =
+    false;
+
+  try {
+    /* ========================================================
+       9. CREATE OFFICIAL PERSONNEL PROFILE
+    ======================================================== */
+
+    const {
+      error: profileError,
+    } =
+      await adminClient
+        .from("profiles")
+        .upsert(
+          {
+            id: userId,
+
+            full_name:
+              fullName,
+
+            phone:
+              phone || null,
+
+            identity_number:
+              identityNumber ||
+              null,
+
+            date_of_birth:
+              dateOfBirth || null,
+
+            gender:
+              gender || null,
+
+            profile_type:
+              "staff",
+
+            is_active:
+              true,
+
+            job_title:
+              jobTitle,
+
+            department,
+
+            employment_type:
+              employmentType,
+
+            duty_station:
+              dutyStation,
+
+            appointment_date:
+              appointmentDate ||
+              null,
+
+            employment_start_date:
+              employmentStartDate,
+
+            reporting_officer:
+              reportingOfficer ||
+              null,
+
+            salary_amount:
+              salaryAmount,
+
+            salary_currency:
+              salaryAmount !== null
+                ? salaryCurrency ||
+                  null
+                : null,
+
+            salary_period:
+              salaryAmount !== null
+                ? salaryPeriod ||
+                  null
+                : null,
+
+            working_days_per_week:
+              workingDaysPerWeek,
+
+            working_hours_per_day:
+              workingHoursPerDay,
+
+            working_hours_per_week:
+              workingHoursPerWeek,
+
+            work_schedule:
+              workSchedule || null,
+
+            probation_period_months:
+              probationPeriodMonths,
+
+            updated_at:
+              new Date()
+                .toISOString(),
+          },
+          {
+            onConflict: "id",
+          }
+        );
+
+    if (profileError) {
+      throw new Error(
+        `Unable to create staff personnel profile: ${profileError.message}`
+      );
+    }
+
+    /* ========================================================
+       10. CREATE STAFF AUTHORIZATION ROLE
+    ======================================================== */
+
+    const {
+      data: existingRole,
+      error: roleLookupError,
+    } =
+      await adminClient
+        .from("staff_roles")
+        .select("id")
+        .eq(
+          "user_id",
+          userId
+        )
+        .eq(
+          "role",
+          validRole
+        )
+        .eq(
+          "active",
+          true
+        )
+        .maybeSingle();
+
+    if (roleLookupError) {
+      throw new Error(
+        `Unable to verify staff authorization: ${roleLookupError.message}`
+      );
+    }
+
+    if (!existingRole) {
+      const {
+        error: roleError,
+      } =
+        await adminClient
+          .from(
+            "staff_roles"
+          )
+          .insert({
+            user_id:
+              userId,
+
+            role:
+              validRole,
+
+            active:
+              true,
+          });
+
+      if (roleError) {
+        throw new Error(
+          `Unable to assign staff role: ${roleError.message}`
+        );
+      }
+    }
+
+    /* ========================================================
+       11. AUDIT ACCOUNT CREATION
+    ======================================================== */
+
+    await logAuditEvent(
+      context,
+      {
+        action:
+          "staff_account_created",
+
+        entityType:
+          "staff",
+
+        entityId:
+          userId,
+
+        description:
+          `Created staff personnel account for ${fullName}`,
+
+        metadata: {
+          target_user_id:
+            userId,
+
+          email,
+
+          role:
+            validRole,
+
+          job_title:
+            jobTitle,
+
+          department,
+
+          employment_type:
+            employmentType,
+
+          duty_station:
+            dutyStation,
+
+          appointment_date:
+            appointmentDate ||
+            null,
+
+          employment_start_date:
+            employmentStartDate,
+
+          gender:
+            gender || null,
+
+          salary_currency:
+            salaryAmount !==
+            null
+              ? salaryCurrency
+              : null,
+
+          salary_period:
+            salaryAmount !==
+            null
+              ? salaryPeriod
+              : null,
+
+          working_days_per_week:
+            workingDaysPerWeek,
+
+          working_hours_per_day:
+            workingHoursPerDay,
+
+          working_hours_per_week:
+            workingHoursPerWeek,
+
+          work_schedule:
+            workSchedule ||
+            null,
+
+          probation_period_months:
+            probationPeriodMonths,
+
+          activation_delivery:
+            "resend",
+        },
+      }
+    );
+
+    provisioningSucceeded =
+      true;
+  } finally {
+    /* ========================================================
+       12. ROLLBACK INCOMPLETE PROVISIONING
+
+       If personnel provisioning fails, remove any partially
+       created Red Stone records and authentication account.
+    ======================================================== */
+
+    if (
+      !provisioningSucceeded
+    ) {
+      try {
+        await adminClient
+          .from("staff_roles")
+          .delete()
+          .eq(
+            "user_id",
+            userId
+          );
+      } catch {
+        // Best-effort cleanup.
+      }
+
+      try {
+        await adminClient
+          .from("profiles")
+          .delete()
+          .eq(
+            "id",
+            userId
+          );
+      } catch {
+        // Best-effort cleanup.
+      }
+
+      try {
+        await adminClient
+          .auth
+          .admin
+          .deleteUser(
+            userId
+          );
+      } catch {
+        // Best-effort cleanup.
+      }
+    }
+  }
+
+  /* ==========================================================
+     13. LOAD DATABASE-GENERATED PERSONNEL IDENTIFIERS
+
+     staff_id, personnel_record_no and referral_code are
+     generated by the personnel database workflow.
+  ========================================================== */
+
+  let generatedStaffId:
+    string | null = null;
+
+  let generatedPersonnelRecordNo:
+    string | null = null;
+
+  let generatedReferralCode:
+    string | null = null;
+
+  try {
+    const {
+      data:
+        createdStaffRecord,
+      error:
+        identifierError,
+    } =
+      await adminClient
+        .from("profiles")
+        .select(
+          `
+          staff_id,
+          personnel_record_no,
+          referral_code
+          `
+        )
+        .eq(
+          "id",
+          userId
+        )
+        .maybeSingle<{
+          staff_id:
+            string | null;
+
+          personnel_record_no:
+            string | null;
+
+          referral_code:
+            string | null;
+        }>();
+
+    if (identifierError) {
+      adminWarn(
+        "staff_personnel_identifier_lookup_failed",
+        {
+          user_id:
+            userId,
+
+          email,
+
+          error:
+            identifierError
+              .message,
+        }
+      );
+    } else {
+      generatedStaffId =
+        createdStaffRecord
+          ?.staff_id ??
+        null;
+
+      generatedPersonnelRecordNo =
+        createdStaffRecord
+          ?.personnel_record_no ??
+        null;
+
+      generatedReferralCode =
+        createdStaffRecord
+          ?.referral_code ??
+        null;
+    }
+  } catch (error) {
+    adminWarn(
+      "staff_personnel_identifier_lookup_exception",
+      {
+        user_id:
+          userId,
+
+        email,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      }
+    );
+  }
+
+  /* ==========================================================
+     14. SEND ONE BRANDED RED STONE ACTIVATION EMAIL
+
+     The secure Supabase activation URL is included in the
+     Red Stone onboarding email sent through Resend.
+
+     Email failure is intentionally non-fatal because the
+     personnel account has already been successfully created.
+     The failure is logged for administrative follow-up.
+  ========================================================== */
+
+  try {
+    const notificationResult =
+      await sendStaffWelcomeNotification(
+        {
+          to:
+            email,
+
+          fullName,
+
+          activationUrl,
+
+          staffId:
+            generatedStaffId,
+
+          personnelRecordNo:
+            generatedPersonnelRecordNo,
+
+          referralCode:
+            generatedReferralCode,
+
+          jobTitle,
+
+          department,
+
+          dutyStation,
+
+          employmentType,
+
+          employmentStartDate,
+
+          appointmentDate:
+            appointmentDate ||
+            null,
+
+          reportingOfficer:
+            reportingOfficer ||
+            null,
+
+          role:
+            validRole,
+
+          workingDaysPerWeek,
+
+          workingHoursPerDay,
+
+          workingHoursPerWeek,
+
+          workSchedule:
+            workSchedule ||
+            null,
+
+          probationPeriodMonths,
+        }
+      );
+
+    if (
+      !notificationResult.sent
+    ) {
+      adminWarn(
+        "staff_activation_notification_failed",
+        {
+          user_id:
+            userId,
+
+          email,
+
+          reason:
+            notificationResult
+              .reason,
+        }
+      );
+    } else {
+      await logAuditEvent(
+        context,
+        {
+          action:
+            "staff_welcome_notification_sent",
+
+          entityType:
+            "staff",
+
+          entityId:
+            userId,
+
+          description:
+            `Sent secure staff onboarding and activation email to ${fullName}`,
+
+          metadata: {
+            target_user_id:
+              userId,
+
+            email,
+
+            delivery_provider:
+              "resend",
+
+            sender:
+              process.env
+                .RESEND_FROM_EMAIL ||
+              "noreply@redstone.co.ke",
+
+            message_id:
+              notificationResult
+                .messageId ??
+              null,
+          },
+        }
+      );
+    }
+  } catch (error) {
+    adminWarn(
+      "staff_activation_notification_exception",
+      {
+        user_id:
+          userId,
+
+        email,
+
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+      }
+    );
+  }
+
+  /* ==========================================================
+     15. OPEN OFFICIAL PERSONNEL RECORD
+  ========================================================== */
+
+  redirect(
+    `/admin/staff/${userId}/record`
+  );
 }

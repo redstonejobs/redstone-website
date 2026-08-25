@@ -5,7 +5,7 @@ import { JobCard } from "@/components/public/job-card";
 import { Band } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
 import { dateText } from "@/lib/admin/format";
-import { benefitStatusLabel, feeRelationshipLabel, skillLevelLabel } from "@/lib/jobs/catalogue";
+import { benefitStatusLabel, feeRelationshipLabel, occupationContentAsText, resolveOccupationJobContent, skillLevelLabel } from "@/lib/jobs/catalogue";
 import {
   COST_DISCLAIMER,
   INDEPENDENT_DOCUMENT_DISCLAIMER,
@@ -28,10 +28,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { job } = await getJobBySlug(slug);
   if (!job) return { title: "Job Not Found" };
+  const jobContent = occupationContentAsText(resolveOccupationJobContent(job));
   const title = `${job.title} Jobs in ${job.country ?? "International Markets"}`;
   return {
     title,
-    description: `${job.short_description || `View ${job.title} vacancy details and apply through ${SITE_NAME}.`}`,
+    description: jobContent.short_description || `View ${job.title} vacancy details and apply through ${SITE_NAME}.`,
     alternates: { canonical: canonical(`/jobs/${slug}`) },
     openGraph: { title, description: `Published job opportunity from ${SITE_NAME}.` },
   };
@@ -50,6 +51,7 @@ export default async function JobDetailPage({ params }: Props) {
   const existingApplication = applications?.[0] as { id?: string; status?: string } | undefined;
   const related = await getPublishedJobs({ country: job.country ?? undefined, page: "1" });
   const context = await getJobCatalogueContext(job);
+  const jobContent = occupationContentAsText(resolveOccupationJobContent(job));
   const salary = formatSalary(job);
   const programmeFee = resolveProgrammeFee(job as unknown as Record<string, unknown>, context.country);
   const closed = isClosed(job.application_deadline, job.vacancies);
@@ -57,7 +59,7 @@ export default async function JobDetailPage({ params }: Props) {
 
   return (
     <>
-      <StructuredData data={jobPostingData(job, salary, slug)} />
+      <StructuredData data={jobPostingData({ ...job, description: jobContent.description, short_description: jobContent.short_description }, salary, slug)} />
       <StructuredData data={{ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "Jobs", item: canonical("/jobs") },
         { "@type": "ListItem", position: 2, name: job.title, item: canonical(`/jobs/${slug}`) },
@@ -68,7 +70,7 @@ export default async function JobDetailPage({ params }: Props) {
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#B8860B]">Published job</p>
             <h1 className="mt-3 text-4xl font-black text-[#071A3D]">{job.title}</h1>
             <p className="mt-3 text-lg text-slate-600">{[job.country, job.city].filter(Boolean).join(" / ")}</p>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">{job.short_description || "Detailed vacancy information is provided below for candidate planning and application review."}</p>
+            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-700">{jobContent.short_description}</p>
 
             <div className="mt-8 grid gap-4 rounded-md border border-slate-200 bg-white p-6 md:grid-cols-2">
               <Detail label="Country" value={job.country} />
@@ -83,14 +85,14 @@ export default async function JobDetailPage({ params }: Props) {
               <Detail label="Application Deadline" value={dateText(job.application_deadline)} />
             </div>
 
-            <ContentSection title="Job Overview" body={job.short_description} />
-            <ContentSection title="Full Job Description" body={job.description} fallback="Detailed job description will be shared through the official recruitment process." />
-            <ContentSection title="Responsibilities" body={job.responsibilities} />
-            <ContentSection title="Requirements" body={job.requirements} />
-            <ContentSection title="Experience Requirements" body={job.experience_requirements} />
-            <ContentSection title="Education Requirements" body={job.education_requirements} />
-            <ContentSection title="Language Requirements" body={job.language_requirements} />
-            <ContentSection title="Physical / Occupational Requirements" body={job.physical_requirements} />
+            <ContentSection title="Job Overview" body={jobContent.short_description} />
+            <ContentSection title="Full Job Description" body={jobContent.description} />
+            <ContentSection title="Responsibilities" body={jobContent.responsibilities} />
+            <ContentSection title="Requirements" body={jobContent.requirements} />
+            <ContentSection title="Experience Requirements" body={jobContent.experience_requirements} />
+            <ContentSection title="Education Requirements" body={jobContent.education_requirements} />
+            <ContentSection title="Language Requirements" body={jobContent.language_requirements} />
+            <ContentSection title="Physical / Occupational Requirements" body={jobContent.physical_requirements} />
 
             <section className="mt-8">
               <h2 className="text-2xl font-black text-[#071A3D]">Salary & Employment Terms</h2>
