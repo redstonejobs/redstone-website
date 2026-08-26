@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -60,8 +60,8 @@ export default function ResetPasswordPage() {
       "Password changed successfully. Opening your account..."
     );
 
-    router.replace("/auth/redirect");
-    router.refresh();
+    window.location.assign("/auth/redirect");
+    return;
   }
 
   return (
