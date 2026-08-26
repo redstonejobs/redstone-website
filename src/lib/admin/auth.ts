@@ -102,7 +102,7 @@ export async function requireAdmin(): Promise<AdminContext> {
   );
 
   if (!hasAdminProfile || !hasAdminRole) {
-    redirect("/admin");
+    redirect("/staff");
   }
 
   return context;

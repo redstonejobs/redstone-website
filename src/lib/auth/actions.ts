@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
@@ -98,8 +98,15 @@ export async function routeAuthenticatedUser(next?: string | null) {
     redirect(safeNextPath(next, "/employer"));
   }
 
-  if (isStaff) {
+  if (
+    profile.profile_type === "admin" ||
+    profile.profile_type === "super_admin"
+  ) {
     redirect("/admin");
+  }
+
+  if (profile.profile_type === "staff") {
+    redirect("/staff");
   }
 
   redirect("/login?error=account_not_active");
