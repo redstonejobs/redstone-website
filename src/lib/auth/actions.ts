@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
@@ -57,28 +57,48 @@ export async function routeAuthenticatedUser(next?: string | null) {
   const { data } = await supabase.auth.getUser();
 
   if (!data.user) {
-    redirect(`/login?next=${encodeURIComponent(safeNextPath(next, "/candidate"))}`);
+    redirect(
+      `/login?next=${encodeURIComponent(
+        safeNextPath(next, "/candidate")
+      )}`
+    );
   }
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("profile_type, is_active")
+    .select("profile_type, is_active, must_change_password")
     .eq("id", data.user.id)
-    .maybeSingle<{ profile_type: string | null; is_active: boolean | null }>();
+    .maybeSingle<{
+      profile_type: string | null;
+      is_active: boolean | null;
+      must_change_password: boolean | null;
+    }>();
 
   if (!profile) {
     redirect("/login?error=profile_missing");
   }
 
-  if (profile.profile_type === "candidate" && profile.is_active === true) {
+  if (profile.is_active !== true) {
+    redirect("/login?error=account_not_active");
+  }
+
+  const isStaff = ["staff", "admin", "super_admin"].includes(
+    profile.profile_type ?? ""
+  );
+
+  if (isStaff && profile.must_change_password === true) {
+    redirect("/reset-password?first_login=1");
+  }
+
+  if (profile.profile_type === "candidate") {
     redirect(safeNextPath(next, "/candidate"));
   }
 
-  if (profile.profile_type === "employer" && profile.is_active === true) {
+  if (profile.profile_type === "employer") {
     redirect(safeNextPath(next, "/employer"));
   }
 
-  if (["staff", "admin", "super_admin"].includes(profile.profile_type ?? "")) {
+  if (isStaff) {
     redirect("/admin");
   }
 

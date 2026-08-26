@@ -1,4 +1,4 @@
-import "server-only";
+﻿import "server-only";
 
 /* ============================================================
    RED STONE EMPLOYMENT AGENCY
@@ -72,6 +72,12 @@ export type StaffWelcomeNotificationData = {
    * Existing code can continue calling this function without it.
    */
   activationUrl?: string | null;
+
+  /*
+   * One-time temporary password issued during staff account creation.
+   * The employee must replace it immediately after first login.
+   */
+  temporaryPassword?: string | null;
 };
 
 export type StaffNotificationResult = {
@@ -359,16 +365,14 @@ export async function sendStaffWelcomeNotification(
   const loginUrl =
     `${cleanSiteUrl()}/login`;
 
-  const activationUrl =
-    data.activationUrl?.trim() || null;
+  const temporaryPassword =
+    data.temporaryPassword?.trim() || null;
 
   const primaryActionUrl =
-    activationUrl || loginUrl;
+    loginUrl;
 
   const primaryActionLabel =
-    activationUrl
-      ? "Activate Staff Account"
-      : "Open Staff Login";
+    "Open Staff Login";
 
   const subject =
     "Welcome to Red Stone - Staff Appointment & Account Information";
@@ -837,19 +841,85 @@ export async function sendStaffWelcomeNotification(
                     line-height:21px;
                   "
                 >
-                  ${
-                    activationUrl
-                      ? `
-                        Use the secure activation button below
-                        to activate your Red Stone staff account
-                        and establish your login credentials.
-                      `
-                      : `
-                        Your staff account has been provisioned.
-                        Use the secure staff login below to access
-                        the Red Stone administration system.
-                      `
-                  }
+                  Your Red Stone staff account has been created.
+                  Use the temporary login credentials below.
+                  For security, you will be required to create
+                  your own private password immediately after
+                  your first successful login.
+                </p>
+
+                <div
+                  style="
+                    margin-top:16px;
+                    background:#ffffff;
+                    border:1px solid #bfdbfe;
+                    border-radius:8px;
+                    padding:16px;
+                  "
+                >
+                  <div
+                    style="
+                      font-size:11px;
+                      color:#64748b;
+                      text-transform:uppercase;
+                      font-weight:700;
+                      letter-spacing:.6px;
+                    "
+                  >
+                    Login Email
+                  </div>
+
+                  <div
+                    style="
+                      margin-top:5px;
+                      font-size:14px;
+                      font-weight:700;
+                      color:#0f172a;
+                    "
+                  >
+                    ${escapeHtml(data.to)}
+                  </div>
+
+                  <div
+                    style="
+                      margin-top:14px;
+                      font-size:11px;
+                      color:#64748b;
+                      text-transform:uppercase;
+                      font-weight:700;
+                      letter-spacing:.6px;
+                    "
+                  >
+                    Temporary Password
+                  </div>
+
+                  <div
+                    style="
+                      margin-top:5px;
+                      font-family:Consolas,Monaco,monospace;
+                      font-size:15px;
+                      font-weight:800;
+                      color:#071A3D;
+                    "
+                  >
+                    ${escapeHtml(
+                      temporaryPassword ||
+                        "Provided separately"
+                    )}
+                  </div>
+
+                  <div
+                    style="
+                      margin-top:12px;
+                      color:#b45309;
+                      font-size:12px;
+                      font-weight:700;
+                      line-height:19px;
+                    "
+                  >
+                    You must change this temporary password
+                    immediately after your first login.
+                  </div>
                 </p>
 
                 <p
@@ -1066,15 +1136,19 @@ ${
 
 ACCOUNT SECURITY
 
-${
-  activationUrl
-    ? `Activate your staff account using this secure link:
-${activationUrl}`
-    : `Staff login:
-${loginUrl}`
-}
+Staff login:
+${loginUrl}
 
-Never send your password to anyone by email, WhatsApp, SMS or ordinary text message.
+Login email:
+${data.to}
+
+Temporary password:
+${temporaryPassword || "Provided separately"}
+
+IMPORTANT:
+You must change this temporary password immediately after your first login.
+
+Never send your new private password to anyone by email, WhatsApp, SMS or ordinary text message.
 
 For staff assistance:
 ${BRAND.supportEmail}

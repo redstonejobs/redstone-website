@@ -1842,80 +1842,82 @@ export async function createStaffAccount(formData: FormData) {
     "http://localhost:3000";
 
   /* ==========================================================
-     8. CREATE SECURE STAFF AUTH ACCOUNT
+   8. CREATE SECURE STAFF AUTH ACCOUNT
 
-     Supabase creates the authentication user and produces
-     the secure invite/activation URL.
+   A strong temporary password is generated for the employee.
+   The employee must change it after the first successful login.
+========================================================== */
 
-     Supabase does NOT send the invitation email here.
-     Red Stone sends the activation URL through Resend later.
-  ========================================================== */
+const temporaryPassword =
+  `Rs!${crypto
+    .randomUUID()
+    .replace(/-/g, "")
+    .slice(0, 14)}9Aa`;
 
-  const {
-    data: invitation,
-    error: invitationError,
-  } =
-    await adminClient
-      .auth
-      .admin
-      .generateLink({
-        type: "invite",
-        email,
+const {
+  data: createdUser,
+  error: createUserError,
+} =
+  await adminClient
+    .auth
+    .admin
+    .createUser({
+      email,
 
-        options: {
-          redirectTo:
-            `${siteUrl}/auth/callback?next=/login`,
+      password:
+        temporaryPassword,
 
-          data: {
-            full_name: fullName,
-            phone: phone || null,
-            profile_type: "staff",
-          },
-        },
-      });
+      email_confirm: true,
+
+      user_metadata: {
+        full_name:
+          fullName,
+
+        phone:
+          phone || null,
+
+        profile_type:
+          "staff",
+      },
+    });
+
+if (
+  createUserError ||
+  !createdUser.user
+) {
+  const message =
+    createUserError?.message ||
+    "Unable to create the staff login account.";
+
+  const normalizedMessage =
+    message.toLowerCase();
 
   if (
-    invitationError ||
-    !invitation.user ||
-    !invitation.properties
-      ?.action_link
+    normalizedMessage.includes("already") ||
+    normalizedMessage.includes("registered") ||
+    normalizedMessage.includes("exists")
   ) {
-    const message =
-      invitationError?.message ||
-      "Unable to create the staff login account or secure activation link.";
-
-    const normalizedMessage =
-      message.toLowerCase();
-
-    if (
-      normalizedMessage.includes(
-        "already"
-      ) ||
-      normalizedMessage.includes(
-        "registered"
-      ) ||
-      normalizedMessage.includes(
-        "exists"
-      )
-    ) {
-      throw new Error(
-        "An account with this email address already exists."
-      );
-    }
-
-    throw new Error(message);
+    throw new Error(
+      "An account with this email address already exists."
+    );
   }
 
-  const userId =
-    invitation.user.id;
+  throw new Error(message);
+}
 
-  const activationUrl =
-    invitation.properties
-      .action_link;
+const userId =
+  createdUser.user.id;
 
-  let provisioningSucceeded =
-    false;
+/*
+  Keep this variable temporarily because the existing
+  staff notification code still expects activationUrl.
+  We will change that email in the next step.
+*/
+const activationUrl =
+  `${siteUrl}/login`;
 
+let provisioningSucceeded =
+  false;
   try {
     /* ========================================================
        9. CREATE OFFICIAL PERSONNEL PROFILE
@@ -1951,7 +1953,8 @@ export async function createStaffAccount(formData: FormData) {
 
             is_active:
               true,
-
+must_change_password:
+  true,
             job_title:
               jobTitle,
 
@@ -2324,7 +2327,7 @@ export async function createStaffAccount(formData: FormData) {
           fullName,
 
           activationUrl,
-
+temporaryPassword,
           staffId:
             generatedStaffId,
 
