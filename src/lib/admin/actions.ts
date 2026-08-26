@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -1461,6 +1463,204 @@ export async function revokeStaffRole(roleId: string, formData: FormData) {
     entityId: roleId,
     description: `Revoked ${targetRole.role}`,
   });
+}
+
+/* ============================================================
+   STAFF ACCOUNT STATUS
+   - Deactivation preserves personnel history and related records.
+   - Reactivation restores access without rebuilding the account.
+============================================================ */
+
+export async function deactivateStaffAccount(
+  targetUserId: string,
+  formData: FormData
+) {
+  requireConfirmation(formData);
+
+  const context = await requireAdmin();
+
+  if (!canManageStaff(context)) {
+    throw new Error(
+      "You are not allowed to deactivate staff accounts."
+    );
+  }
+
+  if (context.user.id === targetUserId) {
+    throw new Error(
+      "You cannot deactivate your own account."
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data: targetProfile, error: profileLookupError } =
+    await supabase
+      .from("profiles")
+      .select("id, full_name, is_active, profile_type")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+  if (profileLookupError) {
+    throw new Error(
+      "Unable to verify the staff account."
+    );
+  }
+
+  if (!targetProfile) {
+    throw new Error("Staff account not found.");
+  }
+
+  const { data: targetRoles, error: roleLookupError } =
+    await supabase
+      .from("staff_roles")
+      .select("id, role, active")
+      .eq("user_id", targetUserId)
+      .eq("active", true);
+
+  if (roleLookupError) {
+    throw new Error(
+      "Unable to verify the staff authorization record."
+    );
+  }
+
+  const hasSuperAdminRole =
+    targetRoles?.some(
+      (role) =>
+        role.role === "super_admin" &&
+        role.active === true
+    ) ?? false;
+
+  if (hasSuperAdminRole) {
+    await requireSuperAdmin();
+
+    const { count, error: countError } =
+      await supabase
+        .from("staff_roles")
+        .select("*", {
+          count: "exact",
+          head: true,
+        })
+        .eq("role", "super_admin")
+        .eq("active", true);
+
+    if (countError) {
+      throw new Error(
+        "Unable to verify Super Administrator coverage."
+      );
+    }
+
+    if ((count ?? 0) <= 1) {
+      throw new Error(
+        "Cannot deactivate the final active Super Administrator."
+      );
+    }
+  }
+
+  if (targetProfile.is_active === false) {
+    return;
+  }
+
+  const { error: updateError } =
+    await supabase
+      .from("profiles")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetUserId);
+
+  if (updateError) {
+    throw new Error(
+      "Unable to deactivate the staff account."
+    );
+  }
+
+  await logAuditEvent(context, {
+    action: "staff_account_deactivated",
+    entityType: "staff_account",
+    entityId: targetUserId,
+    description: `Deactivated staff account: ${
+      targetProfile.full_name || targetUserId
+    }`,
+    metadata: {
+      target_user_id: targetUserId,
+      previous_active_state: targetProfile.is_active,
+    },
+  });
+
+  revalidatePath("/admin/staff");
+  revalidatePath(`/admin/staff/${targetUserId}`);
+  revalidatePath(`/admin/staff/${targetUserId}/record`);
+}
+
+export async function reactivateStaffAccount(
+  targetUserId: string,
+  formData: FormData
+) {
+  requireConfirmation(formData);
+
+  const context = await requireAdmin();
+
+  if (!canManageStaff(context)) {
+    throw new Error(
+      "You are not allowed to reactivate staff accounts."
+    );
+  }
+
+  const supabase = await createClient();
+
+  const { data: targetProfile, error: profileLookupError } =
+    await supabase
+      .from("profiles")
+      .select("id, full_name, is_active")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+  if (profileLookupError) {
+    throw new Error(
+      "Unable to verify the staff account."
+    );
+  }
+
+  if (!targetProfile) {
+    throw new Error("Staff account not found.");
+  }
+
+  if (targetProfile.is_active === true) {
+    return;
+  }
+
+  const { error: updateError } =
+    await supabase
+      .from("profiles")
+      .update({
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", targetUserId);
+
+  if (updateError) {
+    throw new Error(
+      "Unable to reactivate the staff account."
+    );
+  }
+
+  await logAuditEvent(context, {
+    action: "staff_account_reactivated",
+    entityType: "staff_account",
+    entityId: targetUserId,
+    description: `Reactivated staff account: ${
+      targetProfile.full_name || targetUserId
+    }`,
+    metadata: {
+      target_user_id: targetUserId,
+      previous_active_state: targetProfile.is_active,
+    },
+  });
+
+  revalidatePath("/admin/staff");
+  revalidatePath(`/admin/staff/${targetUserId}`);
+  revalidatePath(`/admin/staff/${targetUserId}/record`);
 }
 
 export async function createStaffAccount(formData: FormData) {
