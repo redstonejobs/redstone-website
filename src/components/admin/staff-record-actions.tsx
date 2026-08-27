@@ -1,31 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import dynamic from "next/dynamic";
 
-import type { StaffRecordPdfData } from "@/components/admin/staff-record-pdf";
-
-const StaffRecordPdfDownload = dynamic(
-  () =>
-    import("@/components/admin/staff-record-pdf").then(
-      (module) => module.StaffRecordPdfDownload
-    ),
-  {
-    ssr: false,
-
-    loading: () => (
-      <div className="inline-flex h-11 items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-6 text-sm font-bold text-amber-900">
-        Preparing PDF...
-      </div>
-    ),
-  }
-);
+type StaffRecordActionData = {
+  recordId: string;
+  fullName: string;
+};
 
 export function StaffRecordActions({
   record,
 }: {
-  record: StaffRecordPdfData;
+  record: StaffRecordActionData;
 }) {
+  function printOrSavePdf() {
+    window.print();
+  }
+
   return (
     <div className="mx-auto mb-5 max-w-[210mm] print:hidden">
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -54,15 +44,18 @@ export function StaffRecordActions({
 
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={printOrSavePdf}
               className="inline-flex h-11 items-center justify-center rounded-lg bg-[#071A3D] px-6 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800"
             >
-              Print Record
+              Print / Save PDF
             </button>
-
-            <StaffRecordPdfDownload record={record} />
           </div>
         </div>
+
+        <p className="mt-3 text-xs text-slate-500">
+          To download an official PDF, choose{" "}
+          <strong>Save as PDF</strong> in the print window.
+        </p>
       </div>
     </div>
   );
