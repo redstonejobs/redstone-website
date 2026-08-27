@@ -1,7 +1,7 @@
-import type { MetadataRoute } from "next";
+﻿import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/public/blog";
 import { COUNTRIES } from "@/lib/public/countries";
-import { getFeaturedJobs } from "@/lib/public/jobs";
+import { getPublishedJobSitemapEntries } from "@/lib/public/jobs";
 import { SITE_URL } from "@/lib/public/site";
 
 const staticRoutes = [
@@ -35,16 +35,57 @@ const staticRoutes = [
   "/terms",
   "/cookies",
   "/accessibility",
-];
+] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const { jobs } = await getFeaturedJobs(100);
   const now = new Date();
+  const jobs = await getPublishedJobSitemapEntries();
 
   return [
-    ...staticRoutes.map((route) => ({ url: `${SITE_URL}${route}`, lastModified: now })),
-    ...COUNTRIES.map((country) => ({ url: `${SITE_URL}/countries/${country.slug}`, lastModified: now })),
-    ...BLOG_POSTS.map((post) => ({ url: `${SITE_URL}/blog/${post.slug}`, lastModified: new Date(post.date) })),
-    ...jobs.filter((job) => job.slug).map((job) => ({ url: `${SITE_URL}/jobs/${job.slug}`, lastModified: job.published_at ? new Date(job.published_at) : now })),
+    ...staticRoutes.map((route) => ({
+      url: `${SITE_URL}${route}`,
+      lastModified: now,
+    })),
+
+    ...COUNTRIES.map((country) => ({
+      url: `${SITE_URL}/countries/${country.slug}`,
+      lastModified: now,
+    })),
+
+    ...BLOG_POSTS.map((post) => ({
+      url: `${SITE_URL}/blog/${post.slug}`,
+      lastModified: safeDate(post.date, now),
+    })),
+
+    ...jobs.map((job) => ({
+      url: `${SITE_URL}/jobs/${job.slug}`,
+      lastModified: firstValidDate(
+        [job.updated_at, job.published_at, job.created_at],
+        now
+      ),
+    })),
   ];
+}
+
+function firstValidDate(
+  candidates: Array<string | null | undefined>,
+  fallback: Date
+) {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    const parsed = new Date(candidate);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return fallback;
+}
+
+function safeDate(value: string, fallback: Date) {
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 }

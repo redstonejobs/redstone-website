@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { JOB_OCCUPATIONS, type JobOccupation } from "@/lib/jobs/catalogue";
+import { JOB_OCCUPATIONS, occupationContentAsText, type JobOccupation } from "@/lib/jobs/catalogue";
 import { slugify } from "@/lib/public/countries";
 import { assertValid, validateJobForPublication, validateJobPayload } from "./validation";
 import type { AdminContext } from "./types";
@@ -10,7 +10,7 @@ export const GLOBAL_JOB_MATRIX_MODE = "global_active_job_matrix";
 export const GLOBAL_JOB_MATRIX_EXPECTED_COUNTRIES = 26;
 export const GLOBAL_JOB_MATRIX_EXPECTED_TOTAL = JOB_OCCUPATIONS.length * GLOBAL_JOB_MATRIX_EXPECTED_COUNTRIES;
 export const GLOBAL_JOB_MATRIX_CONFIRMATION =
-  "Publishing this campaign can create up to 5,226 live job records on redstone.co.ke. Confirm that Red Stone is currently authorized to recruit for these occupations and destinations.";
+  "Publishing this campaign can create up to 5,226 live job records on redstone.co.ke. Confirm that every occupation-country combination represents a genuine, currently open vacancy and that Red Stone is authorized by the verified employer to recruit for it.";
 
 type CountryRow = {
   country_name: string;
@@ -124,6 +124,16 @@ export async function createGlobalJobMatrixRun(context: AdminContext, formData: 
     throw new Error("Application deadline is required.");
   }
 
+  if (publishMode === "publish") {
+    const deadline = new Date(`${applicationDeadline}T23:59:59.999Z`);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    if (Number.isNaN(deadline.getTime()) || deadline < today) {
+      throw new Error("Published global jobs require a valid future application deadline.");
+    }
+  }
+
   const supabase = await createClient();
   const [{ data: countries }, { data: employer, error: employerError }] = await Promise.all([
     supabase
@@ -221,7 +231,7 @@ export async function processGlobalJobMatrixBatch(context: AdminContext, runId: 
     throw new Error("This publication run is already closed.");
   }
 
-  const countries = await countriesForRun(run.config.countries);
+  const countries = await countriesForRun(supabase, run.config.countries);
   const batchStart = run.current_offset;
   const batchEnd = Math.min(batchStart + run.batch_size, run.total_combinations);
   const batchNumber = Math.floor(batchStart / run.batch_size) + 1;
@@ -238,17 +248,27 @@ export async function processGlobalJobMatrixBatch(context: AdminContext, runId: 
     }
 
     try {
-      const duplicate = await findGlobalDuplicate({
-        employerId: run.employer_id,
-        country: combination.country.country_name,
-        title: combination.occupation.name,
-        vacancies: run.config.default_vacancies,
-        applicationDeadline: run.config.application_deadline,
-      });
+      const jobSlug = stableGlobalSlug(
+        combination.occupation,
+        combination.country.country_name,
+        run.employer_id,
+        run.config.application_deadline
+      );
+
+      const duplicate = await findGlobalDuplicate(supabase, jobSlug);
 
       if (duplicate) {
         stats.skipped += 1;
-        await recordItem(run.id, combination, run.employer_id, batchNumber, "duplicate_skipped", duplicate, null);
+        await recordItem(
+          supabase,
+          run.id,
+          combination,
+          run.employer_id,
+          batchNumber,
+          "duplicate_skipped",
+          duplicate,
+          null
+        );
         await logAuditEvent(context, {
           action: "global_job_duplicate_skipped",
           entityType: "job",
@@ -260,51 +280,95 @@ export async function processGlobalJobMatrixBatch(context: AdminContext, runId: 
         continue;
       }
 
-      const basePayload = globalJobPayload(run.config, run.employer_id, combination);
+      const basePayload = globalJobPayload(
+        run.config,
+        run.employer_id,
+        context.user.id,
+        combination
+      );
+
       let payload: Record<string, unknown> = basePayload;
-      let status: "created" | "published" | "validation_failed" = "created";
-      let validationError: string | null = null;
+      let status: "created" | "published" = "created";
 
       if (run.publish_mode === "publish") {
         const validation = validateJobForPublication(basePayload);
-        if (validation.ok) {
-          payload = {
-            ...basePayload,
-            status: "published",
-            published_at: new Date().toISOString(),
-          };
-          status = "published";
-        } else {
-          validationError = validation.errors.join(" ");
-          status = "validation_failed";
+
+        if (!validation.ok) {
+          const validationError = validation.errors.join(" ");
+          stats.failed += 1;
+          await recordItem(
+            supabase,
+            run.id,
+            combination,
+            run.employer_id,
+            batchNumber,
+            "validation_failed",
+            null,
+            validationError
+          );
+          await logAuditEvent(context, {
+            action: "global_job_validation_failed",
+            entityType: "bulk_job_publication_run",
+            entityId: run.id,
+            description: "Global job matrix item failed publication validation",
+            metadata: {
+              ...itemMetadata(combination, run.employer_id),
+            },
+          });
+          stats.processed += 1;
+          continue;
         }
+
+        payload = {
+          ...basePayload,
+          status: "published",
+          published_at: new Date().toISOString(),
+        };
+        status = "published";
       }
 
-      const { data: job, error: insertError } = await supabase.from("jobs").insert(assertValid(validateJobPayload(payload))).select("id").single<{ id: string }>();
+      const validatedPayload = assertValid(validateJobPayload(payload));
+      const { data: job, error: insertError } = await supabase
+        .from("jobs")
+        .insert(validatedPayload)
+        .select("id")
+        .single<{ id: string }>();
 
       if (insertError || !job) {
         throw new Error(insertError?.message || "Unable to create job.");
       }
 
-      await insertGlobalDocumentRequirements(job.id, run.config.document_requirements, combination.occupation);
-      await recordItem(run.id, combination, run.employer_id, batchNumber, status, job.id, validationError);
+      await insertGlobalDocumentRequirements(
+        supabase,
+        job.id,
+        run.config.document_requirements,
+        combination.occupation
+      );
+      await recordItem(
+        supabase,
+        run.id,
+        combination,
+        run.employer_id,
+        batchNumber,
+        status,
+        job.id,
+        null
+      );
       stats.created += 1;
       if (status === "published") stats.published += 1;
-      if (status === "validation_failed") stats.failed += 1;
 
       await logAuditEvent(context, {
-        action: status === "published" ? "global_job_published" : status === "validation_failed" ? "global_job_validation_failed" : "global_job_created",
+        action: status === "published" ? "global_job_published" : "global_job_created",
         entityType: "job",
         entityId: job.id,
         description: status === "published" ? "Global job matrix job created and published" : "Global job matrix job created as draft",
         metadata: {
           ...itemMetadata(combination, run.employer_id),
-          validation_error: validationError,
         },
       });
     } catch (error) {
       stats.failed += 1;
-      await recordItem(run.id, combination, run.employer_id, batchNumber, "failed", null, error instanceof Error ? error.message : "Unknown failure");
+      await recordItem(supabase, run.id, combination, run.employer_id, batchNumber, "failed", null, error instanceof Error ? error.message : "Unknown failure");
       await logAuditEvent(context, {
         action: "global_job_validation_failed",
         entityType: "bulk_job_publication_run",
@@ -371,46 +435,68 @@ export async function cancelGlobalJobMatrixRun(context: AdminContext, runId: str
   });
 }
 
-function globalJobPayload(config: RunConfig, employerId: string, combination: { country: CountryRow; occupation: JobOccupation }) {
+function globalJobPayload(
+  config: RunConfig,
+  employerId: string,
+  createdBy: string,
+  combination: { country: CountryRow; occupation: JobOccupation }
+) {
   const { occupation, country } = combination;
+  const content = buildCountryAwareJobContent(occupation, country);
+  const sponsorshipConfirmed = config.sponsorship_status === "included";
+  const accommodationConfirmed = config.accommodation_status === "included";
+  const mealsConfirmed = config.meals_status === "included";
+  const transportConfirmed = config.transport_status === "included";
 
   return {
     title: occupation.name,
-    slug: stableGlobalSlug(occupation, country.country_name, employerId),
+    slug: stableGlobalSlug(
+      occupation,
+      country.country_name,
+      employerId,
+      config.application_deadline
+    ),
     employer_id: employerId,
+    created_by: createdBy,
     country: country.country_name,
     city: null,
     category: occupation.category,
     job_type: null,
     skill_level: occupation.skill_level,
-    short_description: null,
-    description: null,
-    responsibilities: null,
-    requirements: null,
-    experience_requirements: null,
-    education_requirements: null,
-    language_requirements: null,
-    physical_requirements: null,
-    additional_requirements: "Specific requirements may vary by employer and destination. Candidates should keep profile, identity and supporting documents accurate and current.",
+
+    short_description: content.short_description,
+    description: content.description,
+    responsibilities: content.responsibilities,
+    requirements: content.requirements,
+    experience_requirements: content.experience_requirements,
+    education_requirements: content.education_requirements,
+    language_requirements: content.language_requirements,
+    physical_requirements: content.physical_requirements,
+    additional_requirements: content.additional_requirements,
+
     salary_min: null,
     salary_max: null,
     currency: config.salary_currency,
     salary_period: config.salary_period,
     salary_confirmed: false,
-    salary_note: "To be confirmed by employer.",
+    salary_note: "Salary and compensation are to be confirmed by the employer for this specific vacancy.",
+
     contract_type: config.contract_type,
     contract_duration_value: config.contract_duration_value,
     contract_duration_unit: config.contract_duration_unit,
-    contract_note: config.contract_type ? null : "Contract terms to be confirmed by employer.",
+    contract_note: config.contract_type ? null : "Contract terms are to be confirmed by the employer.",
     working_hours_per_week: config.working_hours_per_week,
     work_schedule: null,
     overtime_note: null,
+
     vacancies: config.default_vacancies,
     application_deadline: config.application_deadline,
-    visa_sponsorship: false,
-    accommodation: false,
-    transport: false,
-    meals: false,
+
+    visa_sponsorship: sponsorshipConfirmed,
+    accommodation_provided: accommodationConfirmed,
+    transport_provided: transportConfirmed,
+    meals_provided: mealsConfirmed,
+
     sponsorship_status: config.sponsorship_status,
     accommodation_status: config.accommodation_status,
     meals_status: config.meals_status,
@@ -420,21 +506,85 @@ function globalJobPayload(config: RunConfig, employerId: string, combination: { 
     training_status: "not_confirmed",
     annual_leave_note: null,
     other_benefits: null,
+
     country_fee_override: null,
     country_fee_override_currency: null,
     country_fee_override_note: null,
     fee_relationship: "not_confirmed",
+
     processing_time_min: country.processing_time_min,
     processing_time_max: country.processing_time_max,
     processing_time_unit: country.processing_time_unit,
-    processing_time_note: country.processing_time_note || "Processing time varies by employer and immigration process.",
+    processing_time_note:
+      country.processing_time_note ||
+      "Processing time varies by employer, vacancy, immigration process and destination authority.",
+
     status: "draft",
     published_at: null,
   };
 }
 
-function stableGlobalSlug(occupation: JobOccupation, country: string, employerId: string) {
-  return [occupation.slug, slugify(country), employerId.slice(0, 8)].filter(Boolean).join("-");
+function buildCountryAwareJobContent(occupation: JobOccupation, country: CountryRow) {
+  const base = occupationContentAsText(occupation);
+  const destination = country.country_name;
+  const processing = formatProcessingGuidance(country);
+
+  const shortDescription =
+    `${occupation.name} vacancy in ${destination}. Review the role, requirements, application deadline and employer-confirmed recruitment terms before applying.`;
+
+  const destinationIntro =
+    `${occupation.name} opportunity in ${destination}. ` +
+    `This page describes the role, candidate expectations and destination-specific recruitment information for applicants considering this vacancy.`;
+
+  const transparencyNote =
+    `Applicants should rely on the confirmed vacancy record and official Red Stone communication for final employment terms. ` +
+    `Salary, benefits, sponsorship, work location and immigration requirements must not be assumed unless they are explicitly confirmed for this vacancy.`;
+
+  return {
+    short_description: shortDescription,
+    description: [destinationIntro, base.description, processing, transparencyNote].filter(Boolean).join("\n\n"),
+    responsibilities: base.responsibilities,
+    requirements: base.requirements,
+    experience_requirements: base.experience_requirements,
+    education_requirements: base.education_requirements,
+    language_requirements: base.language_requirements,
+    physical_requirements: base.physical_requirements,
+    additional_requirements:
+      `Destination: ${destination}. Candidates must provide accurate identity and application information, meet the employer's confirmed requirements, ` +
+      `and comply with any lawful document, medical, licensing, language or immigration requirements that apply to the role.`,
+  };
+}
+
+function formatProcessingGuidance(country: CountryRow) {
+  const { processing_time_min: min, processing_time_max: max, processing_time_unit: unit, processing_time_note: note } = country;
+
+  if (note?.trim()) {
+    return `Recruitment and processing guidance for ${country.country_name}: ${note.trim()}`;
+  }
+
+  if (min !== null && max !== null && unit) {
+    const range = min === max ? `${min}` : `${min}-${max}`;
+    return `Recruitment and processing guidance for ${country.country_name}: approximately ${range} ${unit}, subject to employer and authority requirements.`;
+  }
+
+  return `Recruitment and processing timelines for ${country.country_name} depend on the employer, vacancy and relevant authorities.`;
+}
+
+function stableGlobalSlug(
+  occupation: JobOccupation,
+  country: string,
+  employerId: string,
+  applicationDeadline: string
+) {
+  const deadlineToken = applicationDeadline.replace(/[^0-9]/g, "");
+  return [
+    occupation.slug,
+    slugify(country),
+    employerId.slice(0, 8),
+    deadlineToken,
+  ]
+    .filter(Boolean)
+    .join("-");
 }
 
 function combinationAt(index: number, config: RunConfig, countries: CountryRow[]) {
@@ -446,8 +596,7 @@ function combinationAt(index: number, config: RunConfig, countries: CountryRow[]
   return country && occupation ? { country, occupation } : null;
 }
 
-async function countriesForRun(countryNames: string[]) {
-  const supabase = await createClient();
+async function countriesForRun(supabase: Awaited<ReturnType<typeof createClient>>, countryNames: string[]) {
   const { data } = await supabase
     .from("country_recruitment_settings")
     .select("country_name, processing_time_min, processing_time_max, processing_time_unit, processing_time_note")
@@ -457,29 +606,14 @@ async function countriesForRun(countryNames: string[]) {
   return countryNames.map((country) => byName.get(country)).filter((country): country is CountryRow => Boolean(country));
 }
 
-async function findGlobalDuplicate({
-  employerId,
-  country,
-  title,
-  vacancies,
-  applicationDeadline,
-}: {
-  employerId: string;
-  country: string;
-  title: string;
-  vacancies: number;
-  applicationDeadline: string;
-}) {
-  const supabase = await createClient();
+async function findGlobalDuplicate(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slug: string
+) {
   const { data, error } = await supabase
     .from("jobs")
     .select("id")
-    .eq("employer_id", employerId)
-    .eq("country", country)
-    .eq("title", title)
-    .eq("vacancies", vacancies)
-    .eq("application_deadline", applicationDeadline)
-    .is("city", null)
+    .eq("slug", slug)
     .neq("status", "archived")
     .limit(1)
     .maybeSingle<{ id: string }>();
@@ -491,10 +625,14 @@ async function findGlobalDuplicate({
   return data?.id ?? null;
 }
 
-async function insertGlobalDocumentRequirements(jobId: string, configuredText: string, occupation: JobOccupation) {
+async function insertGlobalDocumentRequirements(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  jobId: string,
+  configuredText: string,
+  occupation: JobOccupation
+) {
   const rows = documentRequirementRows(jobId, configuredText, occupation);
   if (!rows.length) return;
-  const supabase = await createClient();
   const { error } = await supabase.from("job_document_requirements").insert(rows);
   if (error) {
     throw new Error("Unable to save global job document requirements.");
@@ -534,6 +672,7 @@ function baselineDocuments(occupation: JobOccupation) {
 }
 
 async function recordItem(
+  supabase: Awaited<ReturnType<typeof createClient>>,
   runId: string,
   combination: { country: CountryRow; occupation: JobOccupation },
   employerId: string,
@@ -542,7 +681,6 @@ async function recordItem(
   jobId: string | null,
   errorMessage: string | null
 ) {
-  const supabase = await createClient();
   await supabase.from("bulk_job_publication_items").upsert(
     {
       run_id: runId,
