@@ -1268,9 +1268,19 @@ export async function createEmployer(formData: FormData) {
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase.from("employers").insert(employerPayload(formData)).select("id").single();
+  const payload = employerPayload(formData);
+  const { data, error } = await supabase.from("employers").insert(payload).select("id").single();
 
   if (error) {
+    adminWarn("Employer creation failed", {
+      actor_user_id: context.user.id,
+      supabase_error_code: error.code,
+      supabase_error_message: error.message,
+      supabase_error_details: error.details,
+      supabase_error_hint: error.hint,
+      has_next_public_supabase_url: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+      has_supabase_service_role_key: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    });
     throw new Error("Unable to create employer.");
   }
 
