@@ -105,6 +105,8 @@ export async function getCountriesWithPublishedCounts() {
     .from("jobs")
     .select("country")
     .eq("status", "published")
+    .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+    .or("vacancies.is.null,vacancies.gt.0")
     .returns<Row[]>();
   const counts = new Map<string, number>();
 
@@ -214,4 +216,8 @@ function numberOrNull(value: unknown) {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
 }

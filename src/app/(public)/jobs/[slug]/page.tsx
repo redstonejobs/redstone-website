@@ -33,6 +33,7 @@ import {
 } from "@/lib/public/jobs";
 import {
   canonical,
+  CONTACT,
   RECRUITMENT_DISCLAIMER,
   SITE_NAME,
 } from "@/lib/public/site";
@@ -54,7 +55,11 @@ type StructuredJob = {
   category?: string | null;
   skill_level?: string | null;
   job_type?: string | null;
-  employer?: { company_name: string | null } | null;
+  employer?: {
+    company_name: string | null;
+    verification_status: string | null;
+    is_active: boolean | null;
+  } | null;
   published_at: string | null;
   application_deadline: string | null;
   salary_confirmed: boolean | null;
@@ -176,7 +181,7 @@ export default async function JobDetailPage({ params }: Props) {
   );
 
   const statusLabel = closed ? "Applications closed" : "Applications open";
-  const employerName = job.employer?.company_name || "Confidential employer";
+  const employerName = publicEmployerName(job.employer);
 
   return (
     <>
@@ -1065,6 +1070,11 @@ function jobPostingData(
     },
     url: canonical(`/jobs/${slug}`),
     mainEntityOfPage: canonical(`/jobs/${slug}`),
+    applicationContact: {
+      "@type": "ContactPoint",
+      contactType: "recruitment",
+      email: CONTACT.emails.jobs,
+    },
     directApply: false,
   };
 
@@ -1073,9 +1083,7 @@ function jobPostingData(
   }
 
   const employmentType = employmentTypeFor(job);
-  if (employmentType) {
-    data.employmentType = employmentType;
-  }
+  data.employmentType = employmentType;
 
   if (job.category) {
     data.industry = job.category;
@@ -1192,7 +1200,25 @@ function employmentTypeFor(job: StructuredJob) {
   if (value.includes("seasonal")) return "TEMPORARY";
   if (value.includes("contract") || value.includes("fixed")) return "CONTRACTOR";
 
-  return undefined;
+  return "OTHER";
+}
+
+function publicEmployerName(
+  employer?: {
+    company_name: string | null;
+    verification_status: string | null;
+    is_active: boolean | null;
+  } | null
+) {
+  if (
+    employer?.company_name?.trim() &&
+    employer.verification_status === "verified" &&
+    employer.is_active === true
+  ) {
+    return employer.company_name.trim();
+  }
+
+  return "confidential";
 }
 
 function salaryUnit(period: string | null) {

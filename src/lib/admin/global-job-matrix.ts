@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
-import { JOB_OCCUPATIONS, occupationContentAsText, type JobOccupation } from "@/lib/jobs/catalogue";
+import { JOB_OCCUPATIONS, type JobOccupation } from "@/lib/jobs/catalogue";
 import { slugify } from "@/lib/public/countries";
 import { assertValid, validateJobForPublication, validateJobPayload } from "./validation";
 import type { AdminContext } from "./types";
@@ -442,7 +442,6 @@ function globalJobPayload(
   combination: { country: CountryRow; occupation: JobOccupation }
 ) {
   const { occupation, country } = combination;
-  const content = buildCountryAwareJobContent(occupation, country);
   const sponsorshipConfirmed = config.sponsorship_status === "included";
   const accommodationConfirmed = config.accommodation_status === "included";
   const mealsConfirmed = config.meals_status === "included";
@@ -464,22 +463,22 @@ function globalJobPayload(
     job_type: null,
     skill_level: occupation.skill_level,
 
-    short_description: content.short_description,
-    description: content.description,
-    responsibilities: content.responsibilities,
-    requirements: content.requirements,
-    experience_requirements: content.experience_requirements,
-    education_requirements: content.education_requirements,
-    language_requirements: content.language_requirements,
-    physical_requirements: content.physical_requirements,
-    additional_requirements: content.additional_requirements,
+    short_description: null,
+    description: null,
+    responsibilities: null,
+    requirements: null,
+    experience_requirements: null,
+    education_requirements: null,
+    language_requirements: null,
+    physical_requirements: null,
+    additional_requirements: null,
 
     salary_min: null,
     salary_max: null,
     currency: config.salary_currency,
     salary_period: config.salary_period,
     salary_confirmed: false,
-    salary_note: "Salary and compensation are to be confirmed by the employer for this specific vacancy.",
+    salary_note: "To be confirmed by employer.",
 
     contract_type: config.contract_type,
     contract_duration_value: config.contract_duration_value,
@@ -517,57 +516,11 @@ function globalJobPayload(
     processing_time_unit: country.processing_time_unit,
     processing_time_note:
       country.processing_time_note ||
-      "Processing time varies by employer, vacancy, immigration process and destination authority.",
+      "Processing time varies by employer and immigration process.",
 
     status: "draft",
     published_at: null,
   };
-}
-
-function buildCountryAwareJobContent(occupation: JobOccupation, country: CountryRow) {
-  const base = occupationContentAsText(occupation);
-  const destination = country.country_name;
-  const processing = formatProcessingGuidance(country);
-
-  const shortDescription =
-    `${occupation.name} vacancy in ${destination}. Review the role, requirements, application deadline and employer-confirmed recruitment terms before applying.`;
-
-  const destinationIntro =
-    `${occupation.name} opportunity in ${destination}. ` +
-    `This page describes the role, candidate expectations and destination-specific recruitment information for applicants considering this vacancy.`;
-
-  const transparencyNote =
-    `Applicants should rely on the confirmed vacancy record and official Red Stone communication for final employment terms. ` +
-    `Salary, benefits, sponsorship, work location and immigration requirements must not be assumed unless they are explicitly confirmed for this vacancy.`;
-
-  return {
-    short_description: shortDescription,
-    description: [destinationIntro, base.description, processing, transparencyNote].filter(Boolean).join("\n\n"),
-    responsibilities: base.responsibilities,
-    requirements: base.requirements,
-    experience_requirements: base.experience_requirements,
-    education_requirements: base.education_requirements,
-    language_requirements: base.language_requirements,
-    physical_requirements: base.physical_requirements,
-    additional_requirements:
-      `Destination: ${destination}. Candidates must provide accurate identity and application information, meet the employer's confirmed requirements, ` +
-      `and comply with any lawful document, medical, licensing, language or immigration requirements that apply to the role.`,
-  };
-}
-
-function formatProcessingGuidance(country: CountryRow) {
-  const { processing_time_min: min, processing_time_max: max, processing_time_unit: unit, processing_time_note: note } = country;
-
-  if (note?.trim()) {
-    return `Recruitment and processing guidance for ${country.country_name}: ${note.trim()}`;
-  }
-
-  if (min !== null && max !== null && unit) {
-    const range = min === max ? `${min}` : `${min}-${max}`;
-    return `Recruitment and processing guidance for ${country.country_name}: approximately ${range} ${unit}, subject to employer and authority requirements.`;
-  }
-
-  return `Recruitment and processing timelines for ${country.country_name} depend on the employer, vacancy and relevant authorities.`;
 }
 
 function stableGlobalSlug(

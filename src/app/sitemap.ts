@@ -58,7 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
 
     ...jobs.map((job) => ({
-      url: `${SITE_URL}/jobs/${job.slug}`,
+      url: `${SITE_URL}/jobs/${job.route}`,
       lastModified: firstValidDate(
         [job.updated_at, job.published_at, job.created_at],
         now

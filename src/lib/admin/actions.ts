@@ -190,6 +190,34 @@ function jobPayload(formData: FormData, creatorId?: string) {
   return assertValid(validateJobPayload(payload));
 }
 
+async function assertVerifiedEmployerForPublication(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  employerId: unknown
+) {
+  if (typeof employerId !== "string" || !employerId.trim()) {
+    throw new Error("A verified employer is required before publication.");
+  }
+
+  const { data: employer, error } = await supabase
+    .from("employers")
+    .select("id, verification_status, is_active")
+    .eq("id", employerId)
+    .maybeSingle<{
+      id: string;
+      verification_status: string | null;
+      is_active: boolean | null;
+    }>();
+
+  if (
+    error ||
+    !employer ||
+    employer.verification_status !== "verified" ||
+    employer.is_active !== true
+  ) {
+    throw new Error("Only vacancies for active verified employers can be published.");
+  }
+}
+
 function documentRequirementsPayload(formData: FormData, jobId: string) {
   const raw = value(formData, "document_requirements");
   return documentRequirementsRowsFromText(raw, jobId);
@@ -436,9 +464,15 @@ async function findDuplicateBulkJob(payload: Record<string, unknown>) {
 export async function createJob(formData: FormData) {
   const context = await requireAdmin();
   const supabase = await createClient();
+  const payload = jobPayload(formData, context.user.id);
+
+  if (payload.status === "published") {
+    await assertVerifiedEmployerForPublication(supabase, payload.employer_id);
+  }
+
   const { data, error } = await supabase
     .from("jobs")
-    .insert(jobPayload(formData, context.user.id))
+    .insert(payload)
     .select("id")
     .single();
 
@@ -739,12 +773,18 @@ export async function cancelGlobalJobPublicationRun(formData: FormData) {
 export async function updateJob(id: string, formData: FormData) {
   const context = await requireAdmin();
   const supabase = await createClient();
+  const payload = jobPayload(formData);
   const { data: before } = await supabase
     .from("jobs")
     .select("salary_min, salary_max, salary_confirmed, country_fee_override, processing_time_min, processing_time_max, processing_time_unit, sponsorship_status, accommodation_status, meals_status, transport_status, medical_insurance_status, air_ticket_status")
     .eq("id", id)
     .maybeSingle<Record<string, unknown>>();
-  const { error } = await supabase.from("jobs").update(jobPayload(formData)).eq("id", id);
+
+  if (payload.status === "published") {
+    await assertVerifiedEmployerForPublication(supabase, payload.employer_id);
+  }
+
+  const { error } = await supabase.from("jobs").update(payload).eq("id", id);
 
   if (error) {
     throw new Error("Unable to update job. Check required fields and your permissions.");
@@ -759,7 +799,7 @@ export async function updateJob(id: string, formData: FormData) {
     description: "Job updated",
   });
 
-  await logJobChangeAudits(context, id, before ?? {}, jobPayload(formData));
+  await logJobChangeAudits(context, id, before ?? {}, payload);
 
   redirect(`/admin/jobs/${id}`);
 }
@@ -843,7 +883,7 @@ export async function setJobStatus(id: string, status: string) {
   if (status === "published") {
     const { data: job, error: jobError } = await supabase
       .from("jobs")
-      .select("title, slug, country, category, skill_level, description, vacancies, application_deadline")
+      .select("title, slug, employer_id, country, category, skill_level, description, vacancies, application_deadline")
       .eq("id", id)
       .maybeSingle<Record<string, unknown>>();
 
@@ -852,6 +892,7 @@ export async function setJobStatus(id: string, status: string) {
     }
 
     assertValid(validateJobForPublication(job));
+    await assertVerifiedEmployerForPublication(supabase, job.employer_id);
     payload.published_at = new Date().toISOString();
   }
 
@@ -885,7 +926,7 @@ export async function bulkSetJobStatus(status: string, formData: FormData) {
   const supabase = await createClient();
   const { data: jobs, error: jobsError } = await supabase
     .from("jobs")
-    .select("id, title, slug, country, category, skill_level, description, vacancies, application_deadline, status")
+    .select("id, title, slug, employer_id, country, category, skill_level, description, vacancies, application_deadline, status")
     .in("id", ids)
     .returns<Record<string, unknown>[]>();
 
@@ -896,6 +937,7 @@ export async function bulkSetJobStatus(status: string, formData: FormData) {
   if (status === "published") {
     for (const job of jobs) {
       assertValid(validateJobForPublication(job));
+      await assertVerifiedEmployerForPublication(supabase, job.employer_id);
     }
   }
 
@@ -1225,7 +1267,7 @@ export async function createEmployer(formData: FormData) {
     throw new Error("You are not allowed to create employers.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.from("employers").insert(employerPayload(formData)).select("id").single();
 
   if (error) {

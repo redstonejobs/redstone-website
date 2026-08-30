@@ -52,8 +52,9 @@ test("global job matrix uses stable slugs and duplicate-safe retry behavior", ()
   assert.match(matrix, /occupation\.slug/);
   assert.match(matrix, /slugify\(country\)/);
   assert.match(matrix, /findGlobalDuplicate/);
-  assert.match(matrix, /\.eq\("employer_id"/);
-  assert.match(matrix, /\.eq\("application_deadline"/);
+  assert.match(matrix, /employerId\.slice\(0, 8\)/);
+  assert.match(matrix, /deadlineToken/);
+  assert.match(matrix, /\.eq\("slug", slug\)/);
   assert.match(matrix, /duplicate_skipped/);
 });
 

@@ -91,6 +91,8 @@ export type PublicJob = {
 
   employer?: {
     company_name: string | null;
+    verification_status: string | null;
+    is_active: boolean | null;
   } | null;
 };
 
@@ -111,7 +113,7 @@ export type JobSearchParams = {
 };
 
 export type PublishedJobSitemapEntry = {
-  slug: string;
+  route: string;
   published_at: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -176,7 +178,7 @@ const PUBLIC_JOB_SELECT = `
   published_at,
   created_at,
   updated_at,
-  employer:employers(company_name)
+  employer:employers(company_name, verification_status, is_active)
 `;
 
 const SITEMAP_BATCH_SIZE = 1000;
@@ -192,12 +194,13 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
   let query = supabase
     .from("jobs")
     .select(PUBLIC_JOB_SELECT, { count: "exact" })
-    .eq("status", "published");
+    .eq("status", "published")
+    .not("slug", "is", null);
 
   if (!params.includeClosed) {
     query = query.or(
       `application_deadline.is.null,application_deadline.gte.${todayDate()}`
-    );
+    ).or("vacancies.is.null,vacancies.gt.0");
   }
 
   if (params.q) {
@@ -320,7 +323,9 @@ export async function getFeaturedJobs(limit = 6) {
     .from("jobs")
     .select(PUBLIC_JOB_SELECT)
     .eq("status", "published")
+    .not("slug", "is", null)
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+    .or("vacancies.is.null,vacancies.gt.0")
     .order("published_at", {
       ascending: false,
       nullsFirst: false,
@@ -371,6 +376,8 @@ export async function getPublishedJobSitemapEntries() {
       )
       .eq("status", "published")
       .not("slug", "is", null)
+      .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+      .or("vacancies.is.null,vacancies.gt.0")
       .order("published_at", {
         ascending: false,
         nullsFirst: false,
@@ -398,7 +405,7 @@ export async function getPublishedJobSitemapEntries() {
       if (!row.slug) continue;
 
       entries.push({
-        slug: row.slug,
+        route: row.slug,
         published_at: row.published_at,
         created_at: row.created_at,
         updated_at: row.updated_at,
