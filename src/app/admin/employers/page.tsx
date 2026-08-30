@@ -37,7 +37,7 @@ export default async function EmployersPage({ searchParams }: PageProps) {
       <FilterBar
         searchPlaceholder="Search company, email, phone"
         filters={[
-          { name: "verification_status", label: "Verification", options: ["pending", "verified", "rejected"] },
+          { name: "verification_status", label: "Verification", options: ["pending", "under_review", "verified", "suspended", "rejected"] },
           { name: "active", label: "State", options: ["true", "false"] },
           { name: "sort", label: "Sort", options: ["newest", "company"] },
         ]}

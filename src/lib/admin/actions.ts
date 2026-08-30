@@ -110,9 +110,20 @@ function requireSelectedJobIds(formData: FormData) {
   return ids;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function uuidValue(formData: FormData, key: string) {
   const raw = value(formData, key);
-  return raw || null;
+
+  if (!raw) {
+    return null;
+  }
+
+  if (!UUID_PATTERN.test(raw)) {
+    throw new Error(`${key} must be a valid UUID.`);
+  }
+
+  return raw;
 }
 
 function jobPayload(formData: FormData, creatorId?: string) {
@@ -1256,7 +1267,6 @@ function employerPayload(formData: FormData) {
     description: value(formData, "description") || null,
     verification_status: value(formData, "verification_status") || "pending",
     is_active: checkbox(formData, "is_active"),
-    owner_user_id: uuidValue(formData, "owner_user_id"),
   }));
 }
 
@@ -1268,7 +1278,7 @@ export async function createEmployer(formData: FormData) {
   }
 
   const supabase = createAdminClient();
-  const payload = employerPayload(formData);
+  const payload = { ...employerPayload(formData), owner_user_id: null };
   const { data, error } = await supabase.from("employers").insert(payload).select("id").single();
 
   if (error) {
@@ -1296,7 +1306,11 @@ export async function createEmployer(formData: FormData) {
 
 export async function updateEmployer(id: string, formData: FormData) {
   const context = await requireAdmin();
-  const supabase = await createClient();
+  if (!canManageEmployer(context)) {
+    throw new Error("You are not allowed to update employers.");
+  }
+
+  const supabase = createAdminClient();
   const { error } = await supabase.from("employers").update(employerPayload(formData)).eq("id", id);
 
   if (error) {

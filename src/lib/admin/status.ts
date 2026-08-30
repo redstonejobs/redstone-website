@@ -17,6 +17,8 @@ export const APPLICATION_STATUSES = [
 
 export const JOB_STATUSES = ["draft", "published", "paused", "closed", "archived"] as const;
 
+export const EMPLOYER_VERIFICATION_STATUSES = ["pending", "under_review", "verified", "suspended", "rejected"] as const;
+
 export const STATUS_STYLES: Record<string, string> = {
   draft: "bg-slate-100 text-slate-700 ring-slate-200",
   published: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -38,6 +40,7 @@ export const STATUS_STYLES: Record<string, string> = {
   withdrawn: "bg-slate-100 text-slate-700 ring-slate-200",
   verified: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   pending: "bg-amber-50 text-amber-700 ring-amber-200",
+  suspended: "bg-slate-200 text-slate-800 ring-slate-300",
   active: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   inactive: "bg-slate-100 text-slate-700 ring-slate-200",
 };
@@ -52,4 +55,3 @@ export function labelForStatus(status: string | null | undefined) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
-

@@ -1,6 +1,6 @@
 import type { AdminContext } from "./types";
 import { hasCapability } from "./auth";
-import { APPLICATION_STATUSES, JOB_STATUSES } from "./status";
+import { APPLICATION_STATUSES, EMPLOYER_VERIFICATION_STATUSES, JOB_STATUSES } from "./status";
 
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export type JobStatus = (typeof JOB_STATUSES)[number];
@@ -23,9 +23,11 @@ const APPLICATION_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = 
 };
 
 const EMPLOYER_TRANSITIONS: Record<string, string[]> = {
-  pending: ["verified", "rejected"],
-  verified: ["rejected", "pending"],
-  rejected: ["pending", "verified"],
+  pending: ["under_review", "verified", "suspended", "rejected"],
+  under_review: ["pending", "verified", "suspended", "rejected"],
+  verified: ["pending", "suspended", "rejected"],
+  suspended: ["pending", "under_review", "verified", "rejected"],
+  rejected: ["pending", "under_review", "verified"],
 };
 
 export function isApplicationStatus(status: string): status is ApplicationStatus {
@@ -34,6 +36,10 @@ export function isApplicationStatus(status: string): status is ApplicationStatus
 
 export function isJobStatus(status: string): status is JobStatus {
   return JOB_STATUSES.includes(status as JobStatus);
+}
+
+export function isEmployerVerificationStatus(status: string) {
+  return EMPLOYER_VERIFICATION_STATUSES.includes(status as (typeof EMPLOYER_VERIFICATION_STATUSES)[number]);
 }
 
 export function getAllowedNextApplicationStatuses(status: string | null | undefined) {
@@ -65,10 +71,13 @@ export function canOverrideApplicationTransition(context: AdminContext, reason: 
 }
 
 export function canTransitionEmployerVerification(from: string | null | undefined, to: string) {
+  if (!isEmployerVerificationStatus(to)) {
+    return false;
+  }
+
   if (!from || from === to) {
     return true;
   }
 
   return (EMPLOYER_TRANSITIONS[from] ?? []).includes(to);
 }
-

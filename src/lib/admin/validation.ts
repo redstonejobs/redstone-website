@@ -1,5 +1,5 @@
 import { isStaffRole } from "./constants";
-import { canTransitionEmployerVerification, isJobStatus } from "./workflow";
+import { canTransitionEmployerVerification, isEmployerVerificationStatus, isJobStatus } from "./workflow";
 import { resolveOccupationJobContent, type JobContentCandidate } from "@/lib/jobs/catalogue";
 
 export type ValidationResult<T> =
@@ -120,13 +120,13 @@ export function validateEmployerPayload(payload: Record<string, unknown>) {
       errors.push("Enter a valid website URL.");
     }
   }
-  if (!["pending", "verified", "rejected"].includes(status)) errors.push("Invalid employer verification status.");
+  if (!isEmployerVerificationStatus(status)) errors.push("Invalid employer verification status.");
 
   return errors.length ? fail(errors) : ok(payload);
 }
 
 export function validateEmployerTransition(currentStatus: string | null | undefined, nextStatus: string) {
-  if (!["pending", "verified", "rejected"].includes(nextStatus)) {
+  if (!isEmployerVerificationStatus(nextStatus)) {
     return fail("Invalid employer verification status.");
   }
 

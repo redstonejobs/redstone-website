@@ -1,5 +1,6 @@
 import type { Row } from "@/lib/admin/types";
 import { textValue } from "@/lib/admin/format";
+import { EMPLOYER_VERIFICATION_STATUSES } from "@/lib/admin/status";
 
 type EmployerFormProps = {
   action: (formData: FormData) => void | Promise<void>;
@@ -18,7 +19,6 @@ export function EmployerForm({ action, employer, submitLabel }: EmployerFormProp
         <Field name="phone" label="Phone" defaultValue={textValue(employer, ["phone"], "")} />
         <Field name="country" label="Country" defaultValue={textValue(employer, ["country"], "")} />
         <Field name="city" label="City" defaultValue={textValue(employer, ["city"], "")} />
-        <Field name="owner_user_id" label="Owner User ID" defaultValue={textValue(employer, ["owner_user_id"], "")} />
       </div>
 
       <label className="grid gap-2 text-sm font-semibold text-slate-700">
@@ -48,9 +48,9 @@ export function EmployerForm({ action, employer, submitLabel }: EmployerFormProp
             defaultValue={textValue(employer, ["verification_status"], "pending")}
             className="min-h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-normal"
           >
-            <option value="pending">pending</option>
-            <option value="verified">verified</option>
-            <option value="rejected">rejected</option>
+            {EMPLOYER_VERIFICATION_STATUSES.map((status) => (
+              <option key={status} value={status}>{status}</option>
+            ))}
           </select>
         </label>
         <label className="flex min-h-11 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700">
@@ -92,4 +92,3 @@ function Field({
     </label>
   );
 }
-
