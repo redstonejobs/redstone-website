@@ -29,6 +29,16 @@ test("automatic importer quality-screens overseas eligibility and never treats L
   assert.match(run, /needs_review/);
 });
 
+test("employer-level TFWP or REP participation never becomes vacancy-specific sponsorship automatically", () => {
+  assert.match(classifier, /EMPLOYER_LEVEL_FOREIGN_WORKER_PATTERNS/);
+  assert.match(classifier, /temporary foreign worker program/i);
+  assert.match(classifier, /recognized employer pilot/i);
+  assert.match(classifier, /foreignWorkerStatus = "sponsorship_unconfirmed"/);
+  assert.match(classifier, /visaSponsorship = false/);
+  const autoPublishStatusBlock = run.match(/const POSITIVE_FOREIGN_STATUSES = new Set\(\[([\s\S]*?)\]\);/)?.[1] ?? "";
+  assert.doesNotMatch(autoPublishStatusBlock, /sponsorship_unconfirmed/);
+});
+
 test("FoundRole is connected through approved server feed or authenticated MCP, not scraped HTML", () => {
   assert.match(foundrole, /FOUNDROLE_FEED_URL/);
   assert.match(foundrole, /FOUNDROLE_MCP_ACCESS_TOKEN/);
