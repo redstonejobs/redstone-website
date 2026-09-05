@@ -5,7 +5,7 @@ This feature adds a source-aware automatic vacancy pipeline without weakening th
 ## Architecture
 
 ```text
-FoundRole approved feed / authenticated MCP       Canada Job Bank authorized XML feed
+FoundRole public MCP / approved partner feed       Canada Job Bank authorized XML feed
                     \                               /
                      \                             /
                       -> secure import endpoint <-
@@ -39,12 +39,15 @@ The importer does not blindly publish every result. It records every source item
 
 ## FoundRole
 
-The adapter supports two production modes:
+The adapter supports these modes:
 
-1. `FOUNDROLE_FEED_URL`: preferred when FoundRole provides Red Stone with an approved partner/server feed.
-2. `FOUNDROLE_MCP_ACCESS_TOKEN`: calls the official remote MCP endpoint (`https://www.foundrole.com/mcp`) and invokes `jobs_search` through Streamable HTTP.
+1. Anonymous read-only MCP search against the official endpoint (`https://www.foundrole.com/mcp`). FoundRole documents job search and job details as available without sign-in.
+2. `FOUNDROLE_MCP_ACCESS_TOKEN`: optional authenticated MCP access if FoundRole supplies a server-compatible credential in future.
+3. `FOUNDROLE_FEED_URL`: preferred when FoundRole provides Red Stone with an approved partner/server feed.
 
-FoundRole's normal remote MCP setup uses OAuth. The ChatGPT FoundRole connection is an authenticated ChatGPT connection; its credentials are not exposed to the deployed Red Stone website. Unattended production imports therefore require a FoundRole-approved server credential/feed or a production-compatible OAuth arrangement. Do not copy browser cookies or personal login credentials into the website.
+The importer sends no `Authorization` header for anonymous MCP search. It only adds a bearer token when `FOUNDROLE_MCP_ACCESS_TOKEN` is explicitly configured. Do not copy browser cookies, personal login credentials, or ChatGPT connector credentials into the website.
+
+Anonymous search availability does not itself grant unlimited republication rights. Keep source attribution and external apply links, respect FoundRole rate limits/terms, and switch to a partner feed if FoundRole requires one for production syndication.
 
 The initial FoundRole search configuration is stored in `job_import_sources.config` and focuses on current Canada roles such as caregiver, cleaning, housekeeping, warehouse, security, driving, construction, farm and hotel work. It can be changed in the database without redesigning the importer.
 
@@ -79,8 +82,11 @@ Configure these as server-only deployment secrets; never prefix them with `NEXT_
 
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `JOB_IMPORT_SECRET`
-- `FOUNDROLE_MCP_ACCESS_TOKEN` or `FOUNDROLE_FEED_URL` / `FOUNDROLE_FEED_TOKEN`
+- optional `FOUNDROLE_MCP_ACCESS_TOKEN` if FoundRole provides an authenticated server credential
+- optional `FOUNDROLE_FEED_URL` / `FOUNDROLE_FEED_TOKEN` for an approved FoundRole partner feed
 - `JOBBANK_XML_FEED_URL` / `JOBBANK_XML_FEED_TOKEN` after Job Bank approval
+
+No FoundRole token is required for anonymous read-only MCP search.
 
 ## Database migration
 
