@@ -39,6 +39,8 @@ The workflow uses non-production placeholder environment values so build-time ch
 
 If a check fails, fix the branch and re-run it. Do not bypass the gate just to get a deployment through.
 
+If GitHub Actions is disabled for the repository, enable Actions before relying on this gate. Until the workflow produces a successful run, treat the pull request as not yet production-validated.
+
 ## 4. Cloudflare build configuration
 
 Under Worker Settings -> Builds, confirm the Git repository is `redstonejobs/redstone-website` and production branch is `main`.
