@@ -39,11 +39,15 @@ test("employer-level TFWP or REP participation never becomes vacancy-specific sp
   assert.doesNotMatch(autoPublishStatusBlock, /sponsorship_unconfirmed/);
 });
 
-test("FoundRole is connected through approved server feed or authenticated MCP, not scraped HTML", () => {
+test("FoundRole supports anonymous read-only MCP search plus optional authenticated/feed modes", () => {
   assert.match(foundrole, /FOUNDROLE_FEED_URL/);
   assert.match(foundrole, /FOUNDROLE_MCP_ACCESS_TOKEN/);
+  assert.match(foundrole, /https:\/\/www\.foundrole\.com\/mcp/);
   assert.match(foundrole, /tools\/call/);
   assert.match(foundrole, /jobs_search/);
+  assert.match(foundrole, /token \? \{ Authorization:/);
+  assert.match(foundrole, /return true;/);
+  assert.doesNotMatch(foundrole, /not runtime-authorized/);
   assert.doesNotMatch(foundrole, /cheerio|puppeteer|playwright/);
 });
 
