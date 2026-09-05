@@ -737,7 +737,6 @@ begin
 end;
 $$;
 
-
 create or replace function public.candidate_start_application(p_job_slug text)
 returns uuid
 language plpgsql
