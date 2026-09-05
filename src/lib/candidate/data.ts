@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import type { CandidateContext, CandidateRow } from "./types";
 
-const JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level, short_description, description, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, working_hours_per_week, work_schedule, overtime_note, vacancies, application_deadline, visa_sponsorship, accommodation, transport, meals, sponsorship_status, accommodation_status, meals_status, transport_status, medical_insurance_status, air_ticket_status, training_status, annual_leave_note, other_benefits, country_fee_override, country_fee_override_currency, country_fee_override_note, fee_relationship, processing_time_min, processing_time_max, processing_time_unit, processing_time_note, employer:employers(company_name, verification_status, is_active)";
+const JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level, short_description, description, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, working_hours_per_week, work_schedule, overtime_note, vacancies, application_deadline, visa_sponsorship, accommodation, transport, meals, sponsorship_status, accommodation_status, meals_status, transport_status, medical_insurance_status, air_ticket_status, training_status, annual_leave_note, other_benefits, country_fee_override, country_fee_override_currency, country_fee_override_note, fee_relationship, processing_time_min, processing_time_max, processing_time_unit, processing_time_note, source_provider, source_url, source_apply_url, source_employer_name, source_posted_at, source_last_seen_at, source_attribution, source_status, auto_imported, application_mode, foreign_worker_status, immigration_evidence, import_quality_score, employer:employers(company_name, verification_status, is_active)";
 
 export async function getCandidateApplications(context: CandidateContext, statusFilter = "active") {
   const supabase = await createClient();
@@ -90,6 +90,7 @@ export async function getRecentPublishedJobs(limit = 4) {
     .not("slug", "is", null)
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
+    .or("source_status.is.null,source_status.eq.active")
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit)
     .returns<CandidateRow[]>();

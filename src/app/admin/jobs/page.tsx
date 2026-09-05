@@ -18,7 +18,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
     table: "jobs",
     page: getPage(params),
     query: getParam(params, "q"),
-    searchColumns: ["title", "country", "city", "category", "skill_level", "status"],
+    searchColumns: ["title", "country", "city", "category", "skill_level", "status", "source_provider", "source_employer_name"],
     filters: {
       country: getParam(params, "country"),
       category: getParam(params, "category"),
@@ -36,6 +36,9 @@ export default async function JobsPage({ searchParams }: PageProps) {
           <p className="mt-1 text-sm text-slate-600">Search, filter and manage vacancies.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/admin/job-imports" className="rounded-md border border-[#D4AF37] bg-amber-50 px-4 py-3 text-sm font-semibold text-[#071A3D]">
+            Automatic Imports
+          </Link>
           <Link href="/admin/jobs/bulk-create" className="rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-[#071A3D]">
             Bulk Create
           </Link>
@@ -46,7 +49,7 @@ export default async function JobsPage({ searchParams }: PageProps) {
       </div>
 
       <FilterBar
-        searchPlaceholder="Search title, country, category"
+        searchPlaceholder="Search title, employer, country, category"
         filters={[
           { name: "status", label: "Status", options: ["draft", "published", "paused", "closed", "archived"] },
           { name: "skill_level", label: "Skill", options: SKILL_LEVELS.map((item) => item.value) },

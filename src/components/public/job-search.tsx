@@ -11,18 +11,32 @@ export function JobSearch({ defaults = {}, countries = [] }: { defaults?: Record
       </datalist>
       <label className="grid gap-1 text-sm font-bold text-slate-700 lg:col-span-2">
         Search
-        <input name="q" defaultValue={defaults.q} list="public-job-occupation-options" className="min-h-11 rounded-md border border-slate-300 px-3 font-normal" placeholder="Job title, occupation, country" />
+        <input name="q" defaultValue={defaults.q} list="public-job-occupation-options" className="min-h-11 rounded-md border border-slate-300 px-3 font-normal" placeholder="Job title, employer, city, country" />
       </label>
       <Select name="country" label="Country" defaultValue={defaults.country} options={["", ...countries.map((country) => country.name)]} labels={{ "": "Any" }} />
       <Select name="category" label="Category" defaultValue={defaults.category} options={["", ...JOB_CATEGORIES]} labels={{ "": "Any" }} />
-      <Select name="skill" label="Skill" defaultValue={defaults.skill} options={["", ...SKILL_LEVELS.map((item) => item.value)]} labels={Object.fromEntries(SKILL_LEVELS.map((item) => [item.value, item.label]))} />
+      <Select name="skill" label="Skill" defaultValue={defaults.skill} options={["", ...SKILL_LEVELS.map((item) => item.value)]} labels={{ "": "Any", ...Object.fromEntries(SKILL_LEVELS.map((item) => [item.value, item.label])) }} />
+      <Select
+        name="source"
+        label="Source"
+        defaultValue={defaults.source}
+        options={["", "redstone", "foundrole", "jobbank"]}
+        labels={{ "": "Any", redstone: "Red Stone", foundrole: "FoundRole", jobbank: "Canada Job Bank" }}
+      />
+      <Select
+        name="foreign_worker"
+        label="International Eligibility"
+        defaultValue={defaults.foreign_worker}
+        options={["", "accepted", "sponsorship", "unconfirmed"]}
+        labels={{ "": "Any", accepted: "Foreign/international signal", sponsorship: "Sponsorship evidence", unconfirmed: "Not confirmed" }}
+      />
       <Field name="salary_min" label="Salary Min" defaultValue={defaults.salary_min} type="number" />
       <Field name="salary_max" label="Salary Max" defaultValue={defaults.salary_max} type="number" />
       <Select name="contract_type" label="Contract" defaultValue={defaults.contract_type} options={["", ...CONTRACT_TYPES]} labels={{ "": "Any" }} />
       <Select name="sponsorship" label="Sponsorship" defaultValue={defaults.sponsorship} options={["", "true"]} labels={{ "": "Any", true: "Visa sponsorship" }} />
       <Select name="accommodation" label="Accommodation" defaultValue={defaults.accommodation} options={["", "true"]} labels={{ "": "Any", true: "Provided" }} />
-      <Select name="job_type" label="Job Type" defaultValue={defaults.job_type} options={["", "full_time", "contract", "seasonal"]} />
-      <Select name="sort" label="Sort" defaultValue={defaults.sort} options={["newest", "salary_asc", "salary_desc", "deadline"]} labels={{ newest: "Newest", salary_asc: "Salary Low to High", salary_desc: "Salary High to Low", deadline: "Closing Soon" }} />
+      <Select name="job_type" label="Job Type" defaultValue={defaults.job_type} options={["", "full_time", "part_time", "contract", "seasonal"]} labels={{ "": "Any", full_time: "Full time", part_time: "Part time", contract: "Contract", seasonal: "Seasonal" }} />
+      <Select name="sort" label="Sort" defaultValue={defaults.sort} options={["newest", "source_newest", "salary_asc", "salary_desc", "deadline"]} labels={{ newest: "Newest on Red Stone", source_newest: "Newest at source", salary_asc: "Salary Low to High", salary_desc: "Salary High to Low", deadline: "Closing Soon" }} />
       <button className="min-h-11 self-end rounded-md bg-[#D4AF37] px-4 text-sm font-black text-[#071A3D]">Filter Jobs</button>
     </form>
   );

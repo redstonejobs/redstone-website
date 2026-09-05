@@ -6,7 +6,9 @@ const publicJobs = readFileSync("src/lib/public/jobs.ts", "utf8");
 const candidateData = readFileSync("src/lib/candidate/data.ts", "utf8");
 const publicJobsPage = readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
 const publicJobDetail = readFileSync("src/app/(public)/jobs/[slug]/page.tsx", "utf8");
+const externalJobDetail = readFileSync("src/app/(public)/opportunities/[slug]/page.tsx", "utf8");
 const candidateActions = readFileSync("src/lib/candidate/actions.ts", "utf8");
+const candidateApply = readFileSync("src/app/apply/[slug]/page.tsx", "utf8");
 const jobCard = readFileSync("src/components/public/job-card.tsx", "utf8");
 const sitemap = readFileSync("src/app/sitemap.ts", "utf8");
 const countries = readFileSync("src/lib/public/countries.ts", "utf8");
@@ -27,8 +29,10 @@ test("catalogue entries remain labelled as non-vacancy templates", () => {
   assert.doesNotMatch(publicJobsPage, /JobPosting/);
 });
 
-test("job cards use real job slugs and do not build occupation apply links", () => {
+test("job cards use real job slugs and preserve Apply for both Red Stone and source jobs", () => {
   assert.match(jobCard, /href=\{`\/apply\/\$\{job\.slug\}`\}/);
+  assert.match(jobCard, /externalJobApplyUrl/);
+  assert.match(jobCard, />\s*Apply\s*</);
   assert.doesNotMatch(jobCard, /JOB_OCCUPATIONS|occupation\.slug|\/apply\?occupation/);
 });
 
@@ -37,14 +41,14 @@ test("candidate apply lookup and sitemap exclude expired or unavailable public v
   assert.match(candidateData, /\.eq\("status", "published"\)/);
   assert.match(candidateActions, /candidate_start_application/);
   assert.match(sitemap, /getPublishedJobSitemapEntries/);
-  assert.match(sitemap, /\/jobs\/\$\{job\.route\}/);
+  assert.match(sitemap, /\$\{SITE_URL\}\$\{job\.route\}/);
   assert.match(publicJobs, /getPublishedJobSitemapEntries/);
   assert.match(publicJobs, /application_deadline\.is\.null,application_deadline\.gte/);
   assert.match(publicJobs, /vacancies\.is\.null,vacancies\.gt\.0/);
   assert.match(countries, /vacancies\.is\.null,vacancies\.gt\.0/);
 });
 
-test("JobPosting JSON-LD is only generated for real open job detail pages", () => {
+test("JobPosting JSON-LD is only generated for real open Red Stone job detail pages", () => {
   assert.match(publicJobDetail, /schemaEligible/);
   assert.match(publicJobDetail, /!closed/);
   assert.match(publicJobDetail, /<StructuredData data=\{structuredJob\}/);
@@ -57,7 +61,17 @@ test("JobPosting JSON-LD is only generated for real open job detail pages", () =
   assert.match(publicJobDetail, /baseSalary/);
 });
 
-test("JobPosting hiring organization is verified employer or confidential", () => {
+test("syndicated jobs receive a dedicated SEO page and source-directed application", () => {
+  assert.match(publicJobs, /\/opportunities\/\$\{slug\}/);
+  assert.match(externalJobDetail, /"@type": "JobPosting"/);
+  assert.match(externalJobDetail, /directApply: false/);
+  assert.match(externalJobDetail, /Apply at Source/);
+  assert.match(externalJobDetail, /does not claim a recruitment mandate/);
+  assert.match(candidateApply, /externalJobApplyUrl/);
+  assert.match(candidateApply, /redirect\(externalApply\)/);
+});
+
+test("JobPosting hiring organization is verified employer or confidential for Red Stone jobs", () => {
   assert.match(publicJobs, /employer:employers\(company_name, verification_status, is_active\)/);
   assert.match(candidateData, /employer:employers\(company_name, verification_status, is_active\)/);
   assert.match(publicJobDetail, /publicEmployerName/);
@@ -67,7 +81,7 @@ test("JobPosting hiring organization is verified employer or confidential", () =
   assert.doesNotMatch(publicJobDetail, /hiringOrganizationName\s*=\s*SITE_NAME|Red Stone Employment Agency"\s*\}/);
 });
 
-test("publication remains tied to active verified employers", () => {
+test("manual publication remains tied to active verified employers", () => {
   assert.match(adminActions, /assertVerifiedEmployerForPublication/);
   assert.match(adminActions, /verification_status !== "verified"/);
   assert.match(adminActions, /is_active !== true/);

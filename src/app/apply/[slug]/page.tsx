@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { startApplication, submitApplication } from "@/lib/candidate/actions";
 import { requireCandidate } from "@/lib/candidate/auth";
 import { getCandidateApplications, getCandidateDocuments, getPublishedJobBySlug } from "@/lib/candidate/data";
@@ -8,14 +8,22 @@ import { formatContract, formatMoney, formatProcessingTime, resolveProgrammeFee 
 import { formatSalary } from "@/lib/public/jobs";
 import { getJobCatalogueContext } from "@/lib/public/jobs";
 import type { PublicJob } from "@/lib/public/jobs";
+import { externalJobApplyUrl, type SourceAwareJob } from "@/lib/public/job-source";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export default async function ApplyForJobPage({ params }: Props) {
   const { slug } = await params;
-  const context = await requireCandidate();
   const { job } = await getPublishedJobBySlug(slug);
   if (!job) notFound();
+
+  // Syndicated listings are discovery pages, not Red Stone recruitment mandates.
+  // Never collect a Red Stone candidate application for them; send the applicant
+  // to the original source instead.
+  const externalApply = externalJobApplyUrl(job as SourceAwareJob);
+  if (externalApply) redirect(externalApply);
+
+  const context = await requireCandidate();
   const today = new Date().toISOString().slice(0, 10);
   const deadline = typeof job.application_deadline === "string" ? job.application_deadline : null;
   const closed = deadline !== null && deadline < today;

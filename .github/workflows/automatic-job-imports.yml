@@ -1,0 +1,57 @@
+name: Automatic Job Imports
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: "Provider to run"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - foundrole
+          - jobbank
+
+permissions:
+  contents: read
+
+concurrency:
+  group: automatic-job-imports
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Run secure Red Stone job importer
+        env:
+          JOB_IMPORT_URL: ${{ secrets.JOB_IMPORT_URL }}
+          JOB_IMPORT_SECRET: ${{ secrets.JOB_IMPORT_SECRET }}
+          PROVIDER: ${{ inputs.provider || 'all' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${JOB_IMPORT_URL:-}" ] || [ -z "${JOB_IMPORT_SECRET:-}" ]; then
+            echo "JOB_IMPORT_URL and JOB_IMPORT_SECRET repository secrets are required."
+            exit 1
+          fi
+
+          response_file="$(mktemp)"
+          status="$(curl --silent --show-error --location \
+            --retry 2 --retry-all-errors --max-time 720 \
+            --output "$response_file" --write-out "%{http_code}" \
+            --request POST "$JOB_IMPORT_URL" \
+            --header "Authorization: Bearer $JOB_IMPORT_SECRET" \
+            --header "Content-Type: application/json" \
+            --data "{\"provider\":\"$PROVIDER\"}")"
+
+          cat "$response_file"
+          echo
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Import endpoint returned HTTP $status"
+            exit 1
+          fi
