@@ -129,9 +129,9 @@ test("sitemap job URLs are split into bounded shards", () => {
   );
   assert.match(publicJobs, /export const SITEMAP_SHARD_SIZE = 1000/);
   assert.match(publicJobs, /getPublishedJobSitemapCount/);
-  assert.match(publicJobs, /select\("id, employer:employers!inner\(id\)", \{ count: "exact", head: true \}\)/);
-  assert.match(publicJobs, /\.eq\("employer\.verification_status", "verified"\)/);
-  assert.match(publicJobs, /\.eq\("employer\.is_active", true\)/);
+  assert.match(publicJobs, /select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(publicJobs, /isPublicJobVisible/);
+  assert.match(publicJobs, /employer\.is_active === true/);
   assert.match(publicJobs, /getPublishedJobSitemapShardCount/);
   assert.match(publicJobs, /Math\.ceil\(safeCount \/ SITEMAP_SHARD_SIZE\)/);
   assert.match(publicJobs, /getPublishedJobSitemapEntries\(shardId = 0\)/);

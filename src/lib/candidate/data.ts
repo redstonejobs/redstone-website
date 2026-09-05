@@ -1,10 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { getCandidateApplicationPayments } from "@/lib/payments/application-payments";
+import { isExternalJob, type SourceAwareJob } from "@/lib/public/job-source";
 import type { CandidateContext, CandidateRow } from "./types";
 
 const CANDIDATE_JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level";
-const RECENT_JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, vacancies, application_deadline, visa_sponsorship, accommodation:accommodation_provided, transport:transport_provided, meals:meals_provided, sponsorship_status, accommodation_status, meals_status, transport_status, processing_time_min, processing_time_max, processing_time_unit, processing_time_note, employer:employers!inner(company_name, verification_status, is_active)";
-const APPLY_JOB_FIELDS = "id, title, slug, country, city, vacancies, application_deadline, employer_filter:employers!inner(id)";
+const RECENT_JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, vacancies, application_deadline, visa_sponsorship, accommodation:accommodation_provided, transport:transport_provided, meals:meals_provided, sponsorship_status, accommodation_status, meals_status, transport_status, processing_time_min, processing_time_max, processing_time_unit, processing_time_note, source_provider, source_url, source_apply_url, source_employer_name, source_posted_at, source_attribution, source_status, application_mode, foreign_worker_status, employer:employers(company_name, verification_status, is_active)";
+const APPLY_JOB_FIELDS = "id, title, slug, country, city, vacancies, application_deadline, source_provider, source_url, source_apply_url, source_status, application_mode, employer:employers(company_name, verification_status, is_active)";
 const CANDIDATE_APPLICATION_PAGE_SIZE = 25;
 const CANDIDATE_DOCUMENT_LIST_LIMIT = 100;
 
@@ -114,24 +115,28 @@ export async function getCandidateTimeline(applicationId: string) {
 
 export async function getRecentPublishedJobs(limit = 4) {
   const supabase = await createClient();
+  const fetchLimit = Math.min(Math.max(limit * 4, limit), 50);
+
   const { data, error } = await supabase
     .from("jobs")
     .select(RECENT_JOB_FIELDS)
     .eq("status", "published")
     .not("slug", "is", null)
-    .eq("employer.verification_status", "verified")
-    .eq("employer.is_active", true)
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
+    .or("source_status.is.null,source_status.eq.active")
     .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit)
+    .limit(fetchLimit)
     .returns<CandidateRow[]>();
 
-  return { jobs: data ?? [], error };
+  return {
+    jobs: (data ?? []).filter(isCandidateVisibleJob).slice(0, limit),
+    error,
+  };
 }
-
 export async function getPublishedJobBySlug(slug: string) {
   const supabase = await createClient();
+
   const { data, error } = await supabase
     .from("jobs")
     .select(APPLY_JOB_FIELDS)
@@ -139,13 +144,25 @@ export async function getPublishedJobBySlug(slug: string) {
     .eq("status", "published")
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
-    .eq("employer_filter.verification_status", "verified")
-    .eq("employer_filter.is_active", true)
+    .or("source_status.is.null,source_status.eq.active")
     .maybeSingle<CandidateRow>();
 
-  return { job: data, error };
-}
+  if (error || !data) return { job: data, error };
+  if (!isCandidateVisibleJob(data)) return { job: null, error: null };
 
+  return { job: data, error: null };
+}
+function isCandidateVisibleJob(job: CandidateRow) {
+  if (isExternalJob(job as SourceAwareJob)) return true;
+
+  const relation = job.employer;
+  const employer = Array.isArray(relation) ? relation[0] : relation;
+
+  if (!employer || typeof employer !== "object") return false;
+
+  const record = employer as Record<string, unknown>;
+  return record.verification_status === "verified" && record.is_active === true;
+}
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
 }

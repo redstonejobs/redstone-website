@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { startApplication } from "@/lib/candidate/actions";
 import { getPublishedJobBySlug } from "@/lib/candidate/data";
+import { externalJobApplyUrl, type SourceAwareJob } from "@/lib/public/job-source";
 import { CONTACT } from "@/lib/public/site";
 import { createClient } from "@/utils/supabase/server";
 
@@ -42,6 +43,10 @@ export default async function ApplyForJobPage({ params, searchParams }: Props) {
   }
 
   if (!job) notFound();
+
+  // Syndicated external jobs must never create a Red Stone candidate application.
+  const externalApply = externalJobApplyUrl(job as SourceAwareJob);
+  if (externalApply) redirect(externalApply);
 
   const access = await getApplyCandidateAccess(applyPath);
 

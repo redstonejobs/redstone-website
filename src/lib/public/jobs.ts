@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import { slugify } from "./countries";
+import { isExternalJob } from "./job-source";
 
 export type PublicJob = {
   id: string;
@@ -169,7 +170,21 @@ const PUBLIC_JOB_SELECT = `
   published_at,
   created_at,
   updated_at,
-  employer:employers!inner(company_name, verification_status, is_active)
+  source_provider,
+  source_external_id,
+  source_url,
+  source_apply_url,
+  source_employer_name,
+  source_posted_at,
+  source_last_seen_at,
+  source_attribution,
+  source_status,
+  auto_imported,
+  application_mode,
+  foreign_worker_status,
+  immigration_evidence,
+  import_quality_score,
+  employer:employers(company_name, verification_status, is_active)
 `;
 
 const PUBLIC_JOB_CARD_SELECT = `
@@ -207,7 +222,21 @@ const PUBLIC_JOB_CARD_SELECT = `
   processing_time_unit,
   processing_time_note,
   published_at,
-  employer:employers!inner(company_name, verification_status, is_active)
+  source_provider,
+  source_external_id,
+  source_url,
+  source_apply_url,
+  source_employer_name,
+  source_posted_at,
+  source_last_seen_at,
+  source_attribution,
+  source_status,
+  auto_imported,
+  application_mode,
+  foreign_worker_status,
+  immigration_evidence,
+  import_quality_score,
+  employer:employers(company_name, verification_status, is_active)
 `;
 
 export const SITEMAP_SHARD_SIZE = 1000;
@@ -225,26 +254,21 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
     .select(PUBLIC_JOB_CARD_SELECT, { count: "exact" })
     .eq("status", "published")
     .not("slug", "is", null)
-    .eq("employer.verification_status", "verified")
-    .eq("employer.is_active", true);
+    .or("source_status.is.null,source_status.eq.active");
 
   if (!params.includeClosed) {
-    query = query.or(
-      `application_deadline.is.null,application_deadline.gte.${todayDate()}`
-    ).or("vacancies.is.null,vacancies.gt.0");
+    query = query
+      .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+      .or("vacancies.is.null,vacancies.gt.0");
   }
 
   if (params.q) {
-    const safe = params.q
-      .replaceAll("%", "")
-      .replaceAll(",", " ")
-      .trim();
+    const safe = params.q.replaceAll("%", "").replaceAll(",", " ").trim();
 
     if (safe) {
-      // Load the large occupation catalogue only when a visitor actually
-      // submits a free-text search. Exact job/detail requests stay lightweight
-      // on Cloudflare Workers.
+      // Load the large occupation catalogue only for an actual free-text search.
       const { occupationSearchTerms } = await import("@/lib/jobs/catalogue");
+
       const searchTerms = [
         ...new Set(
           [safe, ...occupationSearchTerms(safe)]
@@ -258,28 +282,46 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
           .flatMap((term) => [
             `title.ilike.%${term}%`,
             `country.ilike.%${term}%`,
+            `city.ilike.%${term}%`,
             `category.ilike.%${term}%`,
             `job_type.ilike.%${term}%`,
+            `source_employer_name.ilike.%${term}%`,
           ])
           .join(",")
       );
     }
   }
 
-  if (params.country) {
-    query = query.eq("country", params.country);
+  if (params.country) query = query.eq("country", params.country);
+  if (params.category) query = query.eq("category", params.category);
+  if (params.skill) query = query.eq("skill_level", params.skill);
+  if (params.job_type) query = query.eq("job_type", params.job_type);
+
+  if (params.source === "redstone") {
+    query = query.or("source_provider.is.null,source_provider.eq.redstone");
+  } else if (params.source) {
+    query = query.eq("source_provider", params.source);
   }
 
-  if (params.category) {
-    query = query.eq("category", params.category);
-  }
-
-  if (params.skill) {
-    query = query.eq("skill_level", params.skill);
-  }
-
-  if (params.job_type) {
-    query = query.eq("job_type", params.job_type);
+  if (params.foreign_worker === "accepted") {
+    query = query.in("foreign_worker_status", [
+      "verified_foreign_recruitment",
+      "international_applicants_accepted",
+      "lmia_requested",
+      "lmia_approved",
+      "sponsorship_confirmed",
+    ]);
+  } else if (params.foreign_worker === "sponsorship") {
+    query = query.in("foreign_worker_status", [
+      "verified_foreign_recruitment",
+      "lmia_approved",
+      "sponsorship_confirmed",
+    ]);
+  } else if (params.foreign_worker === "unconfirmed") {
+    query = query.in("foreign_worker_status", [
+      "unknown",
+      "sponsorship_unconfirmed",
+    ]);
   }
 
   if (params.sponsorship === "true") {
@@ -300,7 +342,6 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
 
   if (params.salary_min) {
     const min = Number(params.salary_min);
-
     if (Number.isFinite(min) && min >= 0) {
       query = query.gte("salary_max", min);
     }
@@ -308,7 +349,6 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
 
   if (params.salary_max) {
     const max = Number(params.salary_max);
-
     if (Number.isFinite(max) && max >= 0) {
       query = query.lte("salary_min", max);
     }
@@ -331,6 +371,11 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
       ascending: false,
       nullsFirst: false,
     });
+  } else if (sort === "source_newest") {
+    query = query.order("source_posted_at", {
+      ascending: false,
+      nullsFirst: false,
+    });
   } else {
     query = query.order("published_at", {
       ascending: false,
@@ -343,39 +388,37 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
     .returns<PublicJob[]>();
 
   return {
-    jobs: data ?? [],
+    jobs: (data ?? []).filter(isPublicJobVisible),
     count: error ? 0 : count ?? 0,
     error,
     page,
     pageSize: PAGE_SIZE,
   };
 }
-
 export async function getFeaturedJobs(limit = 6) {
   const supabase = await createClient();
+  const fetchLimit = Math.min(Math.max(limit * 4, limit), 50);
 
   const { data, error } = await supabase
     .from("jobs")
     .select(PUBLIC_JOB_CARD_SELECT)
     .eq("status", "published")
     .not("slug", "is", null)
-    .eq("employer.verification_status", "verified")
-    .eq("employer.is_active", true)
+    .or("source_status.is.null,source_status.eq.active")
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
     .order("published_at", {
       ascending: false,
       nullsFirst: false,
     })
-    .limit(limit)
+    .limit(fetchLimit)
     .returns<PublicJob[]>();
 
   return {
-    jobs: data ?? [],
+    jobs: (data ?? []).filter(isPublicJobVisible).slice(0, limit),
     error,
   };
 }
-
 export const getJobBySlug = cache(async function getJobBySlug(slug: string) {
   const supabase = await createClient();
 
@@ -384,31 +427,40 @@ export const getJobBySlug = cache(async function getJobBySlug(slug: string) {
     .select(PUBLIC_JOB_SELECT)
     .eq("slug", slug)
     .eq("status", "published")
-    .eq("employer.verification_status", "verified")
-    .eq("employer.is_active", true)
+    .or("source_status.is.null,source_status.eq.active")
     .maybeSingle<PublicJob>();
+
+  if (error || !data) {
+    return {
+      job: data,
+      error,
+    };
+  }
+
+  if (!isPublicJobVisible(data)) {
+    return {
+      job: null,
+      error: null,
+    };
+  }
 
   return {
     job: data,
-    error,
+    error: null,
   };
 });
-
 /**
- * Fetch one bounded published-job sitemap page using a minimal select.
- *
- * Sitemap generation uses a separate head count plus fixed-size shards so a
- * single Worker request never has to materialize the full job catalogue.
+ * Count open published jobs for bounded sitemap shard generation.
  */
 export async function getPublishedJobSitemapCount() {
   const supabase = createPublicSitemapClient();
+
   const { count, error } = await supabase
     .from("jobs")
-    .select("id, employer:employers!inner(id)", { count: "exact", head: true })
+    .select("id", { count: "exact", head: true })
     .eq("status", "published")
     .not("slug", "is", null)
-    .eq("employer.verification_status", "verified")
-    .eq("employer.is_active", true)
+    .or("source_status.is.null,source_status.eq.active")
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0");
 
@@ -429,6 +481,7 @@ export function getPublishedJobSitemapShardCount(count: number) {
 export async function getPublishedJobSitemapEntries(shardId = 0) {
   const supabase = createPublicSitemapClient();
   const entries: PublishedJobSitemapEntry[] = [];
+
   const safeShardId = Math.max(0, Math.floor(shardId));
   const from = safeShardId * SITEMAP_SHARD_SIZE;
   const to = from + SITEMAP_SHARD_SIZE - 1;
@@ -436,12 +489,11 @@ export async function getPublishedJobSitemapEntries(shardId = 0) {
   const { data, error } = await supabase
     .from("jobs")
     .select(
-      "slug, published_at, created_at, updated_at, application_deadline, employer:employers!inner(id)"
+      "slug, published_at, created_at, updated_at, application_deadline, source_provider, source_status, application_mode, employer:employers(company_name, verification_status, is_active)"
     )
     .eq("status", "published")
     .not("slug", "is", null)
-    .eq("employer.verification_status", "verified")
-    .eq("employer.is_active", true)
+    .or("source_status.is.null,source_status.eq.active")
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
     .order("published_at", {
@@ -456,6 +508,14 @@ export async function getPublishedJobSitemapEntries(shardId = 0) {
         created_at: string | null;
         updated_at: string | null;
         application_deadline: string | null;
+        source_provider: string | null;
+        source_status: string | null;
+        application_mode: string | null;
+        employer?: {
+          company_name: string | null;
+          verification_status: string | null;
+          is_active: boolean | null;
+        } | null;
       }[]
     >();
 
@@ -466,10 +526,12 @@ export async function getPublishedJobSitemapEntries(shardId = 0) {
   }
 
   for (const row of data ?? []) {
-    if (!row.slug) continue;
+    if (!row.slug || !isPublicJobVisible(row)) continue;
 
     entries.push({
-      route: row.slug,
+      route: isExternalJob(row)
+        ? `/opportunities/${row.slug}`
+        : `/jobs/${row.slug}`,
       published_at: row.published_at,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -479,7 +541,6 @@ export async function getPublishedJobSitemapEntries(shardId = 0) {
 
   return entries;
 }
-
 export async function getJobsForCountry(country: string, limit = 6) {
   return getPublishedJobs({
     country,
@@ -492,7 +553,11 @@ export async function getJobsForCountry(country: string, limit = 6) {
 }
 
 export function jobHref(job: PublicJob) {
-  return `/jobs/${job.slug || slugify(job.title || String(job.id))}`;
+  const slug = job.slug || slugify(job.title || String(job.id));
+  return isExternalJob(job)
+    ? `/opportunities/${slug}`
+    : `/jobs/${slug}`;
+}`;
 }
 
 export function publicJobApplyHref(job: Pick<PublicJob, "slug">) {
@@ -598,6 +663,25 @@ export function normalizePage(page?: string) {
     : 1;
 }
 
+function isPublicJobVisible(
+  job: Pick<
+    PublicJob,
+    "source_provider" | "application_mode" | "source_status" | "employer"
+  >
+) {
+  if (isExternalJob(job)) {
+    return job.source_status === null || job.source_status === "active";
+  }
+
+  const relation = job.employer;
+  const employer = Array.isArray(relation) ? relation[0] : relation;
+
+  return Boolean(
+    employer &&
+      employer.verification_status === "verified" &&
+      employer.is_active === true
+  );
+}
 function safeSearchTerm(value: string) {
   return value
     .replaceAll("%", "")
