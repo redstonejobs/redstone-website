@@ -46,6 +46,19 @@ These must never be committed or prefixed with `NEXT_PUBLIC_`:
 
 Keep production values in Cloudflare and the relevant provider secret stores. The repository contains names and examples only.
 
+## GitHub quality gate
+
+Pull requests should pass `.github/workflows/quality-gate.yml` before merge. The workflow is validation-only and does not deploy.
+
+It runs:
+
+1. `npm ci`
+2. `npm run lint`
+3. `npm test`
+4. `npm run build:cloudflare`
+
+The workflow uses safe non-production placeholder environment values for build-time validation. Never copy production Supabase, Resend, Cloudflare, or other credentials into the workflow file.
+
 ## Worker configuration
 
 `wrangler.jsonc` is the source-controlled production baseline. It currently provides:
@@ -108,9 +121,10 @@ Do not deploy directly from an unreviewed local working tree. Preferred flow:
 
 1. Create a feature branch.
 2. Make and inspect the changes.
-3. Use Cloudflare's preview/version build for the branch where available.
-4. Review authentication, database, email, and document-access behavior.
-5. Merge to `main` only after approval.
-6. Let Cloudflare Workers Builds perform the production deployment.
+3. Wait for the GitHub quality gate to pass.
+4. Use Cloudflare's preview/version build for the branch where available.
+5. Review authentication, database, email, and document-access behavior.
+6. Merge to `main` only after approval.
+7. Let Cloudflare Workers Builds perform the production deployment.
 
 See `docs/cloudflare-production-runbook.md` for the operational checklist.
