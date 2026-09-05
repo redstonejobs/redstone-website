@@ -2,9 +2,9 @@ import { cache } from "react";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
 import { slugify } from "./countries";
-import { isExternalJob } from "./job-source";
+import { isExternalJob, type SourceAwareJob } from "./job-source";
 
-export type PublicJob = {
+export type PublicJob = SourceAwareJob & {
   id: string;
   title: string | null;
   slug: string | null;
@@ -81,6 +81,9 @@ export type PublicJob = {
   created_at: string | null;
   updated_at: string | null;
 
+  source_external_id: string | null;
+  source_status: string | null;
+
   employer?: {
     company_name: string | null;
     verification_status: string | null;
@@ -99,6 +102,8 @@ export type JobSearchParams = {
   salary_max?: string;
   contract_type?: string;
   job_type?: string;
+  source?: string;
+  foreign_worker?: string;
   sort?: string;
   page?: string;
   includeClosed?: boolean;
@@ -557,7 +562,6 @@ export function jobHref(job: PublicJob) {
   return isExternalJob(job)
     ? `/opportunities/${slug}`
     : `/jobs/${slug}`;
-}`;
 }
 
 export function publicJobApplyHref(job: Pick<PublicJob, "slug">) {

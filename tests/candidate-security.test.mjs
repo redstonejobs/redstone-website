@@ -105,9 +105,9 @@ test("missing or unavailable apply jobs still return 404 before account-type han
   assert.match(candidateData, /\.eq\("status", "published"\)/);
   assert.match(candidateData, /application_deadline\.is\.null,application_deadline\.gte/);
   assert.match(candidateData, /vacancies\.is\.null,vacancies\.gt\.0/);
-  assert.match(candidateData, /employer_filter:employers!inner\(id\)/);
-  assert.match(candidateData, /\.eq\("employer_filter\.verification_status", "verified"\)/);
-  assert.match(candidateData, /\.eq\("employer_filter\.is_active", true\)/);
+  assert.match(candidateData, /isCandidateVisibleJob/);
+  assert.match(candidateData, /record\.verification_status === "verified"/);
+  assert.match(candidateData, /record\.is_active === true/);
 });
 
 test("candidate_required from start application returns to apply page instead of throwing 404", () => {
@@ -126,7 +126,7 @@ test("apply page reports missing auth profile as account setup error not 404", (
 });
 
 test("apply route stays lightweight for Cloudflare Workers", () => {
-  assert.match(candidateData, /const APPLY_JOB_FIELDS = "id, title, slug, country, city, vacancies, application_deadline, employer_filter:employers!inner\(id\)"/);
+  assert.match(candidateData, /const APPLY_JOB_FIELDS = "[^"]*source_provider[^"]*employer:employers\(company_name, verification_status, is_active\)"/);
   assert.match(applyPage, /Lightweight application entry point/);
   assert.doesNotMatch(applyPage, /getCandidateApplications|getCandidateDocuments|getJobCatalogueContext|resolveProgrammeFee|submitApplication/);
   assert.match(applyPage, /select\("profile_type, is_active"\)/);

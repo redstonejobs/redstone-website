@@ -163,7 +163,7 @@ test("candidate submit and withdraw RPCs set controlled status-transition flags"
   const withdrawRpc = between(
     hardening,
     "create or replace function public.candidate_withdraw_application",
-    "do $$\ndeclare\n  v_policy record;",
+    "do $$\r\ndeclare\r\n  v_policy record;",
   );
 
   assert.match(submitRpc, /p\.profile_type = 'candidate'/);
