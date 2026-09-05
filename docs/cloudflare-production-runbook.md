@@ -19,13 +19,27 @@ Confirm the change has been reviewed on a feature branch.
 Minimum checks for application changes:
 
 - Lint/tests relevant to the changed area pass.
+- The Cloudflare production build passes in CI.
 - No real `.env`, credentials, access tokens, API keys, service-role keys, private certificates, or customer data are committed.
 - Authentication redirects still target `https://redstone.co.ke`.
 - Admin/candidate/employer authorization remains server-side.
 - Database schema changes are represented as new Supabase migrations; do not edit a migration that has already been applied in production.
 - New environment variables are documented in `.env.example` and configured in Cloudflare before deployment.
 
-## 3. Cloudflare build configuration
+## 3. GitHub quality gate
+
+Pull requests should pass `.github/workflows/quality-gate.yml` before merge. The workflow intentionally does not deploy anything. It runs:
+
+1. `npm ci`
+2. `npm run lint`
+3. `npm test`
+4. `npm run build:cloudflare`
+
+The workflow uses non-production placeholder environment values so build-time checks never require production secrets.
+
+If a check fails, fix the branch and re-run it. Do not bypass the gate just to get a deployment through.
+
+## 4. Cloudflare build configuration
 
 Under Worker Settings -> Builds, confirm the Git repository is `redstonejobs/redstone-website` and production branch is `main`.
 
@@ -37,7 +51,7 @@ Use:
 
 Do not store production secrets in the Git repository.
 
-## 4. Environment configuration
+## 5. Environment configuration
 
 Public/build variables:
 
@@ -59,7 +73,7 @@ Email configuration:
 
 When rotating a credential, update the provider first where appropriate, update Cloudflare, test, then revoke the old credential.
 
-## 5. DNS and custom domains
+## 6. DNS and custom domains
 
 Confirm the zone remains active in Cloudflare and that the Worker receives both apex and `www` traffic as intended.
 
@@ -67,7 +81,7 @@ Do not change DNS and application deployment simultaneously unless necessary. Ke
 
 For authentication, confirm Supabase redirect allowlists match the hostnames actually used by the application.
 
-## 6. Security controls
+## 7. Security controls
 
 Use Cloudflare security controls as a traffic-protection layer, not as a replacement for application authorization.
 
@@ -84,7 +98,7 @@ Roll out rate limits gradually. Start in logging/observation mode when possible,
 
 Never cache personalized/authenticated HTML, signed document URLs, or responses containing private candidate/employer information.
 
-## 7. Observability
+## 8. Observability
 
 Workers Logs are enabled in `wrangler.jsonc`. Source maps are uploaded to make production stack traces useful.
 
@@ -99,7 +113,7 @@ Review after each significant release:
 
 Automatic tracing is currently disabled. Enable sampled tracing intentionally if deeper latency diagnostics are needed and review Cloudflare's current observability pricing before doing so.
 
-## 8. Post-deployment smoke test
+## 9. Post-deployment smoke test
 
 After a production deployment, check:
 
@@ -114,7 +128,7 @@ After a production deployment, check:
 9. Email sends successfully if the release touched email-dependent flows.
 10. Cloudflare logs show no new high-volume errors.
 
-## 9. Rollback
+## 10. Rollback
 
 If a critical regression occurs:
 
@@ -127,7 +141,7 @@ If a critical regression occurs:
 
 For database migrations, application rollback and database rollback are separate concerns. Prefer forward-fix migrations when destructive rollback would risk data loss.
 
-## 10. Performance roadmap
+## 11. Performance roadmap
 
 Current optimizations:
 
