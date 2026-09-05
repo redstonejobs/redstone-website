@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: canonical("/skilled-jobs") },
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function SkilledJobsPage() {
   const [skilled, professional] = await Promise.all([
     getPublishedJobs({ skill: "skilled", page: "1" }),

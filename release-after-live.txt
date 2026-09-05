@@ -1,0 +1,19 @@
+ M	next.config.ts
+ M	src/app/admin/applications/[id]/page.tsx
+ M	src/app/admin/applications/page.tsx
+ M	src/app/auth/callback/route.ts
+ M	src/app/candidate/applications/[id]/page.tsx
+ M	src/app/candidate/applications/page.tsx
+ M	src/app/staff/clients/page.tsx
+ M	src/app/staff/page.tsx
+ M	src/lib/admin/data.ts
+ M	src/lib/auth/actions.ts
+ M	src/lib/candidate/actions.ts
+ M	src/lib/staff/actions.ts
+??	src/app/candidate/applications/[id]/PaymentStatusRefresher.tsx
+??	src/components/candidate/DocumentUploadRows.tsx
+??	src/components/candidate/document-upload-builder.tsx
+??	src/components/staff/referral-link-card.tsx
+??	src/lib/payments/application-payments.ts
+??	src/lib/payments/mpesa/daraja.ts
+??	src/lib/referrals/attribution.ts

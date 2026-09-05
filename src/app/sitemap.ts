@@ -1,8 +1,14 @@
 ﻿import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/public/blog";
 import { COUNTRIES } from "@/lib/public/countries";
-import { getPublishedJobSitemapEntries } from "@/lib/public/jobs";
+import {
+  getPublishedJobSitemapCount,
+  getPublishedJobSitemapEntries,
+  getPublishedJobSitemapShardCount,
+} from "@/lib/public/jobs";
 import { SITE_URL } from "@/lib/public/site";
+
+export const dynamic = "force-dynamic";
 
 const staticRoutes = [
   "",
@@ -37,25 +43,45 @@ const staticRoutes = [
   "/accessibility",
 ] as const;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function generateSitemaps() {
+  const count = await getPublishedJobSitemapCount();
+  const shardCount = getPublishedJobSitemapShardCount(count);
+
+  return Array.from({ length: shardCount }, (_, id) => ({
+    id,
+  }));
+}
+
+export default async function sitemap({
+  id,
+}: {
+  id?: number;
+} = {}): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const jobs = await getPublishedJobSitemapEntries();
+  const isJobShard = typeof id === "number";
+  const jobs = isJobShard ? await getPublishedJobSitemapEntries(id) : [];
 
   return [
-    ...staticRoutes.map((route) => ({
-      url: `${SITE_URL}${route}`,
-      lastModified: now,
-    })),
+    ...(isJobShard
+      ? []
+      : staticRoutes.map((route) => ({
+          url: `${SITE_URL}${route}`,
+          lastModified: now,
+        }))),
 
-    ...COUNTRIES.map((country) => ({
-      url: `${SITE_URL}/countries/${country.slug}`,
-      lastModified: now,
-    })),
+    ...(isJobShard
+      ? []
+      : COUNTRIES.map((country) => ({
+          url: `${SITE_URL}/countries/${country.slug}`,
+          lastModified: now,
+        }))),
 
-    ...BLOG_POSTS.map((post) => ({
-      url: `${SITE_URL}/blog/${post.slug}`,
-      lastModified: safeDate(post.date, now),
-    })),
+    ...(isJobShard
+      ? []
+      : BLOG_POSTS.map((post) => ({
+          url: `${SITE_URL}/blog/${post.slug}`,
+          lastModified: safeDate(post.date, now),
+        }))),
 
     ...jobs.map((job) => ({
       url: `${SITE_URL}/jobs/${job.route}`,

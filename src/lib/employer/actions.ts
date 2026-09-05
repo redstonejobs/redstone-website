@@ -83,12 +83,9 @@ export async function updateEmployerProfile(formData: FormData) {
 export async function submitCompanyVerification() {
   const context = await requireEmployer();
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("employers")
-    .update({ verification_status: "under_review", verification_submitted_at: new Date().toISOString() })
-    .eq("id", String(context.employer.id))
-    .eq("owner_user_id", context.user.id)
-    .in("verification_status", ["pending", "rejected"]);
+  const { error } = await supabase.rpc("employer_submit_company_verification", {
+    p_employer_id: String(context.employer.id),
+  });
 
   if (error) redirect("/employer/onboarding?error=verification_submit_failed");
   await logEmployerActivity(context, "employer_verification_submitted", "employer", String(context.employer.id), "Employer submitted verification");

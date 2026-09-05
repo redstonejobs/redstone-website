@@ -2,10 +2,16 @@ import Link from "next/link";
 import { dateText } from "@/lib/admin/format";
 import { formatContract, formatProcessingTime } from "@/lib/jobs/costs";
 import { skillLevelLabel } from "@/lib/jobs/catalogue";
-import { formatSalary, jobHref, type PublicJob } from "@/lib/public/jobs";
+import {
+  formatSalary,
+  jobHref,
+  publicJobApplyState,
+  type PublicJob,
+} from "@/lib/public/jobs";
 
 export function JobCard({ job }: { job: PublicJob }) {
   const salary = formatSalary(job);
+  const apply = publicJobApplyState({ job });
   const badges = [
     skillLevelLabel(job.skill_level),
     job.visa_sponsorship ? "Visa Sponsorship" : null,
@@ -34,7 +40,17 @@ export function JobCard({ job }: { job: PublicJob }) {
       </div>
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
         <Link href={jobHref(job)} className="rounded-md bg-[#071A3D] px-4 py-3 text-center text-sm font-black text-white">View Details</Link>
-        <Link href={`/apply/${job.slug}`} className="rounded-md border border-[#D4AF37] px-4 py-3 text-center text-sm font-black text-[#071A3D]">Apply</Link>
+        <Link
+          href={apply.href}
+          aria-disabled={apply.disabled}
+          className={`rounded-md px-4 py-3 text-center text-sm font-black transition ${
+            apply.disabled
+              ? "pointer-events-none border border-slate-200 bg-slate-100 text-slate-500"
+              : "border border-[#D4AF37] bg-[#D4AF37] text-[#071A3D] hover:bg-[#F2D675]"
+          }`}
+        >
+          {apply.label}
+        </Link>
       </div>
     </article>
   );

@@ -63,15 +63,11 @@ export async function getEmployerApplicants(context: EmployerContext, page = 1) 
   const employerId = String(context.employer.id);
   const from = (Math.max(page, 1) - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
-  const { data: jobs } = await supabase.from("jobs").select("id, title, country, city").eq("employer_id", employerId).returns<Row[]>();
-  const jobIds = (jobs ?? []).map((job) => String(job.id));
-
-  if (jobIds.length === 0) return { rows: [], count: 0, page, pageSize: PAGE_SIZE };
 
   const { data, count, error } = await supabase
     .from("applications")
-    .select(SAFE_APPLICANT_SELECT, { count: "exact" })
-    .in("job_id", jobIds)
+    .select(`${SAFE_APPLICANT_SELECT}, job:jobs!inner(id, title, country, city)`, { count: "exact" })
+    .eq("job.employer_id", employerId)
     .order("created_at", { ascending: false })
     .range(from, to)
     .returns<Row[]>();
@@ -80,14 +76,13 @@ export async function getEmployerApplicants(context: EmployerContext, page = 1) 
     supabase.from("employer_application_decisions").select("application_id, decision, note").eq("employer_id", employerId).returns<Row[]>(),
     candidateIds.length ? supabase.from("profiles").select("id, full_name, nationality, city, country").in("id", candidateIds).returns<Row[]>() : Promise.resolve({ data: [] as Row[] }),
   ]);
-  const jobMap = new Map((jobs ?? []).map((job) => [String(job.id), job]));
   const decisionMap = new Map((decisions ?? []).map((decision) => [String(decision.application_id), decision]));
   const candidateMap = new Map((candidates ?? []).map((candidate) => [String(candidate.id), candidate]));
 
   return {
     rows: (data ?? []).map((application) => ({
       ...application,
-      job: jobMap.get(String(application.job_id)) ?? null,
+      job: embeddedJob(application),
       candidate: candidateMap.get(String(application.candidate_id)) ?? null,
       employer_decision: decisionMap.get(String(application.id)) ?? null,
     })) as Row[],
@@ -100,15 +95,12 @@ export async function getEmployerApplicants(context: EmployerContext, page = 1) 
 export async function getEmployerApplicant(context: EmployerContext, applicationId: string) {
   const supabase = await createClient();
   const employerId = String(context.employer.id);
-  const { data: jobs } = await supabase.from("jobs").select("id, title, country, city").eq("employer_id", employerId).returns<Row[]>();
-  const jobIds = (jobs ?? []).map((job) => String(job.id));
-  if (!jobIds.length) return { application: null, documents: [] as Row[] };
 
   const { data: application } = await supabase
     .from("applications")
-    .select(SAFE_APPLICANT_SELECT)
+    .select(`${SAFE_APPLICANT_SELECT}, job:jobs!inner(id, title, country, city)`)
     .eq("id", applicationId)
-    .in("job_id", jobIds)
+    .eq("job.employer_id", employerId)
     .maybeSingle<Row>();
   if (!application) return { application: null, documents: [] as Row[] };
 
@@ -122,12 +114,11 @@ export async function getEmployerApplicant(context: EmployerContext, application
     supabase.from("profiles").select("id, full_name, nationality, city, country").eq("id", String(application.candidate_id)).maybeSingle<Row>(),
     supabase.from("employer_application_decisions").select("application_id, decision, note").eq("employer_id", employerId).eq("application_id", applicationId).maybeSingle<Row>(),
   ]);
-  const jobMap = new Map((jobs ?? []).map((job) => [String(job.id), job]));
 
   return {
     application: {
       ...application,
-      job: jobMap.get(String(application.job_id)) ?? null,
+      job: embeddedJob(application),
       candidate: candidate ?? null,
       employer_decision: decision ?? null,
     } as Row,
@@ -169,9 +160,15 @@ async function count(table: string, filters: Record<string, string>) {
 
 async function countApplicationsForEmployer(employerId: string) {
   const supabase = await createClient();
-  const { data: jobs } = await supabase.from("jobs").select("id").eq("employer_id", employerId).returns<Row[]>();
-  const ids = (jobs ?? []).map((job) => String(job.id));
-  if (!ids.length) return 0;
-  const { count: result, error } = await supabase.from("applications").select("id", { count: "exact", head: true }).in("job_id", ids);
+  const { count: result, error } = await supabase
+    .from("applications")
+    .select("id, job:jobs!inner(id)", { count: "exact", head: true })
+    .eq("job.employer_id", employerId);
   return error ? null : result ?? 0;
+}
+
+function embeddedJob(application: Row) {
+  const job = application.job;
+  if (Array.isArray(job)) return (job[0] ?? null) as Row | null;
+  return job && typeof job === "object" ? (job as Row) : null;
 }

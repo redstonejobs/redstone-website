@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: canonical("/unskilled-jobs") },
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function UnskilledJobsPage() {
   const [entryLevel, semiSkilled] = await Promise.all([
     getPublishedJobs({ skill: "unskilled", page: "1" }),

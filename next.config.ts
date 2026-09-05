@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    webpackBuildWorker: false,
+    serverActions: {
+      bodySizeLimit: "32mb",
+    },
+    proxyClientMaxBodySize: "32mb",
+  },
   turbopack: {
     root: process.cwd(),
   },
@@ -29,4 +36,6 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-initOpenNextCloudflareForDev();
+if (process.env.NODE_ENV === "development") {
+  initOpenNextCloudflareForDev();
+}

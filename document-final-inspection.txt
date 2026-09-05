@@ -1,0 +1,370 @@
+===== src\components\candidate\DocumentUploadRows.tsx =====
+"use client";
+
+import { useState } from "react";
+
+type Props = {
+  action: (formData: FormData) => void | Promise<void>;
+  documentTypes: string[];
+  disabled?: boolean;
+};
+
+type UploadRow = { id: number };
+
+function titleCase(input: string) {
+  return input
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+export function DocumentUploadRows({ action, documentTypes, disabled = false }: Props) {
+  const [rows, setRows] = useState<UploadRow[]>([{ id: 1 }]);
+  const [nextId, setNextId] = useState(2);
+
+  function addRow() {
+    if (rows.length >= 10) return;
+    setRows((current) => [...current, { id: nextId }]);
+    setNextId((current) => current + 1);
+  }
+
+  function removeRow(id: number) {
+    setRows((current) =>
+      current.length <= 1 ? current : current.filter((row) => row.id !== id),
+    );
+  }
+
+  return (
+    <form action={action} className="space-y-4 rounded-2xl bg-slate-50 p-4">
+      <div className="space-y-3">
+        {rows.map((row, index) => (
+          <div
+            key={row.id}
+            className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 lg:grid-cols-[240px_1fr_auto]"
+          >
+            <select
+              name="document_type"
+              defaultValue={documentTypes[0] ?? ""}
+              required
+              disabled={disabled}
+              aria-label={`Document type ${index + 1}`}
+              className="min-h-12 rounded-xl border border-slate-300 bg-white px-3"
+            >
+              {documentTypes.map((type) => (
+                <option key={type} value={type}>
+                  {titleCase(type)}
+                </option>
+              ))}
+            </select>
+
+            <input
+              name="files"
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+              required
+              disabled={disabled}
+              aria-label={`Document file ${index + 1}`}
+              className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 py-2"
+            />
+
+            <button
+              type="button"
+              onClick={() => removeRow(row.id)}
+              disabled={disabled || rows.length === 1}
+              className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={addRow}
+          disabled={disabled || rows.length >= 10}
+          className="rounded-xl border-2 border-[#D4AF37] bg-white px-5 py-3 text-sm font-black text-[#071A3D] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          + Add Another Document
+        </button>
+
+        <button
+          type="submit"
+          disabled={disabled}
+          className="rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-black text-white disabled:bg-slate-400"
+        >
+          Upload All Documents
+        </button>
+      </div>
+
+      <p className="text-xs leading-5 text-slate-500">
+        Add one row for each document type. You can upload up to 10 documents in one batch.
+        Each file will be saved with the document type selected on its row.
+      </p>
+    </form>
+  );
+}
+===== src\app\candidate\applications\[id]\page.tsx =====
+   17:   saveCandidateFinancialInformation,
+   18:   saveCandidateImmigrationDeclarations,
+   19:   completeCandidateAddressSection,
+   20:   completeCandidateEducationSection,
+   21:   completeCandidateEmploymentSection,
+   22:   completeCandidateFamilySection,
+   23:   completeCandidateLanguagesSection,
+   24:   completeCandidateLicensesSection,
+   25:   completeCandidateTravelSection,
+   26:   completeCandidateVisaSection,
+   27:   completeCandidateEmergencySection,
+   28:   completeCandidateReferencesSection,
+   29:   completeCandidateFinancesSection,
+   30:   completeCandidateDeclarationsSection,
+   31:   completeCandidateDocumentsSection,
+   32:   deleteCandidateAddress,
+   33:   deleteCandidateDependant,
+   34:   deleteCandidateEducation,
+   35:   deleteCandidateEmployment,
+   36:   deleteCandidateLanguage,
+   37:   deleteCandidateProfessionalLicense,
+   38:   deleteCandidateTravelHistory,
+   39:   deleteCandidateVisaHistory,
+   40:   deleteCandidateEmergencyContact,
+   41:   deleteCandidateReference,
+   42:   saveCandidatePassportInformation,
+   43:   saveCandidatePersonalInformation,
+   44:   initiateApplicationPayment,
+   45:   prepareApplicationPayment,
+   46:   uploadCandidateDocument,
+   47:   withdrawApplication,
+   48: } from "@/lib/candidate/actions";
+   49: 
+   50: import { dateText } from "@/lib/admin/format";
+   51: import { requireCandidate } from "@/lib/candidate/auth";
+   52: 
+   53: import {
+   54:   candidateDocumentStatus,
+   55:   candidateStatusLabel,
+   56:   DOCUMENT_TYPES,
+   57:   WITHDRAWABLE_STATUSES,
+   58: } from "@/lib/candidate/constants";
+   59: 
+   60: import { getCandidateApplication } from "@/lib/candidate/data";
+   61: import {
+   62:   CV_DOCUMENT_VERIFICATION_FEE,
+   63:   paymentConfigurationState,
+   64: } from "@/lib/payments/config";
+   65: import { createClient } from "@/utils/supabase/server";
+   66: 
+   67: type Props = {
+
+ 3877:             text="Save and review your declarations before continuing to documents."
+ 3878:           >
+ 3879:             <form action={completeCandidateDeclarationsSection.bind(null, id)}>
+ 3880:               <SaveButton
+ 3881:                 label="Complete Declarations & Continue to Documents"
+ 3882:                 disabled={!editable}
+ 3883:               />
+ 3884:             </form>
+ 3885:           </CompletionBox>
+ 3886:         </SectionPanel>
+ 3887:       ) : null}
+ 3888:       {/* DOCUMENTS */}
+ 3889:       {section === "documents" ? (
+ 3890:         <SectionPanel
+ 3891:           title="Supporting Documents"
+ 3892:           subtitle="Upload supporting evidence for your employment and immigration case."
+ 3893:         >
+ 3894:           <Warning
+ 3895:             title="Only upload genuine documents"
+ 3896:             text="Required documents vary according to the destination, employer and immigration program."
+ 3897:           />
+ 3898:           <DocumentUploadRows
+ 3899:             action={uploadCandidateDocument.bind(null, id)}
+ 3900:             documentTypes={[...DOCUMENT_TYPES]}
+ 3901:             disabled={!editable}
+ 3902:           />
+ 3903: 
+ 3904:           <div className="space-y-3">
+ 3905:             {documents.map(
+ 3906:               (document) => (
+ 3907:                 <article
+ 3908:                   key={String(
+ 3909:                     document.id,
+ 3910:                   )}
+ 3911:                   className="flex flex-col gap-3 rounded-2xl border border-slate-200 p-4 md:flex-row md:items-center md:justify-between"
+ 3912:                 >
+ 3913:                   <div>
+ 3914:                     <p className="font-bold text-[#071A3D]">
+ 3915:                       {String(
+ 3916:                         document.file_name ??
+ 3917:                           document.document_type ??
+ 3918:                           "Document",
+ 3919:                       )}
+ 3920:                     </p>
+ 3921: 
+ 3922:                     <p className="mt-1 text-sm text-slate-600">
+ 3923:                       {candidateDocumentStatus(
+ 3924:                         String(
+ 3925:                           document.verification_status ??
+ 3926:                             "pending",
+ 3927:                         ),
+
+ 3954:             {!documents.length ? (
+ 3955:               <EmptyState
+ 3956:                 title="No documents uploaded"
+ 3957:                 text="Uploaded documents will appear here."
+ 3958:               />
+ 3959:             ) : null}
+ 3960:           </div>
+ 3961: 
+ 3962:           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+ 3963:             You can select multiple files of the same document type at once. After uploading, the documents will remain listed here and you can select another document type and upload more files.
+ 3964:           </div>
+ 3965: 
+ 3966:           <CompletionBox
+ 3967:             title="Finished uploading documents?"
+ 3968:             text="Upload all supporting documents you want included with this application, then mark this section complete and continue to Final Review."
+ 3969:           >
+ 3970:             <form action={completeCandidateDocumentsSection.bind(null, id)}>
+ 3971:               <SaveButton
+ 3972:                 label="Complete Documents & Continue to Review"
+ 3973:                 disabled={!editable}
+ 3974:               />
+ 3975:             </form>
+ 3976:           </CompletionBox>        </SectionPanel>
+ 3977:       ) : null}
+ 3978: 
+ 3979:       {/* REVIEW */}
+ 3980:       {section === "review" ? (
+ 3981:         <SectionPanel
+ 3982:           title="Final Application Review"
+ 3983:           subtitle="Review the status of each application section before you consider your case information complete."
+ 3984:         >
+ 3985:           <Notice
+ 3986:             title="Review before proceeding"
+ 3987:             text="Check every section carefully. A completed portal review does not mean that a visa, work permit or employment placement has been approved."
+ 3988:           />
+ 3989: 
+ 3990:           <div className="grid gap-3 md:grid-cols-2">
+ 3991:             {SECTIONS.filter((item) => item.key !== "review").map((item) => {
+ 3992:               if (item.key === "payment") return null;
+ 3993:               const progress = (progressRows ?? []).find(
+ 3994:                 (row) => row.section_key === item.key,
+ 3995:               );
+ 3996:               const status = progress?.status ?? "incomplete";
+ 3997:               const complete = status === "complete";
+ 3998: 
+ 3999:               return (
+ 4000:                 <article
+ 4001:                   key={item.key}
+ 4002:                   className="rounded-2xl border border-slate-200 bg-white p-5"
+ 4003:                 >
+ 4004:                   <div className="flex items-start justify-between gap-4">
+
+ 3956:                 title="No documents uploaded"
+ 3957:                 text="Uploaded documents will appear here."
+ 3958:               />
+ 3959:             ) : null}
+ 3960:           </div>
+ 3961: 
+ 3962:           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+ 3963:             You can select multiple files of the same document type at once. After uploading, the documents will remain listed here and you can select another document type and upload more files.
+ 3964:           </div>
+ 3965: 
+ 3966:           <CompletionBox
+ 3967:             title="Finished uploading documents?"
+ 3968:             text="Upload all supporting documents you want included with this application, then mark this section complete and continue to Final Review."
+ 3969:           >
+ 3970:             <form action={completeCandidateDocumentsSection.bind(null, id)}>
+ 3971:               <SaveButton
+ 3972:                 label="Complete Documents & Continue to Review"
+ 3973:                 disabled={!editable}
+ 3974:               />
+ 3975:             </form>
+ 3976:           </CompletionBox>        </SectionPanel>
+ 3977:       ) : null}
+ 3978: 
+ 3979:       {/* REVIEW */}
+ 3980:       {section === "review" ? (
+ 3981:         <SectionPanel
+ 3982:           title="Final Application Review"
+ 3983:           subtitle="Review the status of each application section before you consider your case information complete."
+ 3984:         >
+ 3985:           <Notice
+ 3986:             title="Review before proceeding"
+ 3987:             text="Check every section carefully. A completed portal review does not mean that a visa, work permit or employment placement has been approved."
+ 3988:           />
+ 3989: 
+ 3990:           <div className="grid gap-3 md:grid-cols-2">
+ 3991:             {SECTIONS.filter((item) => item.key !== "review").map((item) => {
+ 3992:               if (item.key === "payment") return null;
+ 3993:               const progress = (progressRows ?? []).find(
+ 3994:                 (row) => row.section_key === item.key,
+ 3995:               );
+ 3996:               const status = progress?.status ?? "incomplete";
+ 3997:               const complete = status === "complete";
+ 3998: 
+ 3999:               return (
+ 4000:                 <article
+ 4001:                   key={item.key}
+ 4002:                   className="rounded-2xl border border-slate-200 bg-white p-5"
+ 4003:                 >
+ 4004:                   <div className="flex items-start justify-between gap-4">
+ 4005:                     <div>
+ 4006:                       <p className="text-sm font-bold text-[#071A3D]">
+
+ 4033:           <div className="rounded-2xl border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-5">
+ 4034:             <p className="text-sm font-bold text-[#071A3D]">
+ 4035:               Final verification
+ 4036:             </p>
+ 4037:             <p className="mt-2 text-sm leading-6 text-slate-600">
+ 4038:               Confirm that your personal, immigration, employment, financial,
+ 4039:               declaration and document information is accurate and current before
+ 4040:               relying on this application record for recruitment processing.
+ 4041:             </p>
+ 4042:             <form
+ 4043:               action={prepareApplicationPayment.bind(null, id)}
+ 4044:               className="mt-5"
+ 4045:             >
+ 4046:               <button className="rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-black text-white">
+ 4047:                 Continue to Verification Fee
+ 4048:               </button>
+ 4049:             </form>
+ 4050:           </div>
+ 4051:         </SectionPanel>
+ 4052:       ) : null}
+ 4053: 
+ 4054:       {/* PAYMENT */}
+ 4055:       {section === "payment" ? (
+ 4056:         <SectionPanel
+ 4057:           title={CV_DOCUMENT_VERIFICATION_FEE.displayName}
+ 4058:           subtitle="Payment is required only at final submission and is verified server-side."
+ 4059:         >
+ 4060:           <PaymentStatusRefresher
+ 4061:             active={
+ 4062:               Boolean(activePayment) ||
+ 4063:               (Boolean(paidPayment) &&
+ 4064:                 ["draft", "ready_for_payment", "payment_pending"].includes(
+ 4065:                   String(status)
+ 4066:                 ))
+ 4067:             }
+ 4068:           />
+ 4069:           <Notice
+ 4070:             title="Payment service is being configured"
+ 4071:             text={
+ 4072:               paymentState.paymentsEnabled
+ 4073:                 ? "Enter your M-Pesa phone number to receive a secure STK Push request."
+ 4074:                 : "Payment collection is not enabled yet. No real M-Pesa STK Push will be sent from this environment."
+ 4075:             }
+ 4076:           />
+ 4077: 
+ 4078:           <div className="grid gap-4 lg:grid-cols-3">
+ 4079:             <Detail
+ 4080:               label="Purpose"
+ 4081:               value={CV_DOCUMENT_VERIFICATION_FEE.displayName}
+ 4082:             />
+ 4083:             <Detail
+

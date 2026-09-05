@@ -1,0 +1,326 @@
+===== BRANCH =====
+* codex/redstone-release-apply-cta a7bf149 [origin/main] Fix employer creation and validation
++ main                             a7bf149 (C:/Projects/redstone-website) [origin/main] Fix employer creation and validation
+
+===== STATUS =====
+ M .env.example
+ M CLOUDFLARE_DEPLOYMENT.md
+ D middleware.ts
+ M next.config.ts
+ M package.json
+ M proxy.ts
+ M src/app/(public)/apply/page.tsx
+ M src/app/(public)/complaints/page.tsx
+ M src/app/(public)/contact/page.tsx
+ M src/app/(public)/countries/[slug]/page.tsx
+ M src/app/(public)/countries/page.tsx
+ M src/app/(public)/employers/page.tsx
+ M src/app/(public)/faq/page.tsx
+ M src/app/(public)/fraud-awareness/page.tsx
+ M src/app/(public)/home-page.tsx
+ M src/app/(public)/jobs/[slug]/page.tsx
+ M src/app/(public)/jobs/page.tsx
+ M src/app/(public)/skilled-jobs/page.tsx
+ M src/app/(public)/unskilled-jobs/page.tsx
+ M src/app/admin/applications/[id]/page.tsx
+ M src/app/admin/applications/page.tsx
+ M src/app/admin/jobs/page.tsx
+ M src/app/admin/staff/new/page.tsx
+ M src/app/apply/[slug]/page.tsx
+ M src/app/auth/callback/route.ts
+ M src/app/auth/logout/route.ts
+ M src/app/candidate/applications/[id]/page.tsx
+ M src/app/candidate/applications/page.tsx
+ M src/app/candidate/help/page.tsx
+ M src/app/employer/(portal)/support/page.tsx
+ M src/app/globals.css
+ M src/app/layout.tsx
+ M src/app/login/page.tsx
+ M src/app/page.tsx
+ M src/app/register/page.tsx
+ M src/app/sitemap.ts
+ M src/app/staff/clients/page.tsx
+ M src/app/staff/page.tsx
+ M src/components/public/country-card.tsx
+ M src/components/public/job-card.tsx
+ M src/components/public/job-search.tsx
+ M src/components/public/public-shell.tsx
+ M src/lib/admin/actions.ts
+ M src/lib/admin/constants.ts
+ M src/lib/admin/data.ts
+ M src/lib/admin/types.ts
+ M src/lib/auth/actions.ts
+ M src/lib/candidate/actions.ts
+ M src/lib/candidate/auth.ts
+ M src/lib/candidate/constants.ts
+ M src/lib/candidate/data.ts
+ M src/lib/employer/data.ts
+ M src/lib/public/company-pages.ts
+ M src/lib/public/countries.ts
+ M src/lib/public/jobs.ts
+ M src/lib/public/site.ts
+ M src/lib/staff/actions.ts
+ M tests/candidate-security.test.mjs
+ M tests/job-occupation-catalogue.test.mjs
+ M tests/phase6-catalogue.test.mjs
+ M tests/public-jobs-real-vacancies.test.mjs
+ M wrangler.jsonc
+?? .apply-final-backup/
+?? .backup-daraja-hardening-20260902-212612/
+?? .backup-documents-review-payment-20260903-105010/
+?? .chatgpt-backup-complete-apply-20260902-231024/
+?? .chatgpt-backup-family-validation-20260902-234632/
+?? .chatgpt-backup-job-link-20260902-192230/
+?? .redstone-backups/
+?? apply-final-chunks.txt
+?? backup-jobs-page-20260902-195549/
+?? branch-result.txt
+?? candidate-final-inspection.txt
+?? candidate-helper-inspection.txt
+?? candidate-section-performance-source.txt
+?? cloudflare-build-final-2.txt
+?? cloudflare-build-final.txt
+?? cloudflare-deployments.txt
+?? document-final-inspection.txt
+?? document-test-result.txt
+?? failing-tests-source.txt
+?? full-test-after-build-fix.txt
+?? full-test-final.txt
+?? full-test-result.txt
+?? git-status.txt
+?? lint-final.txt
+?? live-version.json
+?? newer-than-live.txt
+?? npm-scripts.txt
+?? payment-complete-check.txt
+?? payment-deep.txt
+?? payment-enforcement-setting.txt
+?? payment-engine.txt
+?? payment-final-check.txt
+?? payment-flow.txt
+?? payment-rpc-check.txt
+?? payment-watcher-check.txt
+?? release-after-live.txt
+?? release-candidate-files.txt
+?? repair-test-result.txt
+?? src/app/api/
+?? src/app/candidate/applications/[id]/PaymentStatusRefresher.tsx
+?? src/components/candidate/DocumentUploadRows.tsx
+?? src/components/candidate/document-upload-builder.tsx
+?? src/components/candidate/payment-status-watcher.tsx
+?? src/components/staff/
+?? src/lib/payments/
+?? src/lib/public/job-detail-context.ts
+?? src/lib/public/job-eligibility.ts
+?? src/lib/referrals/
+?? submission-paths.txt
+?? submit-payment-gate.txt
+?? supabase/migrations/20260901202311_application_payments_mpesa_prod_compat.sql
+?? test-result.txt
+?? tests/candidate-document-multi-upload.test.mjs
+?? tests/candidate-document-row-uploader.test.mjs
+?? tests/candidate-document-workflow.test.mjs
+?? tests/candidate-education-finance-save.test.mjs
+?? tests/candidate-section-performance.test.mjs
+?? tests/candidate-section-validation.test.mjs
+?? tests/candidate-wizard-clean.test.mjs
+?? tests/payment-workflow.test.mjs
+?? tests/staff-referral-crm.test.mjs
+?? tests/worker-performance.test.mjs
+?? typecheck-result.txt
+?? website-changes-full.txt
+?? website-changes.txt
+?? wizard-backup-compare.txt
+?? worker-version-check.txt
+
+===== CHANGED TRACKED FILES =====
+M	.env.example
+M	CLOUDFLARE_DEPLOYMENT.md
+D	middleware.ts
+M	next.config.ts
+M	package.json
+M	proxy.ts
+M	src/app/(public)/apply/page.tsx
+M	src/app/(public)/complaints/page.tsx
+M	src/app/(public)/contact/page.tsx
+M	src/app/(public)/countries/[slug]/page.tsx
+M	src/app/(public)/countries/page.tsx
+M	src/app/(public)/employers/page.tsx
+M	src/app/(public)/faq/page.tsx
+M	src/app/(public)/fraud-awareness/page.tsx
+M	src/app/(public)/home-page.tsx
+M	src/app/(public)/jobs/[slug]/page.tsx
+M	src/app/(public)/jobs/page.tsx
+M	src/app/(public)/skilled-jobs/page.tsx
+M	src/app/(public)/unskilled-jobs/page.tsx
+M	src/app/admin/applications/[id]/page.tsx
+M	src/app/admin/applications/page.tsx
+M	src/app/admin/jobs/page.tsx
+M	src/app/admin/staff/new/page.tsx
+M	src/app/apply/[slug]/page.tsx
+M	src/app/auth/callback/route.ts
+M	src/app/auth/logout/route.ts
+M	src/app/candidate/applications/[id]/page.tsx
+M	src/app/candidate/applications/page.tsx
+M	src/app/candidate/help/page.tsx
+M	src/app/employer/(portal)/support/page.tsx
+M	src/app/globals.css
+M	src/app/layout.tsx
+M	src/app/login/page.tsx
+M	src/app/page.tsx
+M	src/app/register/page.tsx
+M	src/app/sitemap.ts
+M	src/app/staff/clients/page.tsx
+M	src/app/staff/page.tsx
+M	src/components/public/country-card.tsx
+M	src/components/public/job-card.tsx
+M	src/components/public/job-search.tsx
+M	src/components/public/public-shell.tsx
+M	src/lib/admin/actions.ts
+M	src/lib/admin/constants.ts
+M	src/lib/admin/data.ts
+M	src/lib/admin/types.ts
+M	src/lib/auth/actions.ts
+M	src/lib/candidate/actions.ts
+M	src/lib/candidate/auth.ts
+M	src/lib/candidate/constants.ts
+M	src/lib/candidate/data.ts
+M	src/lib/employer/data.ts
+M	src/lib/public/company-pages.ts
+M	src/lib/public/countries.ts
+M	src/lib/public/jobs.ts
+M	src/lib/public/site.ts
+M	src/lib/staff/actions.ts
+M	tests/candidate-security.test.mjs
+M	tests/job-occupation-catalogue.test.mjs
+M	tests/phase6-catalogue.test.mjs
+M	tests/public-jobs-real-vacancies.test.mjs
+M	wrangler.jsonc
+
+===== UNTRACKED FILES =====
+.apply-final-backup/application-page.tsx
+.apply-final-backup/application-payments.ts
+.apply-final-backup/candidate-actions.ts
+.apply-final-backup/candidate-document-test-before-fix-20260904-070659.mjs
+.apply-final-backup/candidate-page-before-document-fix-20260904-070659.tsx
+.apply-final-backup/candidate-page-before-section-fix-20260904-072522.tsx
+.apply-final-backup/candidate-page-before-wizard-repair-20260904-070412.tsx
+.apply-final-backup/candidate-section-performance-20260904-071031.mjs
+.apply-final-backup/candidate-section-performance-before-fix-20260904-072522.mjs
+.apply-final-backup/package-before-lint-fix-20260904-073657.json
+.backup-daraja-hardening-20260902-212612/src/lib/payments/application-payments.ts
+.backup-daraja-hardening-20260902-212612/src/lib/payments/mpesa/daraja.ts
+.backup-daraja-hardening-20260902-212612/tests/payment-workflow.test.mjs
+.backup-documents-review-payment-20260903-105010/next.config.ts
+.backup-documents-review-payment-20260903-105010/src/app/candidate/applications/[id]/page.tsx
+.backup-documents-review-payment-20260903-105010/src/lib/candidate/actions.ts
+.backup-documents-review-payment-20260903-105010/src/lib/payments/application-payments.ts
+.backup-documents-review-payment-20260903-105010/tests/payment-workflow.test.mjs
+.chatgpt-backup-complete-apply-20260902-231024/src/app/(public)/apply/page.tsx
+.chatgpt-backup-complete-apply-20260902-231024/src/app/(public)/jobs/[slug]/page.tsx
+.chatgpt-backup-complete-apply-20260902-231024/src/app/candidate/applications/[id]/page.tsx
+.chatgpt-backup-complete-apply-20260902-231024/src/lib/candidate/actions.ts
+.chatgpt-backup-complete-apply-20260902-231024/src/lib/candidate/data.ts
+.chatgpt-backup-complete-apply-20260902-231024/src/lib/payments/application-payments.ts
+.chatgpt-backup-complete-apply-20260902-231024/src/lib/public/jobs.ts
+.chatgpt-backup-complete-apply-20260902-231024/tests/job-occupation-catalogue.test.mjs
+.chatgpt-backup-complete-apply-20260902-231024/tests/phase6-catalogue.test.mjs
+.chatgpt-backup-complete-apply-20260902-231024/tests/public-jobs-real-vacancies.test.mjs
+.chatgpt-backup-complete-apply-20260902-231024/tests/worker-performance.test.mjs
+.chatgpt-backup-family-validation-20260902-234632/src/app/candidate/applications/[id]/page.tsx
+.chatgpt-backup-family-validation-20260902-234632/src/lib/candidate/actions.ts
+.chatgpt-backup-job-link-20260902-192230/src/lib/candidate/data.ts
+.redstone-backups/candidate-section-20260903-121957/page.tsx
+.redstone-backups/document-row-uploader-20260903-192441/actions.ts
+.redstone-backups/document-row-uploader-20260903-192441/page.tsx
+.redstone-backups/document-section-20260903-132538/actions.ts
+.redstone-backups/document-section-20260903-132538/page.tsx
+.redstone-backups/education-finance-20260903-091216/src/app/candidate/applications/[id]/page.tsx
+.redstone-backups/education-finance-20260903-091216/src/lib/candidate/actions.ts
+.redstone-backups/final-document-ui-2026-09-03T15-41-55-869Z/actions.ts
+.redstone-backups/final-document-ui-2026-09-03T15-41-55-869Z/candidate-document-workflow.test.mjs
+.redstone-backups/final-document-ui-2026-09-03T15-41-55-869Z/page.tsx
+.redstone-backups/full-wizard-clean-20260903-081352/src/app/candidate/applications/[id]/page.tsx
+.redstone-backups/full-wizard-clean-20260903-081352/src/app/candidate/applications/page.tsx
+.redstone-backups/full-wizard-clean-20260903-081352/src/lib/candidate/actions.ts
+.redstone-backups/full-wizard-clean-20260903-081352/src/lib/payments/mpesa/daraja.ts
+.redstone-backups/full-wizard-clean-20260903-081352/tests/candidate-section-validation.test.mjs
+.redstone-backups/full-wizard-clean-20260903-081352/tests/payment-workflow.test.mjs
+.redstone-backups/staff-crm-referral-20260903-111811/src/app/admin/applications/[id]/page.tsx
+.redstone-backups/staff-crm-referral-20260903-111811/src/app/admin/applications/page.tsx
+.redstone-backups/staff-crm-referral-20260903-111811/src/app/auth/callback/route.ts
+.redstone-backups/staff-crm-referral-20260903-111811/src/app/staff/clients/page.tsx
+.redstone-backups/staff-crm-referral-20260903-111811/src/app/staff/page.tsx
+.redstone-backups/staff-crm-referral-20260903-111811/src/lib/admin/data.ts
+.redstone-backups/staff-crm-referral-20260903-111811/src/lib/auth/actions.ts
+.redstone-backups/staff-crm-referral-20260903-111811/src/lib/candidate/actions.ts
+.redstone-backups/staff-crm-referral-20260903-111811/src/lib/staff/actions.ts
+apply-final-chunks.txt
+backup-jobs-page-20260902-195549/src/app/(public)/jobs/page.tsx
+backup-jobs-page-20260902-195549/src/components/public/job-search.tsx
+branch-result.txt
+candidate-final-inspection.txt
+candidate-helper-inspection.txt
+candidate-section-performance-source.txt
+cloudflare-build-final-2.txt
+cloudflare-build-final.txt
+cloudflare-deployments.txt
+document-final-inspection.txt
+document-test-result.txt
+failing-tests-source.txt
+full-test-after-build-fix.txt
+full-test-final.txt
+full-test-result.txt
+git-status.txt
+lint-final.txt
+live-version.json
+newer-than-live.txt
+npm-scripts.txt
+payment-complete-check.txt
+payment-deep.txt
+payment-enforcement-setting.txt
+payment-engine.txt
+payment-final-check.txt
+payment-flow.txt
+payment-rpc-check.txt
+payment-watcher-check.txt
+release-after-live.txt
+release-candidate-files.txt
+repair-test-result.txt
+src/app/api/payments/[reference]/status/route.ts
+src/app/api/payments/mpesa/callback/route.ts
+src/app/candidate/applications/[id]/PaymentStatusRefresher.tsx
+src/components/candidate/DocumentUploadRows.tsx
+src/components/candidate/document-upload-builder.tsx
+src/components/candidate/payment-status-watcher.tsx
+src/components/staff/referral-link-card.tsx
+src/lib/payments/application-payments.ts
+src/lib/payments/config.ts
+src/lib/payments/mpesa/daraja.ts
+src/lib/payments/mpesa/phone.ts
+src/lib/public/job-detail-context.ts
+src/lib/public/job-eligibility.ts
+src/lib/referrals/attribution.ts
+submission-paths.txt
+submit-payment-gate.txt
+supabase/migrations/20260901202311_application_payments_mpesa_prod_compat.sql
+test-result.txt
+tests/candidate-document-multi-upload.test.mjs
+tests/candidate-document-row-uploader.test.mjs
+tests/candidate-document-workflow.test.mjs
+tests/candidate-education-finance-save.test.mjs
+tests/candidate-section-performance.test.mjs
+tests/candidate-section-validation.test.mjs
+tests/candidate-wizard-clean.test.mjs
+tests/payment-workflow.test.mjs
+tests/staff-referral-crm.test.mjs
+tests/worker-performance.test.mjs
+typecheck-result.txt
+website-changes-full.txt
+website-changes.txt
+wizard-backup-compare.txt
+worker-version-check.txt
+
+===== DIFF CHECK =====
+src/app/candidate/applications/[id]/page.tsx:4853: new blank line at EOF.
+src/lib/candidate/actions.ts:3482: new blank line at EOF.

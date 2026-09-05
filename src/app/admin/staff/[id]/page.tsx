@@ -55,6 +55,8 @@ export default async function StaffDetailPage({
     { data: profile },
     staffRoles,
     assigned,
+    clientCount,
+    staffClients,
     audit,
   ] = await Promise.all([
     fetchById("profiles", id),
@@ -67,6 +69,16 @@ export default async function StaffDetailPage({
 
     countRows("applications", {
       assigned_staff_id: id,
+    }),
+
+    countRows("staff_clients", {
+      staff_user_id: id,
+    }),
+
+    fetchRows({
+      table: "staff_clients",
+      filters: { staff_user_id: id },
+      page: 1,
     }),
 
     fetchRows({
@@ -190,6 +202,11 @@ export default async function StaffDetailPage({
         <Metric
           label="Active Roles"
           value={activeRoles.length}
+        />
+
+        <Metric
+          label="Staff Clients"
+          value={clientCount}
         />
 
         <Metric
@@ -318,6 +335,86 @@ export default async function StaffDetailPage({
             last
           />
         </div>
+      </section>
+
+      {/* =====================================================
+          STAFF CLIENTS
+      ===================================================== */}
+
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col justify-between gap-3 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#B8860B]">
+              Recruitment CRM
+            </p>
+
+            <h2 className="mt-1 text-xl font-black text-[#071A3D]">
+              Staff Client Portfolio
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Admin-only review of clients assigned to this staff member.
+            </p>
+          </div>
+
+          <Link
+            href={`/admin/clients?staff=${encodeURIComponent(id)}`}
+            className="rounded-lg border border-[#071A3D] px-4 py-3 text-xs font-black uppercase tracking-wide text-[#071A3D] transition hover:bg-[#071A3D] hover:text-white"
+          >
+            View All Staff Clients
+          </Link>
+        </div>
+
+        {staffClients.rows.length === 0 ? (
+          <p className="m-6 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+            No client records found for this staff member.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-slate-50">
+                <tr>
+                  <ClientHeading>Client</ClientHeading>
+                  <ClientHeading>Interest</ClientHeading>
+                  <ClientHeading>Status</ClientHeading>
+                  <ClientHeading>Follow-Up</ClientHeading>
+                  <ClientHeading>Created</ClientHeading>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {staffClients.rows.map((client: Row) => (
+                  <tr key={textValue(client, ["id"])} className="align-top">
+                    <ClientCell>
+                      <p className="font-black text-[#071A3D]">
+                        {textValue(client, ["full_name"], "Client")}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {textValue(client, ["phone", "email"], "No contact")}
+                      </p>
+                    </ClientCell>
+                    <ClientCell>
+                      <p className="font-bold text-slate-800">
+                        {textValue(client, ["interested_job"], "Job not recorded")}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {textValue(client, ["preferred_country"], "Destination not recorded")}
+                      </p>
+                    </ClientCell>
+                    <ClientCell>
+                      <StatusBadge status={textValue(client, ["status"], "lead")} />
+                    </ClientCell>
+                    <ClientCell>
+                      {dateText(client.follow_up_date)}
+                    </ClientCell>
+                    <ClientCell>
+                      {dateText(client.created_at)}
+                    </ClientCell>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       {/* =====================================================
@@ -589,5 +686,29 @@ function DetailCell({
         {value}
       </p>
     </div>
+  );
+}
+
+function ClientHeading({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wide text-slate-500">
+      {children}
+    </th>
+  );
+}
+
+function ClientCell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <td className="min-w-[150px] px-5 py-4 text-sm text-slate-700">
+      {children}
+    </td>
   );
 }

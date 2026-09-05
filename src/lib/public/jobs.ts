@@ -1,16 +1,7 @@
+import { cache } from "react";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/utils/supabase/server";
-import type { Row } from "@/lib/admin/types";
-import {
-  calculateDocumentCosts,
-  rowToFee,
-  rowToRequirement,
-} from "@/lib/jobs/costs";
-import { occupationSearchTerms } from "@/lib/jobs/catalogue";
-import {
-  findCountry,
-  getConfiguredCountries,
-  slugify,
-} from "./countries";
+import { slugify } from "./countries";
 
 export type PublicJob = {
   id: string;
@@ -178,10 +169,48 @@ const PUBLIC_JOB_SELECT = `
   published_at,
   created_at,
   updated_at,
-  employer:employers(company_name, verification_status, is_active)
+  employer:employers!inner(company_name, verification_status, is_active)
 `;
 
-const SITEMAP_BATCH_SIZE = 1000;
+const PUBLIC_JOB_CARD_SELECT = `
+  id,
+  title,
+  slug,
+  employer_id,
+  country,
+  city,
+  category,
+  job_type,
+  skill_level,
+  salary_min,
+  salary_max,
+  currency,
+  salary_period,
+  salary_confirmed,
+  salary_note,
+  contract_type,
+  contract_duration_value,
+  contract_duration_unit,
+  contract_note,
+  vacancies,
+  application_deadline,
+  visa_sponsorship,
+  accommodation:accommodation_provided,
+  transport:transport_provided,
+  meals:meals_provided,
+  sponsorship_status,
+  accommodation_status,
+  meals_status,
+  transport_status,
+  processing_time_min,
+  processing_time_max,
+  processing_time_unit,
+  processing_time_note,
+  published_at,
+  employer:employers!inner(company_name, verification_status, is_active)
+`;
+
+export const SITEMAP_SHARD_SIZE = 1000;
 
 export const PAGE_SIZE = 9;
 
@@ -193,9 +222,11 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
 
   let query = supabase
     .from("jobs")
-    .select(PUBLIC_JOB_SELECT, { count: "exact" })
+    .select(PUBLIC_JOB_CARD_SELECT, { count: "exact" })
     .eq("status", "published")
-    .not("slug", "is", null);
+    .not("slug", "is", null)
+    .eq("employer.verification_status", "verified")
+    .eq("employer.is_active", true);
 
   if (!params.includeClosed) {
     query = query.or(
@@ -210,6 +241,10 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
       .trim();
 
     if (safe) {
+      // Load the large occupation catalogue only when a visitor actually
+      // submits a free-text search. Exact job/detail requests stay lightweight
+      // on Cloudflare Workers.
+      const { occupationSearchTerms } = await import("@/lib/jobs/catalogue");
       const searchTerms = [
         ...new Set(
           [safe, ...occupationSearchTerms(safe)]
@@ -321,9 +356,11 @@ export async function getFeaturedJobs(limit = 6) {
 
   const { data, error } = await supabase
     .from("jobs")
-    .select(PUBLIC_JOB_SELECT)
+    .select(PUBLIC_JOB_CARD_SELECT)
     .eq("status", "published")
     .not("slug", "is", null)
+    .eq("employer.verification_status", "verified")
+    .eq("employer.is_active", true)
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
     .order("published_at", {
@@ -339,7 +376,7 @@ export async function getFeaturedJobs(limit = 6) {
   };
 }
 
-export async function getJobBySlug(slug: string) {
+export const getJobBySlug = cache(async function getJobBySlug(slug: string) {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -347,75 +384,97 @@ export async function getJobBySlug(slug: string) {
     .select(PUBLIC_JOB_SELECT)
     .eq("slug", slug)
     .eq("status", "published")
+    .eq("employer.verification_status", "verified")
+    .eq("employer.is_active", true)
     .maybeSingle<PublicJob>();
 
   return {
     job: data,
     error,
   };
-}
+});
 
 /**
- * Fetch every published job URL using a minimal select.
+ * Fetch one bounded published-job sitemap page using a minimal select.
  *
- * This deliberately pages in batches instead of relying on the project's
- * PostgREST row limit. It keeps sitemap generation lightweight even when the
- * public catalogue contains several thousand vacancies.
+ * Sitemap generation uses a separate head count plus fixed-size shards so a
+ * single Worker request never has to materialize the full job catalogue.
  */
-export async function getPublishedJobSitemapEntries() {
-  const supabase = await createClient();
+export async function getPublishedJobSitemapCount() {
+  const supabase = createPublicSitemapClient();
+  const { count, error } = await supabase
+    .from("jobs")
+    .select("id, employer:employers!inner(id)", { count: "exact", head: true })
+    .eq("status", "published")
+    .not("slug", "is", null)
+    .eq("employer.verification_status", "verified")
+    .eq("employer.is_active", true)
+    .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+    .or("vacancies.is.null,vacancies.gt.0");
+
+  if (error) {
+    throw new Error(
+      `Unable to count published jobs for sitemap: ${error.message}`
+    );
+  }
+
+  return count ?? 0;
+}
+
+export function getPublishedJobSitemapShardCount(count: number) {
+  const safeCount = Number.isFinite(count) && count > 0 ? count : 0;
+  return Math.ceil(safeCount / SITEMAP_SHARD_SIZE);
+}
+
+export async function getPublishedJobSitemapEntries(shardId = 0) {
+  const supabase = createPublicSitemapClient();
   const entries: PublishedJobSitemapEntry[] = [];
+  const safeShardId = Math.max(0, Math.floor(shardId));
+  const from = safeShardId * SITEMAP_SHARD_SIZE;
+  const to = from + SITEMAP_SHARD_SIZE - 1;
 
-  for (let from = 0; ; from += SITEMAP_BATCH_SIZE) {
-    const to = from + SITEMAP_BATCH_SIZE - 1;
+  const { data, error } = await supabase
+    .from("jobs")
+    .select(
+      "slug, published_at, created_at, updated_at, application_deadline, employer:employers!inner(id)"
+    )
+    .eq("status", "published")
+    .not("slug", "is", null)
+    .eq("employer.verification_status", "verified")
+    .eq("employer.is_active", true)
+    .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+    .or("vacancies.is.null,vacancies.gt.0")
+    .order("published_at", {
+      ascending: false,
+      nullsFirst: false,
+    })
+    .range(from, to)
+    .returns<
+      {
+        slug: string | null;
+        published_at: string | null;
+        created_at: string | null;
+        updated_at: string | null;
+        application_deadline: string | null;
+      }[]
+    >();
 
-    const { data, error } = await supabase
-      .from("jobs")
-      .select(
-        "slug, published_at, created_at, updated_at, application_deadline"
-      )
-      .eq("status", "published")
-      .not("slug", "is", null)
-      .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
-      .or("vacancies.is.null,vacancies.gt.0")
-      .order("published_at", {
-        ascending: false,
-        nullsFirst: false,
-      })
-      .range(from, to)
-      .returns<
-        {
-          slug: string | null;
-          published_at: string | null;
-          created_at: string | null;
-          updated_at: string | null;
-          application_deadline: string | null;
-        }[]
-      >();
+  if (error) {
+    throw new Error(
+      `Unable to load published jobs for sitemap: ${error.message}`
+    );
+  }
 
-    if (error) {
-      throw new Error(
-        `Unable to load published jobs for sitemap: ${error.message}`
-      );
-    }
+  for (const row of data ?? []) {
+    if (!row.slug) continue;
 
-    const rows = data ?? [];
-
-    for (const row of rows) {
-      if (!row.slug) continue;
-
-      entries.push({
-        route: row.slug,
-        published_at: row.published_at,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        application_deadline: row.application_deadline,
-      });
-    }
-
-    if (rows.length < SITEMAP_BATCH_SIZE) {
-      break;
-    }
+    entries.push({
+      route: row.slug,
+      published_at: row.published_at,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      application_deadline: row.application_deadline,
+    });
   }
 
   return entries;
@@ -432,63 +491,73 @@ export async function getJobsForCountry(country: string, limit = 6) {
   }));
 }
 
-export async function getJobCatalogueContext(
-  job: PublicJob,
-  candidateDocuments: Row[] = []
-) {
-  const supabase = await createClient();
-  const countries = await getConfiguredCountries();
-  const country = findCountry(countries, job.country);
-
-  const [{ data: requirements }, { data: fees }] = await Promise.all([
-    supabase
-      .from("job_document_requirements")
-      .select(
-        "id, job_id, document_type, required, fee_applicable, candidate_can_provide_existing, cost_responsibility, notes, sort_order"
-      )
-      .eq("job_id", job.id)
-      .order("sort_order", { ascending: true })
-      .returns<Row[]>(),
-
-    supabase
-      .from("document_fee_catalog")
-      .select(
-        "document_type, label, region, country_id, amount, currency, is_active"
-      )
-      .eq("is_active", true)
-      .returns<Row[]>(),
-  ]);
-
-  const requirementRows =
-    requirements?.map(rowToRequirement) ?? [];
-
-  const feeRows =
-    fees?.map(rowToFee) ?? [];
-
-  return {
-    country,
-    requirements: requirementRows,
-    fees: feeRows,
-    documentCosts: calculateDocumentCosts({
-      requirements: requirementRows,
-      feeCatalog: feeRows,
-      country,
-      candidateDocuments: candidateDocuments.map((document) => ({
-        document_type:
-          typeof document.document_type === "string"
-            ? document.document_type
-            : null,
-        verification_status:
-          typeof document.verification_status === "string"
-            ? document.verification_status
-            : null,
-      })),
-    }),
-  };
-}
-
 export function jobHref(job: PublicJob) {
   return `/jobs/${job.slug || slugify(job.title || String(job.id))}`;
+}
+
+export function publicJobApplyHref(job: Pick<PublicJob, "slug">) {
+  return job.slug ? `/apply/${job.slug}` : "#";
+}
+
+export function isPublicJobClosed(
+  job: Pick<PublicJob, "application_deadline" | "vacancies">
+) {
+  const today = todayDate();
+
+  return Boolean(
+    (job.application_deadline && job.application_deadline < today) ||
+      (typeof job.vacancies === "number" && job.vacancies <= 0)
+  );
+}
+
+export function publicJobApplyState({
+  job,
+  existingApplication,
+  signedIn,
+}: {
+  job: Pick<PublicJob, "id" | "title" | "slug" | "application_deadline" | "vacancies">;
+  existingApplication?: { id?: string; status?: string };
+  signedIn?: boolean;
+}) {
+  if (isPublicJobClosed(job)) {
+    return {
+      label: "Applications Closed",
+      href: "#",
+      disabled: true,
+    };
+  }
+
+  if (existingApplication?.id) {
+    return {
+      label: "View My Application",
+      href: `/candidate/applications/${existingApplication.id}`,
+      disabled: false,
+    };
+  }
+
+  const href = publicJobApplyHref(job);
+
+  if (href === "#") {
+    return {
+      label: "Applications Closed",
+      href,
+      disabled: true,
+    };
+  }
+
+  if (signedIn === false) {
+    return {
+      label: "Apply Now",
+      href: `/login?next=${encodeURIComponent(href)}`,
+      disabled: false,
+    };
+  }
+
+  return {
+    label: "Apply Now",
+    href,
+    disabled: false,
+  };
 }
 
 export function formatSalary(job: PublicJob) {
@@ -534,6 +603,29 @@ function safeSearchTerm(value: string) {
     .replaceAll("%", "")
     .replaceAll(",", " ")
     .trim();
+}
+
+function createPublicSitemapClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable.");
+  }
+
+  if (!publishableKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY environment variable."
+    );
+  }
+
+  return createSupabaseClient(supabaseUrl, publishableKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
 
 function todayDate() {

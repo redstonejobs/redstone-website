@@ -1,0 +1,685 @@
+===== function Input =====
+ 4562:             {subtitle}
+ 4563:           </p>
+ 4564:         ) : null}
+ 4565:       </header>
+ 4566: 
+ 4567:       <div className="space-y-6 p-5 sm:p-6">
+ 4568:         {children}
+ 4569:       </div>
+ 4570:     </section>
+ 4571:   );
+ 4572: }
+ 4573: 
+ 4574: function DeclarationItem({ name, title, checked, detailsName, detailsValue, detailsPlaceholder, disabled = false, }: { name: string; title: string; checked: boolean; detailsName: string; detailsValue: string; detailsPlaceholder?: string; disabled?: boolean; }) { return ( <div className="rounded-2xl border border-slate-200 bg-white p-5"> <label className="flex items-start gap-3"> <input type="checkbox" name={name} defaultChecked={checked} disabled={disabled} className="mt-1 h-4 w-4" /> <span className="text-sm font-bold text-[#071A3D]">{title}</span> </label> <textarea name={detailsName} defaultValue={detailsValue} placeholder={detailsPlaceholder} disabled={disabled} rows={3} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:bg-slate-100" /> </div> ); }
+ 4575: 
+ 4576: function Input({
+ 4577:   label,
+ 4578:   name,
+ 4579:   defaultValue,
+ 4580:   type = "text",
+ 4581:   placeholder,
+ 4582:   required = false,
+ 4583:   min,
+ 4584:   step,
+ 4585: }: {
+ 4586:   label: string;
+ 4587:   name: string;
+ 4588:   defaultValue?: string;
+ 4589:   type?: string;
+ 4590:   placeholder?: string;
+ 4591:   required?: boolean;
+ 4592:   min?: string;
+ 4593:   step?: string;
+ 4594: }) {
+ 4595:   return (
+ 4596:     <label className="grid gap-2 text-sm font-bold text-slate-700">
+ 4597:       <span>
+ 4598:         {label}
+ 4599: 
+ 4600:         {required ? (
+ 4601:           <span className="ml-1 text-red-600">
+ 4602:             *
+ 4603:           </span>
+ 4604:         ) : null}
+ 4605:       </span>
+ 4606: 
+ 4607:       <input
+
+===== const Input =====
+===== type Input =====
+===== SECTIONS.map =====
+  964: 
+  965:         <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100">
+  966:           <div
+  967:             className="h-full rounded-full bg-[#D4AF37] transition-all"
+  968:             style={{
+  969:               width: `${completion}%`,
+  970:             }}
+  971:           />
+  972:         </div>
+  973:       </section>
+  974: 
+  975:       {/* NAVIGATION */}
+  976:       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  977:         <div className="flex gap-2 overflow-x-auto pb-1">
+  978:           {SECTIONS.map((item) => {
+  979:             const active =
+  980:               section === item.key;
+  981: 
+  982:             const complete =
+  983:               progressMap.get(item.key) ===
+  984:               "complete";
+  985: 
+  986:             const inProgress =
+  987:               progressMap.get(item.key) ===
+  988:               "in_progress";
+  989: 
+  990:             return (
+  991:               <Link
+  992:                 key={item.key}
+  993:                 href={`/candidate/applications/${id}?section=${item.key}`}
+  994:                 className={`whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
+  995:                   active
+  996:                     ? "border-[#071A3D] bg-[#071A3D] text-white"
+  997:                     : complete
+  998:                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+  999:                       : inProgress
+ 1000:                         ? "border-amber-200 bg-amber-50 text-amber-700"
+ 1001:                         : "border-slate-200 bg-white text-slate-600 hover:border-[#D4AF37]"
+ 1002:                 }`}
+ 1003:               >
+ 1004:                 {complete ? "\u2713 " : ""}
+ 1005:                 {item.label}
+ 1006:               </Link>
+ 1007:             );
+ 1008:           })}
+ 1009:         </div>
+
+===== Review {item.label} =====
+ 4183:                           : status === "in_progress"
+ 4184:                             ? "Section still in progress"
+ 4185:                             : "Section not yet marked complete"}
+ 4186:                       </p>
+ 4187:                     </div>
+ 4188:                     <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold capitalize text-slate-600">
+ 4189:                       {status.replaceAll("_", " ")}
+ 4190:                     </span>
+ 4191:                   </div>
+ 4192: 
+ 4193:                   <Link
+ 4194:                     href={`/candidate/applications/${id}?section=${item.key}`}
+ 4195:                     className="mt-4 inline-flex text-sm font-bold text-[#B8860B]"
+ 4196:                   >
+ 4197:                     Review {item.label}
+ 4198:                   </Link>
+ 4199:                 </article>
+ 4200:               );
+ 4201:             })}
+ 4202:           </div>
+ 4203: 
+ 4204:           <div className="rounded-2xl border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-5">
+ 4205:             <p className="text-sm font-bold text-[#071A3D]">
+ 4206:               Final verification
+ 4207:             </p>
+ 4208:             <p className="mt-2 text-sm leading-6 text-slate-600">
+ 4209:               Confirm that your personal, immigration, employment, financial,
+ 4210:               declaration and document information is accurate and current before
+ 4211:               relying on this application record for recruitment processing.
+ 4212:             </p>
+ 4213:             <form
+ 4214:               action={prepareApplicationPayment.bind(null, id)}
+ 4215:               className="mt-5"
+ 4216:             >
+ 4217:               <button className="rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-black text-white">
+ 4218:                 Continue to Verification Fee
+ 4219:               </button>
+ 4220:             </form>
+ 4221:           </div>
+ 4222:         </SectionPanel>
+ 4223:       ) : null}
+ 4224: 
+ 4225:       {/* PAYMENT */}
+ 4226:       {section === "payment" ? (
+ 4227:         <SectionPanel
+ 4228:           title={CV_DOCUMENT_VERIFICATION_FEE.displayName}
+
+===== section= =====
+  979:             const active =
+  980:               section === item.key;
+  981: 
+  982:             const complete =
+  983:               progressMap.get(item.key) ===
+  984:               "complete";
+  985: 
+  986:             const inProgress =
+  987:               progressMap.get(item.key) ===
+  988:               "in_progress";
+  989: 
+  990:             return (
+  991:               <Link
+  992:                 key={item.key}
+  993:                 href={`/candidate/applications/${id}?section=${item.key}`}
+  994:                 className={`whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
+  995:                   active
+  996:                     ? "border-[#071A3D] bg-[#071A3D] text-white"
+  997:                     : complete
+  998:                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+  999:                       : inProgress
+ 1000:                         ? "border-amber-200 bg-amber-50 text-amber-700"
+ 1001:                         : "border-slate-200 bg-white text-slate-600 hover:border-[#D4AF37]"
+ 1002:                 }`}
+ 1003:               >
+ 1004:                 {complete ? "\u2713 " : ""}
+ 1005:                 {item.label}
+ 1006:               </Link>
+ 1007:             );
+ 1008:           })}
+ 1009:         </div>
+ 1010:       </section>
+ 1011: 
+ 1012:       {/* PERSONAL */}
+ 1013:       {section === "personal" ? (
+ 1014:         <SectionPanel
+ 1015:           title="Personal Information"
+ 1016:           subtitle="Enter your legal personal details exactly as they appear on your official records."
+ 1017:         >
+ 1018:           <Notice
+ 1019:             title="Legal identity information"
+ 1020:             text="Your names, date of birth, nationality and identity information should match your official documents."
+ 1021:           />
+ 1022: 
+ 1023:           <form
+ 1024:             action={saveCandidatePersonalInformation.bind(
+
+ 4180:                       <p className="mt-1 text-xs text-slate-500">
+ 4181:                         {complete
+ 4182:                           ? "Section marked complete"
+ 4183:                           : status === "in_progress"
+ 4184:                             ? "Section still in progress"
+ 4185:                             : "Section not yet marked complete"}
+ 4186:                       </p>
+ 4187:                     </div>
+ 4188:                     <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold capitalize text-slate-600">
+ 4189:                       {status.replaceAll("_", " ")}
+ 4190:                     </span>
+ 4191:                   </div>
+ 4192: 
+ 4193:                   <Link
+ 4194:                     href={`/candidate/applications/${id}?section=${item.key}`}
+ 4195:                     className="mt-4 inline-flex text-sm font-bold text-[#B8860B]"
+ 4196:                   >
+ 4197:                     Review {item.label}
+ 4198:                   </Link>
+ 4199:                 </article>
+ 4200:               );
+ 4201:             })}
+ 4202:           </div>
+ 4203: 
+ 4204:           <div className="rounded-2xl border border-[#D4AF37]/40 bg-[#D4AF37]/10 p-5">
+ 4205:             <p className="text-sm font-bold text-[#071A3D]">
+ 4206:               Final verification
+ 4207:             </p>
+ 4208:             <p className="mt-2 text-sm leading-6 text-slate-600">
+ 4209:               Confirm that your personal, immigration, employment, financial,
+ 4210:               declaration and document information is accurate and current before
+ 4211:               relying on this application record for recruitment processing.
+ 4212:             </p>
+ 4213:             <form
+ 4214:               action={prepareApplicationPayment.bind(null, id)}
+ 4215:               className="mt-5"
+ 4216:             >
+ 4217:               <button className="rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-black text-white">
+ 4218:                 Continue to Verification Fee
+ 4219:               </button>
+ 4220:             </form>
+ 4221:           </div>
+ 4222:         </SectionPanel>
+ 4223:       ) : null}
+ 4224: 
+ 4225:       {/* PAYMENT */}
+
+===== const query = =====
+  367:   }
+  368: 
+  369:   return {
+  370:     label: "Valid",
+  371:     state: "valid" as const,
+  372:   };
+  373: }
+  374: 
+  375: export default async function CandidateApplicationDetailPage({
+  376:   params,
+  377:   searchParams,
+  378: }: Props) {
+  379:   const { id } = await params;
+  380: 
+  381:   const query = (await searchParams) ?? {};
+  382: 
+  383:   const context = await requireCandidate();
+  384: 
+  385:   const {
+  386:     application,
+  387:     documents,
+  388:     payments,
+  389:     timeline,
+  390:   } = await getCandidateApplication(context, id);
+  391: 
+  392:   if (!application) {
+  393:     notFound();
+  394:   }
+  395: 
+  396:   const requestedSection =
+  397:     typeof query.section === "string"
+  398:       ? query.section
+  399:       : "personal";
+  400: 
+  401:   const section = SECTIONS.some(
+  402:     (item) => item.key === requestedSection,
+  403:   )
+  404:     ? requestedSection
+  405:     : "personal";
+  406: 
+  407:   const supabase = await createClient();
+  408: 
+  409:   const [
+  410:     { data: immigrationProfile },
+  411:     { data: progressRows },
+  412:     { data: addressRows },
+
+===== query.section =====
+  383:   const context = await requireCandidate();
+  384: 
+  385:   const {
+  386:     application,
+  387:     documents,
+  388:     payments,
+  389:     timeline,
+  390:   } = await getCandidateApplication(context, id);
+  391: 
+  392:   if (!application) {
+  393:     notFound();
+  394:   }
+  395: 
+  396:   const requestedSection =
+  397:     typeof query.section === "string"
+  398:       ? query.section
+  399:       : "personal";
+  400: 
+  401:   const section = SECTIONS.some(
+  402:     (item) => item.key === requestedSection,
+  403:   )
+  404:     ? requestedSection
+  405:     : "personal";
+  406: 
+  407:   const supabase = await createClient();
+  408: 
+  409:   const [
+  410:     { data: immigrationProfile },
+  411:     { data: progressRows },
+  412:     { data: addressRows },
+  413:     { data: dependantRows },
+  414:     { data: educationRows },
+  415:     { data: employmentRows },
+  416:     { data: languageRows },
+  417:     { data: licenseRows },
+  418:     { data: travelRows },
+  419:     { data: visaRows },
+  420:     { data: emergencyContactRows },
+  421:     { data: referenceRows },
+  422:     { data: financialInformation },
+  423:     { data: immigrationDeclarations },
+  424:   ] = await Promise.all([
+  425:     supabase
+  426:           .from(
+  427:             "application_immigration_profiles",
+  428:           )
+
+  384: 
+  385:   const {
+  386:     application,
+  387:     documents,
+  388:     payments,
+  389:     timeline,
+  390:   } = await getCandidateApplication(context, id);
+  391: 
+  392:   if (!application) {
+  393:     notFound();
+  394:   }
+  395: 
+  396:   const requestedSection =
+  397:     typeof query.section === "string"
+  398:       ? query.section
+  399:       : "personal";
+  400: 
+  401:   const section = SECTIONS.some(
+  402:     (item) => item.key === requestedSection,
+  403:   )
+  404:     ? requestedSection
+  405:     : "personal";
+  406: 
+  407:   const supabase = await createClient();
+  408: 
+  409:   const [
+  410:     { data: immigrationProfile },
+  411:     { data: progressRows },
+  412:     { data: addressRows },
+  413:     { data: dependantRows },
+  414:     { data: educationRows },
+  415:     { data: employmentRows },
+  416:     { data: languageRows },
+  417:     { data: licenseRows },
+  418:     { data: travelRows },
+  419:     { data: visaRows },
+  420:     { data: emergencyContactRows },
+  421:     { data: referenceRows },
+  422:     { data: financialInformation },
+  423:     { data: immigrationDeclarations },
+  424:   ] = await Promise.all([
+  425:     supabase
+  426:           .from(
+  427:             "application_immigration_profiles",
+  428:           )
+  429:           .select("*")
+
+===== LAST 300 LINES =====
+ 4713:         disabled={disabled}
+ 4714:         className="mt-1 h-4 w-4"
+ 4715:       />
+ 4716: 
+ 4717:       <span>
+ 4718:         <span className="block text-sm font-bold text-[#071A3D]">
+ 4719:           {title}
+ 4720:         </span>
+ 4721: 
+ 4722:         <span className="mt-1 block text-xs leading-5 text-slate-500">
+ 4723:           {text}
+ 4724:         </span>
+ 4725:       </span>
+ 4726:     </label>
+ 4727:   );
+ 4728: }
+ 4729: 
+ 4730: function SaveButton({
+ 4731:   label,
+ 4732:   disabled,
+ 4733: }: {
+ 4734:   label: string;
+ 4735:   disabled: boolean;
+ 4736: }) {
+ 4737:   return (
+ 4738:     <button
+ 4739:       type="submit"
+ 4740:       disabled={disabled}
+ 4741:       className="rounded-xl bg-[#071A3D] px-6 py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#0B2859] disabled:cursor-not-allowed disabled:bg-slate-400"
+ 4742:     >
+ 4743:       {label}
+ 4744:     </button>
+ 4745:   );
+ 4746: }
+ 4747: 
+ 4748: function RemoveButton() {
+ 4749:   return (
+ 4750:     <button
+ 4751:       type="submit"
+ 4752:       className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100"
+ 4753:     >
+ 4754:       Remove
+ 4755:     </button>
+ 4756:   );
+ 4757: }
+ 4758: 
+ 4759: function Detail({
+ 4760:   label,
+ 4761:   value,
+ 4762: }: {
+ 4763:   label: string;
+ 4764:   value: string;
+ 4765: }) {
+ 4766:   return (
+ 4767:     <div className="border-b border-slate-100 pb-3 last:border-b-0">
+ 4768:       <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+ 4769:         {label}
+ 4770:       </p>
+ 4771: 
+ 4772:       <p className="mt-1 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-800">
+ 4773:         {value}
+ 4774:       </p>
+ 4775:     </div>
+ 4776:   );
+ 4777: }
+ 4778: 
+ 4779: function SmallDetail({
+ 4780:   label,
+ 4781:   value,
+ 4782: }: {
+ 4783:   label: string;
+ 4784:   value: string;
+ 4785: }) {
+ 4786:   return (
+ 4787:     <div>
+ 4788:       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+ 4789:         {label}
+ 4790:       </p>
+ 4791: 
+ 4792:       <p className="mt-1 text-sm font-semibold text-slate-700">
+ 4793:         {value}
+ 4794:       </p>
+ 4795:     </div>
+ 4796:   );
+ 4797: }
+ 4798: 
+ 4799: function LanguageSkill({
+ 4800:   label,
+ 4801:   level,
+ 4802: }: {
+ 4803:   label: string;
+ 4804:   level: string;
+ 4805: }) {
+ 4806:   return (
+ 4807:     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+ 4808:       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+ 4809:         {label}
+ 4810:       </p>
+ 4811: 
+ 4812:       <p className="mt-1 font-black text-[#071A3D]">
+ 4813:         {level}
+ 4814:       </p>
+ 4815:     </div>
+ 4816:   );
+ 4817: }
+ 4818: 
+ 4819: function MiniStat({
+ 4820:   label,
+ 4821:   value,
+ 4822: }: {
+ 4823:   label: string;
+ 4824:   value: string;
+ 4825: }) {
+ 4826:   return (
+ 4827:     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+ 4828:       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+ 4829:         {label}
+ 4830:       </p>
+ 4831: 
+ 4832:       <p className="mt-2 text-2xl font-black text-[#071A3D]">
+ 4833:         {value}
+ 4834:       </p>
+ 4835:     </div>
+ 4836:   );
+ 4837: }
+ 4838: 
+ 4839: function SectionHeading({
+ 4840:   title,
+ 4841:   subtitle,
+ 4842: }: {
+ 4843:   title: string;
+ 4844:   subtitle: string;
+ 4845: }) {
+ 4846:   return (
+ 4847:     <div>
+ 4848:       <h3 className="text-lg font-black text-[#071A3D]">
+ 4849:         {title}
+ 4850:       </h3>
+ 4851: 
+ 4852:       <p className="mt-1 text-sm leading-6 text-slate-500">
+ 4853:         {subtitle}
+ 4854:       </p>
+ 4855:     </div>
+ 4856:   );
+ 4857: }
+ 4858: 
+ 4859: function EmptyState({
+ 4860:   title,
+ 4861:   text,
+ 4862: }: {
+ 4863:   title: string;
+ 4864:   text: string;
+ 4865: }) {
+ 4866:   return (
+ 4867:     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+ 4868:       <p className="font-black text-[#071A3D]">
+ 4869:         {title}
+ 4870:       </p>
+ 4871: 
+ 4872:       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
+ 4873:         {text}
+ 4874:       </p>
+ 4875:     </div>
+ 4876:   );
+ 4877: }
+ 4878: 
+ 4879: function Notice({
+ 4880:   title,
+ 4881:   text,
+ 4882: }: {
+ 4883:   title: string;
+ 4884:   text: string;
+ 4885: }) {
+ 4886:   return (
+ 4887:     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+ 4888:       <p className="text-sm font-bold text-blue-900">
+ 4889:         {title}
+ 4890:       </p>
+ 4891: 
+ 4892:       <p className="mt-1 text-xs leading-5 text-blue-800">
+ 4893:         {text}
+ 4894:       </p>
+ 4895:     </div>
+ 4896:   );
+ 4897: }
+ 4898: 
+ 4899: function Warning({
+ 4900:   title,
+ 4901:   text,
+ 4902: }: {
+ 4903:   title: string;
+ 4904:   text: string;
+ 4905: }) {
+ 4906:   return (
+ 4907:     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+ 4908:       <p className="text-sm font-bold text-amber-900">
+ 4909:         {title}
+ 4910:       </p>
+ 4911: 
+ 4912:       <p className="mt-1 text-xs leading-5 text-amber-800">
+ 4913:         {text}
+ 4914:       </p>
+ 4915:     </div>
+ 4916:   );
+ 4917: }
+ 4918: 
+ 4919: function CompletionBox({
+ 4920:   title,
+ 4921:   text,
+ 4922:   children,
+ 4923: }: {
+ 4924:   title: string;
+ 4925:   text: string;
+ 4926:   children: React.ReactNode;
+ 4927: }) {
+ 4928:   return (
+ 4929:     <div className="rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 p-5">
+ 4930:       <h3 className="font-black text-[#071A3D]">
+ 4931:         {title}
+ 4932:       </h3>
+ 4933: 
+ 4934:       <p className="mt-2 text-sm leading-6 text-slate-600">
+ 4935:         {text}
+ 4936:       </p>
+ 4937: 
+ 4938:       <div className="mt-4">
+ 4939:         {children}
+ 4940:       </div>
+ 4941:     </div>
+ 4942:   );
+ 4943: }
+ 4944: 
+ 4945: function SuccessBadge({
+ 4946:   text,
+ 4947: }: {
+ 4948:   text: string;
+ 4949: }) {
+ 4950:   return (
+ 4951:     <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+ 4952:       {text}
+ 4953:     </span>
+ 4954:   );
+ 4955: }
+ 4956: 
+ 4957: function PendingBadge({
+ 4958:   text,
+ 4959: }: {
+ 4960:   text: string;
+ 4961: }) {
+ 4962:   return (
+ 4963:     <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+ 4964:       {text}
+ 4965:     </span>
+ 4966:   );
+ 4967: }
+ 4968: 
+ 4969: function InfoBadge({
+ 4970:   text,
+ 4971: }: {
+ 4972:   text: string;
+ 4973: }) {
+ 4974:   return (
+ 4975:     <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+ 4976:       {text}
+ 4977:     </span>
+ 4978:   );
+ 4979: }
+ 4980: 
+ 4981: function ExpiredBadge({
+ 4982:   text,
+ 4983: }: {
+ 4984:   text: string;
+ 4985: }) {
+ 4986:   return (
+ 4987:     <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-700">
+ 4988:       {text}
+ 4989:     </span>
+ 4990:   );
+ 4991: }
+ 4992: 
+ 4993: function NeutralBadge({
+ 4994:   text,
+ 4995: }: {
+ 4996:   text: string;
+ 4997: }) {
+ 4998:   return (
+ 4999:     <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+ 5000:       {text}
+ 5001:     </span>
+ 5002:   );
+ 5003: }
+ 5004: 
+ 5005: function Divider() {
+ 5006:   return (
+ 5007:     <div className="border-t border-slate-200" />
+ 5008:   );
+ 5009: }
+ 5010: 
+ 5011: 
+ 5012: 

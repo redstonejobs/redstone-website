@@ -8,6 +8,8 @@ import { getJobsForCountry } from "@/lib/public/jobs";
 import { DEFAULT_PROCESSING_TEXT, formatMoney, PROGRAMME_FEE_DISCLAIMER, PROCESSING_TIME_DISCLAIMER } from "@/lib/jobs/costs";
 import { canonical } from "@/lib/public/site";
 
+export const dynamic = "force-dynamic";
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

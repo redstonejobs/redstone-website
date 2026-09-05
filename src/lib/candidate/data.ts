@@ -1,7 +1,18 @@
 import { createClient } from "@/utils/supabase/server";
+import { getCandidateApplicationPayments } from "@/lib/payments/application-payments";
 import type { CandidateContext, CandidateRow } from "./types";
 
-const JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level, short_description, description, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, working_hours_per_week, work_schedule, overtime_note, vacancies, application_deadline, visa_sponsorship, accommodation, transport, meals, sponsorship_status, accommodation_status, meals_status, transport_status, medical_insurance_status, air_ticket_status, training_status, annual_leave_note, other_benefits, country_fee_override, country_fee_override_currency, country_fee_override_note, fee_relationship, processing_time_min, processing_time_max, processing_time_unit, processing_time_note, employer:employers(company_name, verification_status, is_active)";
+const CANDIDATE_JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level";
+const RECENT_JOB_FIELDS = "id, title, slug, country, city, category, job_type, skill_level, salary_min, salary_max, currency, salary_period, salary_confirmed, salary_note, contract_type, contract_duration_value, contract_duration_unit, contract_note, vacancies, application_deadline, visa_sponsorship, accommodation:accommodation_provided, transport:transport_provided, meals:meals_provided, sponsorship_status, accommodation_status, meals_status, transport_status, processing_time_min, processing_time_max, processing_time_unit, processing_time_note, employer:employers!inner(company_name, verification_status, is_active)";
+const APPLY_JOB_FIELDS = "id, title, slug, country, city, vacancies, application_deadline, employer_filter:employers!inner(id)";
+const CANDIDATE_APPLICATION_PAGE_SIZE = 25;
+const CANDIDATE_DOCUMENT_LIST_LIMIT = 100;
+
+export type CandidateApplicationLoadOptions = {
+  includeDocuments?: boolean;
+  includePayments?: boolean;
+  includeTimeline?: boolean;
+};
 
 export async function getCandidateApplications(context: CandidateContext, statusFilter = "active") {
   const supabase = await createClient();
@@ -16,11 +27,17 @@ export async function getCandidateApplications(context: CandidateContext, status
   if (statusFilter === "withdrawn") query = query.eq("status", "withdrawn");
   if (statusFilter === "rejected") query = query.eq("status", "rejected");
 
-  const { data, error } = await query.returns<CandidateRow[]>();
+  const { data, error } = await query
+    .limit(CANDIDATE_APPLICATION_PAGE_SIZE)
+    .returns<CandidateRow[]>();
   return attachJobs(data ?? [], error);
 }
 
-export async function getCandidateApplication(context: CandidateContext, id: string) {
+export async function getCandidateApplication(
+  context: CandidateContext,
+  id: string,
+  options: CandidateApplicationLoadOptions = {}
+) {
   const supabase = await createClient();
   const { data: application, error } = await supabase
     .from("applications")
@@ -29,15 +46,28 @@ export async function getCandidateApplication(context: CandidateContext, id: str
     .eq("candidate_id", context.user.id)
     .maybeSingle<CandidateRow>();
 
-  if (error || !application) return { application: null, error };
+  if (error || !application) return { application: null, documents: [], payments: [], timeline: [], error };
 
-  const [{ rows }, documents, timeline] = await Promise.all([
+  const [attached, documents, timeline, payments] = await Promise.all([
     attachJobs([application], null),
-    getCandidateDocuments(context, id),
-    getCandidateTimeline(id),
+    options.includeDocuments
+      ? getCandidateDocuments(context, id)
+      : Promise.resolve({ documents: [] as CandidateRow[], error: null }),
+    options.includeTimeline
+      ? getCandidateTimeline(id)
+      : Promise.resolve({ events: [] as CandidateRow[], error: null }),
+    options.includePayments
+      ? getCandidateApplicationPayments(id)
+      : Promise.resolve({ payments: [] as Record<string, unknown>[], error: null }),
   ]);
 
-  return { application: rows[0] ?? null, documents: documents.documents, timeline: timeline.events, error: null };
+  return {
+    application: attached.rows[0] ?? null,
+    documents: documents.documents,
+    payments: payments.payments,
+    timeline: timeline.events,
+    error: null,
+  };
 }
 
 export async function getCandidateDocuments(context: CandidateContext, applicationId?: string) {
@@ -48,6 +78,7 @@ export async function getCandidateDocuments(context: CandidateContext, applicati
     .order("created_at", { ascending: false });
 
   if (applicationId) query = query.eq("application_id", applicationId);
+  else query = query.limit(CANDIDATE_DOCUMENT_LIST_LIMIT);
 
   const { data, error } = await query.returns<CandidateRow[]>();
   if (error) return { documents: [], error };
@@ -85,9 +116,11 @@ export async function getRecentPublishedJobs(limit = 4) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jobs")
-    .select(JOB_FIELDS)
+    .select(RECENT_JOB_FIELDS)
     .eq("status", "published")
     .not("slug", "is", null)
+    .eq("employer.verification_status", "verified")
+    .eq("employer.is_active", true)
     .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
     .or("vacancies.is.null,vacancies.gt.0")
     .order("published_at", { ascending: false, nullsFirst: false })
@@ -101,9 +134,13 @@ export async function getPublishedJobBySlug(slug: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jobs")
-    .select(JOB_FIELDS)
+    .select(APPLY_JOB_FIELDS)
     .eq("slug", slug)
     .eq("status", "published")
+    .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+    .or("vacancies.is.null,vacancies.gt.0")
+    .eq("employer_filter.verification_status", "verified")
+    .eq("employer_filter.is_active", true)
     .maybeSingle<CandidateRow>();
 
   return { job: data, error };
@@ -118,7 +155,7 @@ async function attachJobs(applications: CandidateRow[], error: unknown): Promise
 
   const supabase = await createClient();
   const jobIds = [...new Set(applications.map((application) => String(application.job_id ?? "")).filter(Boolean))];
-  const { data: jobs } = await supabase.from("jobs").select(JOB_FIELDS).in("id", jobIds).returns<CandidateRow[]>();
+  const { data: jobs } = await supabase.from("jobs").select(CANDIDATE_JOB_FIELDS).in("id", jobIds).returns<CandidateRow[]>();
   const jobMap = new Map((jobs ?? []).map((job) => [String(job.id), job]));
 
   return {

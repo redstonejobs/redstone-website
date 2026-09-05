@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { safeNextPath } from "@/lib/auth/redirect";
+import { attributeCandidateFromCurrentReferral } from "@/lib/referrals/attribution";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const safeNext = safeNextPath(requestUrl.searchParams.get("next"), "/candidate");
 
   if (code) {
     const supabase = await createClient();
@@ -26,11 +28,27 @@ export async function GET(request: Request) {
         .maybeSingle<{ profile_type: string | null; is_active: boolean | null }>();
 
       if (profile?.profile_type === "candidate" && profile.is_active === true) {
-        return NextResponse.redirect(new URL(safeNextPath(requestUrl.searchParams.get("next"), "/candidate"), requestUrl.origin));
+        try {
+          await attributeCandidateFromCurrentReferral(userData.user.id, {
+            status: "registered",
+          });
+        } catch (referralError) {
+          console.warn("[referral] auth callback attribution failed", {
+            candidate_id: userData.user.id,
+            message:
+              referralError instanceof Error ? referralError.message : "unknown_error",
+          });
+        }
+
+        return NextResponse.redirect(new URL(safeNext, requestUrl.origin));
       }
 
       if (profile?.profile_type === "employer" && profile.is_active === true) {
         return NextResponse.redirect(new URL(safeNextPath(requestUrl.searchParams.get("next"), "/employer"), requestUrl.origin));
+      }
+
+      if (safeNext.startsWith("/apply/")) {
+        return NextResponse.redirect(new URL(safeNext, requestUrl.origin));
       }
 
       if (["staff", "admin", "super_admin"].includes(profile?.profile_type ?? "")) {

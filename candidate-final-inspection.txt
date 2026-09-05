@@ -1,0 +1,308 @@
+===== src\app\candidate\applications\[id]\page.tsx :: const query =====
+  374: 
+  375: export default async function CandidateApplicationDetailPage({
+  376:   params,
+  377:   searchParams,
+  378: }: Props) {
+  379:   const { id } = await params;
+  380: 
+  381:   const query = (await searchParams) ?? {};
+  382: 
+  383:   const context = await requireCandidate();
+  384: 
+  385:   const {
+  386:     application,
+  387:     documents,
+  388:     payments,
+  389:     timeline,
+  390:   } = await getCandidateApplication(context, id);
+
+===== src\app\candidate\applications\[id]\page.tsx :: available_funds =====
+  234: 
+  235: type FinancialInformationRow = {
+  236:   application_id: string;
+  237:   funding_source?: string | null;
+  238:   sponsor_name?: string | null;
+  239:   sponsor_relationship?: string | null;
+  240:   currency?: string | null;
+  241:   available_funds?: number | null;
+  242:   monthly_income?: number | null;
+  243:   proof_of_funds_available?: boolean | null;
+  244:   employer_sponsorship_expected?: boolean | null;
+  245:   employer_covers_visa?: boolean | null;
+  246:   employer_covers_flight?: boolean | null;
+  247:   employer_covers_accommodation?: boolean | null;
+  248:   employer_covers_medical?: boolean | null;
+  249:   financial_notes?: string | null;
+  250: };
+
+  709:               .select(
+  710:                 `
+  711:                 application_id,
+  712:                 funding_source,
+  713:                 sponsor_name,
+  714:                 sponsor_relationship,
+  715:                 currency,
+  716:                 available_funds,
+  717:                 monthly_income,
+  718:                 proof_of_funds_available,
+  719:                 employer_sponsorship_expected,
+  720:                 employer_covers_visa,
+  721:                 employer_covers_flight,
+  722:                 employer_covers_accommodation,
+  723:                 employer_covers_medical,
+  724:                 financial_notes
+  725:                 `,
+
+ 3661:             <MiniStat
+ 3662:               label="Funding Source"
+ 3663:               value={finances?.funding_source ?? "Not set"}
+ 3664:             />
+ 3665:             <MiniStat
+ 3666:               label="Available Funds"
+ 3667:               value={
+ 3668:                 finances?.available_funds != null
+ 3669:                   ? `${finances.currency ?? "KES"} ${Number(
+ 3670:                       finances.available_funds,
+ 3671:                     ).toLocaleString()}`
+ 3672:                   : "Not set"
+ 3673:               }
+ 3674:             />
+ 3675:             <MiniStat
+ 3676:               label="Monthly Income"
+ 3677:               value={
+
+ 3663:               value={finances?.funding_source ?? "Not set"}
+ 3664:             />
+ 3665:             <MiniStat
+ 3666:               label="Available Funds"
+ 3667:               value={
+ 3668:                 finances?.available_funds != null
+ 3669:                   ? `${finances.currency ?? "KES"} ${Number(
+ 3670:                       finances.available_funds,
+ 3671:                     ).toLocaleString()}`
+ 3672:                   : "Not set"
+ 3673:               }
+ 3674:             />
+ 3675:             <MiniStat
+ 3676:               label="Monthly Income"
+ 3677:               value={
+ 3678:                 finances?.monthly_income != null
+ 3679:                   ? `${finances.currency ?? "KES"} ${Number(
+
+ 3717:                 name="currency"
+ 3718:                 placeholder="KES"
+ 3719:                 defaultValue={finances?.currency ?? "KES"}
+ 3720:               />
+ 3721: 
+ 3722:               <Input
+ 3723:                 label="Available Funds"
+ 3724:                 name="available_funds"
+ 3725:                 type="number"
+ 3726:                 min="0"
+ 3727:                 step="0.01"
+ 3728:                 defaultValue={String(finances?.available_funds ?? "")}
+ 3729:               />
+ 3730: 
+ 3731:               <Input
+ 3732:                 label="Monthly Income"
+ 3733:                 name="monthly_income"
+
+ 3721: 
+ 3722:               <Input
+ 3723:                 label="Available Funds"
+ 3724:                 name="available_funds"
+ 3725:                 type="number"
+ 3726:                 min="0"
+ 3727:                 step="0.01"
+ 3728:                 defaultValue={String(finances?.available_funds ?? "")}
+ 3729:               />
+ 3730: 
+ 3731:               <Input
+ 3732:                 label="Monthly Income"
+ 3733:                 name="monthly_income"
+ 3734:                 type="number"
+ 3735:                 min="0"
+ 3736:                 step="0.01"
+ 3737:                 defaultValue={String(finances?.monthly_income ?? "")}
+
+===== src\app\candidate\applications\[id]\page.tsx :: monthly_income =====
+  235: type FinancialInformationRow = {
+  236:   application_id: string;
+  237:   funding_source?: string | null;
+  238:   sponsor_name?: string | null;
+  239:   sponsor_relationship?: string | null;
+  240:   currency?: string | null;
+  241:   available_funds?: number | null;
+  242:   monthly_income?: number | null;
+  243:   proof_of_funds_available?: boolean | null;
+  244:   employer_sponsorship_expected?: boolean | null;
+  245:   employer_covers_visa?: boolean | null;
+  246:   employer_covers_flight?: boolean | null;
+  247:   employer_covers_accommodation?: boolean | null;
+  248:   employer_covers_medical?: boolean | null;
+  249:   financial_notes?: string | null;
+  250: };
+  251: 
+
+  710:                 `
+  711:                 application_id,
+  712:                 funding_source,
+  713:                 sponsor_name,
+  714:                 sponsor_relationship,
+  715:                 currency,
+  716:                 available_funds,
+  717:                 monthly_income,
+  718:                 proof_of_funds_available,
+  719:                 employer_sponsorship_expected,
+  720:                 employer_covers_visa,
+  721:                 employer_covers_flight,
+  722:                 employer_covers_accommodation,
+  723:                 employer_covers_medical,
+  724:                 financial_notes
+  725:                 `,
+  726:               )
+
+ 3671:                     ).toLocaleString()}`
+ 3672:                   : "Not set"
+ 3673:               }
+ 3674:             />
+ 3675:             <MiniStat
+ 3676:               label="Monthly Income"
+ 3677:               value={
+ 3678:                 finances?.monthly_income != null
+ 3679:                   ? `${finances.currency ?? "KES"} ${Number(
+ 3680:                       finances.monthly_income,
+ 3681:                     ).toLocaleString()}`
+ 3682:                   : "Not set"
+ 3683:               }
+ 3684:             />
+ 3685:             <MiniStat
+ 3686:               label="Employer Sponsorship"
+ 3687:               value={
+
+ 3673:               }
+ 3674:             />
+ 3675:             <MiniStat
+ 3676:               label="Monthly Income"
+ 3677:               value={
+ 3678:                 finances?.monthly_income != null
+ 3679:                   ? `${finances.currency ?? "KES"} ${Number(
+ 3680:                       finances.monthly_income,
+ 3681:                     ).toLocaleString()}`
+ 3682:                   : "Not set"
+ 3683:               }
+ 3684:             />
+ 3685:             <MiniStat
+ 3686:               label="Employer Sponsorship"
+ 3687:               value={
+ 3688:                 finances?.employer_sponsorship_expected
+ 3689:                   ? "Expected"
+
+ 3726:                 min="0"
+ 3727:                 step="0.01"
+ 3728:                 defaultValue={String(finances?.available_funds ?? "")}
+ 3729:               />
+ 3730: 
+ 3731:               <Input
+ 3732:                 label="Monthly Income"
+ 3733:                 name="monthly_income"
+ 3734:                 type="number"
+ 3735:                 min="0"
+ 3736:                 step="0.01"
+ 3737:                 defaultValue={String(finances?.monthly_income ?? "")}
+ 3738:               />
+ 3739: 
+ 3740:               <Input
+ 3741:                 label="Sponsor Name"
+ 3742:                 name="sponsor_name"
+
+ 3730: 
+ 3731:               <Input
+ 3732:                 label="Monthly Income"
+ 3733:                 name="monthly_income"
+ 3734:                 type="number"
+ 3735:                 min="0"
+ 3736:                 step="0.01"
+ 3737:                 defaultValue={String(finances?.monthly_income ?? "")}
+ 3738:               />
+ 3739: 
+ 3740:               <Input
+ 3741:                 label="Sponsor Name"
+ 3742:                 name="sponsor_name"
+ 3743:                 placeholder="If another person is supporting you"
+ 3744:                 defaultValue={finances?.sponsor_name ?? ""}
+ 3745:               />
+ 3746: 
+
+===== src\app\candidate\applications\[id]\page.tsx :: prefetch =====
+===== src\app\candidate\applications\[id]\page.tsx :: DocumentUploadRows =====
+    1: import PaymentStatusRefresher from "./PaymentStatusRefresher";
+    2: import Link from "next/link";
+    3: import { DocumentUploadRows } from "@/components/candidate/DocumentUploadRows";
+    4: import { notFound } from "next/navigation";
+    5: 
+    6: import {
+    7:   addCandidateAddress,
+    8:   addCandidateDependant,
+    9:   addCandidateEducation,
+   10:   addCandidateEmployment,
+   11:   addCandidateLanguage,
+   12:   addCandidateProfessionalLicense,
+
+ 4062:           title="Supporting Documents"
+ 4063:           subtitle="Upload supporting evidence for your employment and immigration case."
+ 4064:         >
+ 4065:           <Warning
+ 4066:             title="Only upload genuine documents"
+ 4067:             text="Required documents vary according to the destination, employer and immigration program."
+ 4068:           />
+ 4069:           <DocumentUploadRows
+ 4070:             action={uploadCandidateDocument.bind(null, id)}
+ 4071:             documentTypes={[...DOCUMENT_TYPES]}
+ 4072:             disabled={!editable}
+ 4073:           />
+ 4074: 
+ 4075:           <div className="space-y-3">
+ 4076:             {documents.map(
+ 4077:               (document) => (
+ 4078:                 <article
+
+===== src\components\candidate\DocumentUploadRows.tsx :: name="files" =====
+   55:                 <option key={type} value={type}>
+   56:                   {titleCase(type)}
+   57:                 </option>
+   58:               ))}
+   59:             </select>
+   60: 
+   61:             <input
+   62:               name="files"
+   63:               type="file"
+   64:               accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+   65:               required
+   66:               disabled={disabled}
+   67:               aria-label={`Document file ${index + 1}`}
+   68:               className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 py-2"
+   69:             />
+   70: 
+   71:             <button
+
+===== src\components\candidate\document-upload-builder.tsx :: name="files" =====
+   53:                 ))}
+   54:               </select>
+   55:             </label>
+   56: 
+   57:             <label className="grid gap-1 text-sm font-bold text-slate-700">
+   58:               <span>Choose file</span>
+   59:               <input
+   60:                 name="files"
+   61:                 type="file"
+   62:                 accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+   63:                 required
+   64:                 disabled={!editable}
+   65:                 className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-[#071A3D] file:px-3 file:py-2 file:text-sm file:font-bold file:text-white disabled:bg-slate-100"
+   66:               />
+   67:             </label>
+   68: 
+   69:             <div className="flex items-end gap-2 lg:pt-6">
+

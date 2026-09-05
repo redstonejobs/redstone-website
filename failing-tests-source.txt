@@ -1,0 +1,242 @@
+===== tests/candidate-document-multi-upload.test.mjs =====
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "..");
+const actions = fs.readFileSync(path.join(root, "src/lib/candidate/actions.ts"), "utf8");
+const page = fs.readFileSync(path.join(root, "src/app/candidate/applications/[id]/page.tsx"), "utf8");
+const paymentService = fs.readFileSync(path.join(root, "src/lib/payments/application-payments.ts"), "utf8");
+const nextConfig = fs.readFileSync(path.join(root, "next.config.ts"), "utf8");
+
+test("candidate documents support controlled multi-file batches", () => {
+  assert.match(actions, /formData\.getAll\("files"\)/);
+  assert.match(actions, /MAX_DOCUMENT_BATCH_FILES = 10/);
+  assert.match(actions, /MAX_DOCUMENT_BATCH_BYTES = 30 \* 1024 \* 1024/);
+  assert.match(actions, /application_documents"\)\s*\.insert\(metadataRows\)/s);
+  assert.match(actions, /candidate_id: context\.user\.id/);
+  assert.doesNotMatch(actions, /uploaded_by: context\.user\.id/);
+  assert.match(actions, /remove\(uploadedPaths\)/);
+  assert.match(page, /name="files"/);
+  assert.match(page, /multiple/);
+  assert.match(page, /Upload Selected Documents/);
+  assert.match(nextConfig, /bodySizeLimit: "32mb"/);
+  assert.match(nextConfig, /proxyClientMaxBodySize: "32mb"/);
+});
+
+test("documents can be submitted and moved to final review", () => {
+  assert.match(actions, /export async function completeCandidateDocumentsSection/);
+  assert.match(actions, /saveImmigrationSectionProgress\(applicationId, "documents", "complete"\)/);
+  assert.match(actions, /section=review&saved=documents/);
+  assert.match(page, /Submit Documents & Continue to Review/);
+});
+
+test("review continues to payment only after document step is complete", () => {
+  assert.match(page, /Continue to Payment/);
+  assert.match(page, /prepareApplicationPayment\.bind\(null, id\)/);
+  assert.match(paymentService, /\["personal", "passport", "declarations", "documents"\]/);
+});
+
+===== tests/candidate-education-finance-save.test.mjs =====
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root = path.resolve(process.cwd());
+const actions = fs.readFileSync(path.join(root, 'src/lib/candidate/actions.ts'), 'utf8');
+const page = fs.readFileSync(path.join(root, 'src/app/candidate/applications/[id]/page.tsx'), 'utf8');
+
+function between(source, start, end) {
+  const i = source.indexOf(start);
+  assert.notEqual(i, -1, `missing start: ${start}`);
+  const j = source.indexOf(end, i + start.length);
+  assert.notEqual(j, -1, `missing end: ${end}`);
+  return source.slice(i, j);
+}
+
+test('education save redirects validation/database errors back to education instead of crashing', () => {
+  const body = between(actions, 'export async function addCandidateEducation', 'export async function deleteCandidateEducation');
+  assert.match(body, /failCandidateSection\([\s\S]*?"education"/);
+  assert.match(body, /Please provide an education start date/);
+  assert.match(body, /education save failed/);
+  assert.doesNotMatch(body, /throw new Error/);
+});
+
+test('finance save prevents numeric(14,2) overflow and returns friendly errors', () => {
+  const body = between(actions, 'export async function saveCandidateFinancialInformation', 'export async function completeCandidateFinancesSection');
+  assert.match(body, /999_999_999_999\.99/);
+  assert.match(body, /failCandidateSection\([\s\S]*?"finances"/);
+  assert.match(body, /finance save failed/);
+  assert.doesNotMatch(body, /throw new Error/);
+});
+
+test('finance number inputs enforce the database-safe maximum', () => {
+  const matches = page.match(/max="999999999999\.99"/g) ?? [];
+  assert.equal(matches.length, 2);
+  assert.match(page, /max\?: string/);
+  assert.match(page, /max=\{max\}/);
+});
+
+===== tests/candidate-section-validation.test.mjs =====
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const actions = readFileSync("src/lib/candidate/actions.ts", "utf8");
+const page = readFileSync(
+  "src/app/candidate/applications/[id]/page.tsx",
+  "utf8",
+);
+
+test("candidate section completion validation redirects back with readable errors", () => {
+  assert.match(actions, /function failCandidateSection\(/);
+  assert.match(actions, /error=\$\{encodeURIComponent\(message\)\}/);
+
+  const expected = [
+    ["completeCandidateAddressSection", "addresses"],
+    ["completeCandidateFamilySection", "family"],
+    ["completeCandidateEducationSection", "education"],
+    ["completeCandidateEmploymentSection", "employment"],
+    ["completeCandidateLanguagesSection", "languages"],
+    ["completeCandidateLicensesSection", "licenses"],
+    ["completeCandidateTravelSection", "travel"],
+    ["completeCandidateVisaSection", "visas"],
+    ["completeCandidateEmergencySection", "emergency"],
+    ["completeCandidateReferencesSection", "references"],
+    ["completeCandidateFinancesSection", "finances"],
+    ["completeCandidateDeclarationsSection", "declarations"],
+  ];
+
+  for (const [name, section] of expected) {
+    const start = actions.indexOf(`export async function ${name}`);
+    assert.notEqual(start, -1, `${name} must exist`);
+    const next = actions.indexOf("\nexport async function ", start + 1);
+    const block = actions.slice(start, next === -1 ? actions.length : next);
+    assert.match(block, new RegExp(`failCandidateSection\\([\\s\\S]*?\\"${section}\\"`));
+  }
+});
+
+test("candidate page shows section validation feedback instead of generic server failure", () => {
+  assert.match(page, /const sectionError =/);
+  assert.match(page, /Please check this section before continuing\./);
+  assert.match(page, /\{sectionError\}/);
+});
+
+===== tests/candidate-wizard-clean.test.mjs =====
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const page = readFileSync("src/app/candidate/applications/[id]/page.tsx", "utf8");
+const list = readFileSync("src/app/candidate/applications/page.tsx", "utf8");
+const actions = readFileSync("src/lib/candidate/actions.ts", "utf8");
+
+test("wizard loads only the active immigration section", () => {
+  assert.match(page, /switch \(section\)/);
+  for (const key of ["addresses", "family", "education", "employment", "languages", "licenses", "travel", "visas", "emergency", "references", "finances", "declarations"]) {
+    assert.match(page, new RegExp(`case "${key}"`));
+  }
+  assert.match(page, /needsImmigrationProfile = \["personal", "passport", "family"\]\.includes\(section\)/);
+});
+
+test("wizard navigation disables automatic Next prefetch", () => {
+  assert.match(page, /key=\{item\.key\}[\s\S]{0,120}prefetch=\{false\}[\s\S]{0,180}section=\$\{item\.key\}/);
+  assert.ok((page.match(/prefetch=\{false\}/g) ?? []).length >= 4);
+  assert.match(page, /Review \{item\.label\}/);
+  assert.match(list, /prefetch=\{false\}[\s\S]{0,120}href=\{applicationHref\}/);
+});
+
+test("validation returns to the correct section and is visible", () => {
+  assert.match(actions, /function failCandidateSection\(/);
+  assert.match(actions, /error=\$\{encodeURIComponent\(message\)\}/);
+  assert.match(page, /typeof query\.error === "string"/);
+  assert.match(page, /Please check this section before continuing\./);
+  assert.match(page, /\{sectionError\}/);
+});
+
+===== tests/worker-performance.test.mjs =====
+import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import test from "node:test";
+
+const proxy = readFileSync("proxy.ts", "utf8");
+const publicJobs = readFileSync("src/lib/public/jobs.ts", "utf8");
+const jobsPage = readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
+const jobDetail = readFileSync("src/app/(public)/jobs/[slug]/page.tsx", "utf8");
+const jobDetailContext = readFileSync("src/lib/public/job-detail-context.ts", "utf8");
+const applyPage = readFileSync("src/app/apply/[slug]/page.tsx", "utf8");
+const genericApplyPage = readFileSync("src/app/(public)/apply/page.tsx", "utf8");
+const candidatePage = readFileSync("src/app/candidate/applications/[id]/page.tsx", "utf8");
+const candidateData = readFileSync("src/lib/candidate/data.ts", "utf8");
+const homePage = readFileSync("src/app/(public)/home-page.tsx", "utf8");
+const countries = readFileSync("src/lib/public/countries.ts", "utf8");
+
+test("public jobs bypass auth proxy and duplicate legacy middleware is removed", () => {
+  assert.match(proxy, /"\/admin\/:path\*"/);
+  assert.match(proxy, /"\/candidate\/:path\*"/);
+  assert.match(proxy, /"\/employer\/:path\*"/);
+  assert.doesNotMatch(proxy, /\(\(\?!_next\/static/);
+  assert.doesNotMatch(proxy, /"\/jobs/);
+  assert.doesNotMatch(proxy, /"\/apply\/:path\*"/);
+  assert.equal(existsSync("middleware.ts"), false);
+});
+
+test("jobs listing fetches only one database page using a reduced card projection", () => {
+  assert.match(publicJobs, /const PUBLIC_JOB_CARD_SELECT/);
+  assert.match(publicJobs, /\.select\(PUBLIC_JOB_CARD_SELECT, \{ count: "exact" \}\)/);
+  assert.match(publicJobs, /\.range\(from, to\)/);
+  assert.match(publicJobs, /export const PAGE_SIZE = 9/);
+});
+
+test("free-text occupation catalogue loads only when a search query is actually used", () => {
+  assert.doesNotMatch(publicJobs, /^import .*occupationSearchTerms/m);
+  assert.match(publicJobs, /await import\("@\/lib\/jobs\/catalogue"\)/);
+});
+
+test("job detail route avoids related-job scans, candidate auth and heavy catalogue expansion", () => {
+  assert.match(jobDetail, /getJobBySlug\(slug\)/);
+  assert.match(jobDetail, /getJobDetailContext\(job\)/);
+  assert.doesNotMatch(jobDetail, /getPublishedJobs|getJobCatalogueContext|resolveOccupationJobContent|occupationContentAsText|createClient\(\)|auth\.getUser|applications/);
+  assert.doesNotMatch(jobDetail, /JobCard/);
+  assert.match(jobDetailContext, /\.eq\("job_id", job\.id\)/);
+  assert.match(jobDetailContext, /\.in\("document_type", documentTypes\)/);
+  assert.doesNotMatch(jobDetailContext, /document_fee_catalog[\s\S]{0,200}\.eq\("is_active", true\)[\s\S]{0,300}\.returns<FeeRow\[\]>\(\)[\s\S]{0,200}getPublishedJobs/);
+});
+
+test("apply route performs no full candidate catalogue or application-list scans", () => {
+  assert.match(applyPage, /getPublishedJobBySlug\(slug\)/);
+  assert.match(applyPage, /select\("profile_type, is_active"\)/);
+  assert.match(applyPage, /await startApplication\(slug\)/);
+  assert.doesNotMatch(applyPage, /getCandidateApplications|getCandidateDocuments|getJobCatalogueContext|JOB_OCCUPATIONS/);
+});
+
+test("candidate wizard loads only current section data", () => {
+  assert.match(candidatePage, /Only progress plus the[\s\S]*currently visible section is loaded/);
+  assert.match(candidatePage, /switch \(section\)/);
+  assert.match(candidatePage, /case "addresses"/);
+  assert.match(candidatePage, /case "declarations"/);
+  assert.doesNotMatch(candidatePage, /const \[[\s\S]{0,1200}addressRows[\s\S]{0,1200}dependantRows[\s\S]{0,1200}educationRows[\s\S]{0,1200}\] = await Promise\.all/);
+  assert.match(candidatePage, /includeDocuments: section === "documents"/);
+  assert.doesNotMatch(candidateData, /const JOB_FIELDS =/);
+  assert.match(candidateData, /const CANDIDATE_JOB_FIELDS =/);
+});
+
+test("generic Apply entry routes visitors to real vacancies", () => {
+  assert.match(genericApplyPage, /redirect\("\/jobs"\)/);
+});
+
+test("homepage avoids all-job country count scans", () => {
+  assert.match(homePage, /getConfiguredCountries/);
+  assert.doesNotMatch(homePage, /getCountriesWithPublishedCounts/);
+});
+
+test("country counts run as database head counts in bounded batches", () => {
+  assert.match(countries, /select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(countries, /COUNTRY_COUNT_CONCURRENCY = 6/);
+  assert.doesNotMatch(countries, /select\("country"\)/);
+});
+

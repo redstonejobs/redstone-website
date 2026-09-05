@@ -4,7 +4,7 @@ import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { Band, ContactCTA, Hero, InfoGrid, ProcessSteps, SectionHeading } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
 import { BLOG_POSTS } from "@/lib/public/blog";
-import { getCountriesWithPublishedCounts } from "@/lib/public/countries";
+import { getConfiguredCountries } from "@/lib/public/countries";
 import { getFeaturedJobs } from "@/lib/public/jobs";
 import { CONTACT, RECRUITMENT_DISCLAIMER, SITE_NAME, SITE_URL } from "@/lib/public/site";
 
@@ -13,7 +13,7 @@ const unskilled = ["Housekeeping", "Cleaning", "Warehouse Support", "Factory Wor
 const process = ["Registration", "Profile Review", "Job Matching", "Employer Selection", "Interview", "Documentation", "Visa / Work Permit", "Travel Preparation", "Deployment"];
 
 export default async function HomePage() {
-  const [{ jobs }, countries] = await Promise.all([getFeaturedJobs(6), getCountriesWithPublishedCounts()]);
+  const [{ jobs }, countries] = await Promise.all([getFeaturedJobs(6), getConfiguredCountries()]);
 
   return (
     <>

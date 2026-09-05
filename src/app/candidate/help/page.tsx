@@ -8,7 +8,7 @@ export default function CandidateHelpPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {[
           ["Application Help", "Review published jobs carefully and only apply through official Red Stone pages."],
-          ["Document Guidance", `For document questions, contact ${CONTACT.emails.documents}.`],
+          ["Document Guidance", `For document questions, contact ${CONTACT.emails.support}.`],
           ["Fraud Warning", "Never share your password or send documents to unverified contacts."],
           ["Support", `For portal help, contact ${CONTACT.emails.support}. Jobs enquiries: ${CONTACT.emails.jobs}.`],
         ].map(([title, body]) => <section key={title} className="rounded-md border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-xl font-black text-[#071A3D]">{title}</h2><p className="mt-3 text-slate-600">{body}</p></section>)}

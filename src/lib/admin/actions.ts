@@ -914,7 +914,7 @@ export async function setJobStatus(id: string, status: string) {
   }
 
   await logAuditEvent(context, {
-    action: status === "published" ? "job_published" : status === "closed" ? "job_closed" : "job_updated",
+    action: jobStatusAuditAction(status),
     entityType: "job",
     entityId: id,
     description: `Job status changed to ${status}`,
@@ -922,6 +922,16 @@ export async function setJobStatus(id: string, status: string) {
 }
 
 export async function bulkSetJobStatus(status: string, formData: FormData) {
+  const ids = await applyBulkJobStatus(status, formData);
+  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(ids.join(","))}`);
+}
+
+export async function bulkSetAdminJobStatus(status: string, formData: FormData) {
+  const ids = await applyBulkJobStatus(status, formData);
+  redirect(`/admin/jobs?status=${encodeURIComponent(status)}&bulk_status=${encodeURIComponent(status)}&count=${ids.length}`);
+}
+
+async function applyBulkJobStatus(status: string, formData: FormData) {
   requireConfirmation(formData);
   const context = await requireAdmin();
 
@@ -965,7 +975,7 @@ export async function bulkSetJobStatus(status: string, formData: FormData) {
 
   for (const job of jobs) {
     await logAuditEvent(context, {
-      action: status === "published" ? "job_published" : status === "closed" ? "job_closed" : "job_updated",
+      action: jobStatusAuditAction(status),
       entityType: "job",
       entityId: String(job.id),
       description: `Bulk job status changed to ${status}`,
@@ -988,7 +998,27 @@ export async function bulkSetJobStatus(status: string, formData: FormData) {
     },
   });
 
-  redirect(`/admin/jobs/bulk-create/review?ids=${encodeURIComponent(ids.join(","))}`);
+  if (status === "published") {
+    await logAuditEvent(context, {
+      action: "bulk_job_run_completed",
+      entityType: "job",
+      description: `Bulk publication completed for ${ids.length} vacancies`,
+      metadata: {
+        job_ids: ids,
+        new_status: status,
+      },
+    });
+  }
+
+  return ids;
+}
+
+function jobStatusAuditAction(status: string) {
+  if (status === "published") return "job_published";
+  if (status === "draft" || status === "paused") return "job_unpublished";
+  if (status === "archived") return "job_archived";
+  if (status === "closed") return "job_closed";
+  return "job_updated";
 }
 
 export async function duplicateJob(id: string) {
@@ -1073,6 +1103,35 @@ async function logJobChangeAudits(
         : undefined,
     });
   }
+}
+
+export async function waiveApplicationVerificationPayment(
+  applicationId: string,
+  formData: FormData
+) {
+  const context = await requireStaff();
+
+  if (!hasCapability(context, "payments.waive")) {
+    throw new Error("You are not allowed to waive application payments.");
+  }
+
+  const reason = value(formData, "reason");
+  if (reason.length < 10) {
+    throw new Error("A clear waiver reason is required.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_waive_application_payment", {
+    p_application_id: applicationId,
+    p_reason: reason,
+  });
+
+  if (error) {
+    throw new Error("We could not waive that payment.");
+  }
+
+  revalidatePath(`/admin/applications/${applicationId}`);
+  redirect(`/admin/applications/${applicationId}?payment=waived`);
 }
 
 export async function updateApplicationStatus(id: string, formData: FormData) {
@@ -1169,7 +1228,6 @@ export async function assignApplication(id: string, formData: FormData) {
   const { data: assignmentRows, error: assignmentError } = await supabase.rpc("admin_assign_application", {
     p_application_id: id,
     p_assigned_staff_id: staffId,
-    p_changed_by: context.user.id,
     p_reason: value(formData, "assignment_reason") || null,
   });
 

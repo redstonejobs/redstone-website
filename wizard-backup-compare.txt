@@ -1,0 +1,561 @@
+============================================================
+PATTERN: switch (section)
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+  427:           .select("*")
+  428:           .eq("application_id", id)
+  429:           .maybeSingle<ImmigrationProfile>()
+  430:       : Promise.resolve({ data: null as ImmigrationProfile | null }),
+  431:   ]);
+  432: 
+  433:   let addressRows: AddressRow[] = [];
+  434:   let dependantRows: DependantRow[] = [];
+  435:   let educationRows: EducationRow[] = [];
+  436:   let employmentRows: EmploymentRow[] = [];
+  437:   let languageRows: LanguageRow[] = [];
+  438:   let licenseRows: LicenseRow[] = [];
+  439:   let travelRows: TravelRow[] = [];
+  440:   let visaRows: VisaRow[] = [];
+  441:   let emergencyContactRows: EmergencyContactRow[] = [];
+  442:   let referenceRows: ReferenceRow[] = [];
+  443:   let financialInformation: FinancialInformationRow | null = null;
+  444:   let immigrationDeclarations: ImmigrationDeclarationsRow | null = null;
+  445: 
+  446:   switch (section) {
+  447:     case "addresses": {
+  448:       const { data } = await supabase
+  449:         .from("application_addresses")
+  450:         .select(
+  451:           "id, address_type, address_line_1, address_line_2, city, state_province, postal_code, country, from_date, to_date, is_current"
+  452:         )
+  453:         .eq("application_id", id)
+  454:         .order("is_current", { ascending: false })
+  455:         .order("from_date", { ascending: false })
+  456:         .returns<AddressRow[]>();
+  457:       addressRows = data ?? [];
+  458:       break;
+  459:     }
+  460:     case "family": {
+  461:       const { data } = await supabase
+  462:         .from("application_dependants")
+  463:         .select(
+  464:           "id, full_name, relationship, date_of_birth, nationality, country_of_residence, passport_number, accompanying_applicant, visa_required"
+  465:         )
+  466:         .eq("application_id", id)
+  467:         .order("created_at", { ascending: true })
+  468:         .returns<DependantRow[]>();
+  469:       dependantRows = data ?? [];
+  470:       break;
+  471:     }
+  472:     case "education": {
+  473:       const { data } = await supabase
+  474:         .from("application_education_history")
+  475:         .select(
+  476:           "id, institution_name, country, qualification, field_of_study, start_date, end_date, completed, graduation_date, certificate_available"
+  477:         )
+  478:         .eq("application_id", id)
+  479:         .order("start_date", { ascending: false })
+  480:         .returns<EducationRow[]>();
+  481:       educationRows = data ?? [];
+  482:       break;
+  483:     }
+  484:     case "employment": {
+  485:       const { data } = await supabase
+  486:         .from("application_employment_history")
+  487:         .select(
+  488:           "id, employer_name, job_title, country, city, start_date, end_date, is_current, duties, reason_for_leaving, supervisor_name, supervisor_contact, reference_permission"
+  489:         )
+  490:         .eq("application_id", id)
+  491:         .order("is_current", { ascending: false })
+  492:         .order("start_date", { ascending: false })
+  493:         .returns<EmploymentRow[]>();
+  494:       employmentRows = data ?? [];
+  495:       break;
+  496:     }
+  497:     case "languages": {
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+============================================================
+PATTERN: needsImmigrationProfile
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+  397:     application,
+  398:     documents,
+  399:     payments,
+  400:     timeline,
+  401:   } = await getCandidateApplication(context, id, {
+  402:     includeDocuments: section === "documents",
+  403:     includePayments: section === "payment",
+  404:     includeTimeline: true,
+  405:   });
+  406: 
+  407:   if (!application) {
+  408:     notFound();
+  409:   }
+  410: 
+  411:   const supabase = await createClient();
+  412: 
+  413:   // Keep each wizard request small on Cloudflare. Only progress plus the
+  414:   // currently visible section is loaded. The previous implementation fetched
+  415:   // every immigration table on every click, which could exceed Worker CPU.
+  416:   const needsImmigrationProfile = ["personal", "passport", "family"].includes(section);
+  417: 
+  418:   const [{ data: progressRows }, { data: immigrationProfile }] = await Promise.all([
+  419:     supabase
+  420:       .from("application_section_progress")
+  421:       .select("section_key, status")
+  422:       .eq("application_id", id)
+  423:       .returns<ProgressRow[]>(),
+  424:     needsImmigrationProfile
+  425:       ? supabase
+  426:           .from("application_immigration_profiles")
+  427:           .select("*")
+  428:           .eq("application_id", id)
+  429:           .maybeSingle<ImmigrationProfile>()
+  430:       : Promise.resolve({ data: null as ImmigrationProfile | null }),
+  431:   ]);
+  432: 
+  433:   let addressRows: AddressRow[] = [];
+  434:   let dependantRows: DependantRow[] = [];
+  435:   let educationRows: EducationRow[] = [];
+  436:   let employmentRows: EmploymentRow[] = [];
+  437:   let languageRows: LanguageRow[] = [];
+  438:   let licenseRows: LicenseRow[] = [];
+  439:   let travelRows: TravelRow[] = [];
+  440:   let visaRows: VisaRow[] = [];
+  441:   let emergencyContactRows: EmergencyContactRow[] = [];
+  442:   let referenceRows: ReferenceRow[] = [];
+  443:   let financialInformation: FinancialInformationRow | null = null;
+  444:   let immigrationDeclarations: ImmigrationDeclarationsRow | null = null;
+  445: 
+  446:   switch (section) {
+  447:     case "addresses": {
+  448:       const { data } = await supabase
+  449:         .from("application_addresses")
+  450:         .select(
+  451:           "id, address_type, address_line_1, address_line_2, city, state_province, postal_code, country, from_date, to_date, is_current"
+  452:         )
+  453:         .eq("application_id", id)
+  454:         .order("is_current", { ascending: false })
+  455:         .order("from_date", { ascending: false })
+  456:         .returns<AddressRow[]>();
+  457:       addressRows = data ?? [];
+  458:       break;
+  459:     }
+  460:     case "family": {
+  461:       const { data } = await supabase
+  462:         .from("application_dependants")
+  463:         .select(
+  464:           "id, full_name, relationship, date_of_birth, nationality, country_of_residence, passport_number, accompanying_applicant, visa_required"
+  465:         )
+  466:         .eq("application_id", id)
+  467:         .order("created_at", { ascending: true })
+  405:   });
+  406: 
+  407:   if (!application) {
+  408:     notFound();
+  409:   }
+  410: 
+  411:   const supabase = await createClient();
+  412: 
+  413:   // Keep each wizard request small on Cloudflare. Only progress plus the
+  414:   // currently visible section is loaded. The previous implementation fetched
+  415:   // every immigration table on every click, which could exceed Worker CPU.
+  416:   const needsImmigrationProfile = ["personal", "passport", "family"].includes(section);
+  417: 
+  418:   const [{ data: progressRows }, { data: immigrationProfile }] = await Promise.all([
+  419:     supabase
+  420:       .from("application_section_progress")
+  421:       .select("section_key, status")
+  422:       .eq("application_id", id)
+  423:       .returns<ProgressRow[]>(),
+  424:     needsImmigrationProfile
+  425:       ? supabase
+  426:           .from("application_immigration_profiles")
+  427:           .select("*")
+  428:           .eq("application_id", id)
+  429:           .maybeSingle<ImmigrationProfile>()
+  430:       : Promise.resolve({ data: null as ImmigrationProfile | null }),
+  431:   ]);
+  432: 
+  433:   let addressRows: AddressRow[] = [];
+  434:   let dependantRows: DependantRow[] = [];
+  435:   let educationRows: EducationRow[] = [];
+  436:   let employmentRows: EmploymentRow[] = [];
+  437:   let languageRows: LanguageRow[] = [];
+  438:   let licenseRows: LicenseRow[] = [];
+  439:   let travelRows: TravelRow[] = [];
+  440:   let visaRows: VisaRow[] = [];
+  441:   let emergencyContactRows: EmergencyContactRow[] = [];
+  442:   let referenceRows: ReferenceRow[] = [];
+  443:   let financialInformation: FinancialInformationRow | null = null;
+  444:   let immigrationDeclarations: ImmigrationDeclarationsRow | null = null;
+  445: 
+  446:   switch (section) {
+  447:     case "addresses": {
+  448:       const { data } = await supabase
+  449:         .from("application_addresses")
+  450:         .select(
+  451:           "id, address_type, address_line_1, address_line_2, city, state_province, postal_code, country, from_date, to_date, is_current"
+  452:         )
+  453:         .eq("application_id", id)
+  454:         .order("is_current", { ascending: false })
+  455:         .order("from_date", { ascending: false })
+  456:         .returns<AddressRow[]>();
+  457:       addressRows = data ?? [];
+  458:       break;
+  459:     }
+  460:     case "family": {
+  461:       const { data } = await supabase
+  462:         .from("application_dependants")
+  463:         .select(
+  464:           "id, full_name, relationship, date_of_birth, nationality, country_of_residence, passport_number, accompanying_applicant, visa_required"
+  465:         )
+  466:         .eq("application_id", id)
+  467:         .order("created_at", { ascending: true })
+  468:         .returns<DependantRow[]>();
+  469:       dependantRows = data ?? [];
+  470:       break;
+  471:     }
+  472:     case "education": {
+  473:       const { data } = await supabase
+  474:         .from("application_education_history")
+  475:         .select(
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+============================================================
+PATTERN: Only progress plus the
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+  394:   const context = await requireCandidate();
+  395: 
+  396:   const {
+  397:     application,
+  398:     documents,
+  399:     payments,
+  400:     timeline,
+  401:   } = await getCandidateApplication(context, id, {
+  402:     includeDocuments: section === "documents",
+  403:     includePayments: section === "payment",
+  404:     includeTimeline: true,
+  405:   });
+  406: 
+  407:   if (!application) {
+  408:     notFound();
+  409:   }
+  410: 
+  411:   const supabase = await createClient();
+  412: 
+  413:   // Keep each wizard request small on Cloudflare. Only progress plus the
+  414:   // currently visible section is loaded. The previous implementation fetched
+  415:   // every immigration table on every click, which could exceed Worker CPU.
+  416:   const needsImmigrationProfile = ["personal", "passport", "family"].includes(section);
+  417: 
+  418:   const [{ data: progressRows }, { data: immigrationProfile }] = await Promise.all([
+  419:     supabase
+  420:       .from("application_section_progress")
+  421:       .select("section_key, status")
+  422:       .eq("application_id", id)
+  423:       .returns<ProgressRow[]>(),
+  424:     needsImmigrationProfile
+  425:       ? supabase
+  426:           .from("application_immigration_profiles")
+  427:           .select("*")
+  428:           .eq("application_id", id)
+  429:           .maybeSingle<ImmigrationProfile>()
+  430:       : Promise.resolve({ data: null as ImmigrationProfile | null }),
+  431:   ]);
+  432: 
+  433:   let addressRows: AddressRow[] = [];
+  434:   let dependantRows: DependantRow[] = [];
+  435:   let educationRows: EducationRow[] = [];
+  436:   let employmentRows: EmploymentRow[] = [];
+  437:   let languageRows: LanguageRow[] = [];
+  438:   let licenseRows: LicenseRow[] = [];
+  439:   let travelRows: TravelRow[] = [];
+  440:   let visaRows: VisaRow[] = [];
+  441:   let emergencyContactRows: EmergencyContactRow[] = [];
+  442:   let referenceRows: ReferenceRow[] = [];
+  443:   let financialInformation: FinancialInformationRow | null = null;
+  444:   let immigrationDeclarations: ImmigrationDeclarationsRow | null = null;
+  445: 
+  446:   switch (section) {
+  447:     case "addresses": {
+  448:       const { data } = await supabase
+  449:         .from("application_addresses")
+  450:         .select(
+  451:           "id, address_type, address_line_1, address_line_2, city, state_province, postal_code, country, from_date, to_date, is_current"
+  452:         )
+  453:         .eq("application_id", id)
+  454:         .order("is_current", { ascending: false })
+  455:         .order("from_date", { ascending: false })
+  456:         .returns<AddressRow[]>();
+  457:       addressRows = data ?? [];
+  458:       break;
+  459:     }
+  460:     case "family": {
+  461:       const { data } = await supabase
+  462:         .from("application_dependants")
+  463:         .select(
+  464:           "id, full_name, relationship, date_of_birth, nationality, country_of_residence, passport_number, accompanying_applicant, visa_required"
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+============================================================
+PATTERN: const sectionError
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+  607:     ["initiated", "pending"].includes(String(payment.status ?? ""))
+  608:   );
+  609:   const paidPayment = paymentRows.find(
+  610:     (payment) => String(payment.status ?? "") === "paid"
+  611:   );
+  612:   const latestPayment = paymentRows[0] ?? null;
+  613:   const paymentState = paymentConfigurationState();
+  614:   const progressMap = new Map(
+  615:     (progressRows ?? []).map((row) => [
+  616:       row.section_key,
+  617:       row.status,
+  618:     ]),
+  619:   );
+  620: 
+  621:   const saved =
+  622:     typeof query.saved === "string"
+  623:       ? query.saved
+  624:       : "";
+  625: 
+  626:   const sectionError =
+  627:     typeof query.error === "string"
+  628:       ? query.error
+  629:       : "";
+  630: 
+  631:   const paymentError =
+  632:     typeof query.payment_error === "string"
+  633:       ? query.payment_error
+  634:       : "";
+  635: 
+  636:   const paymentReference =
+  637:     typeof query.reference === "string"
+  638:       ? query.reference
+  639:       : "";
+  640: 
+  641:   const paymentNotice = paymentErrorMessage(paymentError);
+  642: 
+  643:   const job =
+  644:     application.job as Record<
+  645:       string,
+  646:       unknown
+  647:     > | null;
+  648: 
+  649:   const status = String(
+  650:     application.status ?? "draft",
+  651:   );
+  652: 
+  653:   const editable = ![
+  654:     "withdrawn",
+  655:     "rejected",
+  656:     "declined",
+  657:     "cancelled",
+  658:     "placed",
+  659:     "completed",
+  660:   ].includes(status.toLowerCase());
+  661: 
+  662:   const completedSections = [...CORE_PROGRESS_SECTION_KEYS].filter(
+  663:     (key) => progressMap.get(key) === "complete",
+  664:   ).length;
+  665: 
+  666:   const completion = Math.round(
+  667:     (completedSections / CORE_PROGRESS_SECTION_KEYS.size) * 100,
+  668:   );
+  669: 
+  670:   const validLicenseCount =
+  671:     licenses.filter(
+  672:       (record) =>
+  673:         licenseStatus(record.expiry_date)
+  674:           .state === "valid",
+  675:     ).length;
+  676: 
+  677:   const expiredLicenseCount =
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+============================================================
+PATTERN: prefetch={false}
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+============================================================
+PATTERN: max="999999999999.99"
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+NO MATCH
+
+============================================================
+PATTERN: function Input
+============================================================
+
+FILE: .redstone-backups\full-wizard-clean-20260903-081352\src\app\candidate\applications\[id]\page.tsx
+ 4448:           {title}
+ 4449:         </h2>
+ 4450: 
+ 4451:         {subtitle ? (
+ 4452:           <p className="mt-1 text-sm leading-6 text-slate-500">
+ 4453:             {subtitle}
+ 4454:           </p>
+ 4455:         ) : null}
+ 4456:       </header>
+ 4457: 
+ 4458:       <div className="space-y-6 p-5 sm:p-6">
+ 4459:         {children}
+ 4460:       </div>
+ 4461:     </section>
+ 4462:   );
+ 4463: }
+ 4464: 
+ 4465: function DeclarationItem({ name, title, checked, detailsName, detailsValue, detailsPlaceholder, disabled = false, }: { name: string; title: string; checked: boolean; detailsName: string; detailsValue: string; detailsPlaceholder?: string; disabled?: boolean; }) { return ( <div className="rounded-2xl border border-slate-200 bg-white p-5"> <label className="flex items-start gap-3"> <input type="checkbox" name={name} defaultChecked={checked} disabled={disabled} className="mt-1 h-4 w-4" /> <span className="text-sm font-bold text-[#071A3D]">{title}</span> </label> <textarea name={detailsName} defaultValue={detailsValue} placeholder={detailsPlaceholder} disabled={disabled} rows={3} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:bg-slate-100" /> </div> ); }
+ 4466: 
+ 4467: function Input({
+ 4468:   label,
+ 4469:   name,
+ 4470:   defaultValue,
+ 4471:   type = "text",
+ 4472:   placeholder,
+ 4473:   required = false,
+ 4474:   min,
+ 4475:   step,
+ 4476: }: {
+ 4477:   label: string;
+ 4478:   name: string;
+ 4479:   defaultValue?: string;
+ 4480:   type?: string;
+ 4481:   placeholder?: string;
+ 4482:   required?: boolean;
+ 4483:   min?: string;
+ 4484:   step?: string;
+ 4485: }) {
+ 4486:   return (
+ 4487:     <label className="grid gap-2 text-sm font-bold text-slate-700">
+ 4488:       <span>
+ 4489:         {label}
+ 4490: 
+ 4491:         {required ? (
+ 4492:           <span className="ml-1 text-red-600">
+ 4493:             *
+ 4494:           </span>
+ 4495:         ) : null}
+ 4496:       </span>
+ 4497: 
+ 4498:       <input
+ 4499:         name={name}
+ 4500:         type={type}
+ 4501:         defaultValue={defaultValue}
+ 4502:         placeholder={placeholder}
+ 4503:         required={required}
+ 4504:         min={min}
+ 4505:         step={step}
+ 4506:         className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal outline-none transition focus:border-[#071A3D] focus:ring-2 focus:ring-[#071A3D]/10"
+ 4507:       />
+ 4508:     </label>
+ 4509:   );
+ 4510: }
+ 4511: 
+ 4512: function TextArea({
+ 4513:   label,
+ 4514:   name,
+ 4515:   placeholder,
+ 4516:   rows = 4,
+ 4517: }: {
+ 4518:   label: string;
+
+FILE: src\app\candidate\applications\[id]\page.tsx
+ 4557:           {title}
+ 4558:         </h2>
+ 4559: 
+ 4560:         {subtitle ? (
+ 4561:           <p className="mt-1 text-sm leading-6 text-slate-500">
+ 4562:             {subtitle}
+ 4563:           </p>
+ 4564:         ) : null}
+ 4565:       </header>
+ 4566: 
+ 4567:       <div className="space-y-6 p-5 sm:p-6">
+ 4568:         {children}
+ 4569:       </div>
+ 4570:     </section>
+ 4571:   );
+ 4572: }
+ 4573: 
+ 4574: function DeclarationItem({ name, title, checked, detailsName, detailsValue, detailsPlaceholder, disabled = false, }: { name: string; title: string; checked: boolean; detailsName: string; detailsValue: string; detailsPlaceholder?: string; disabled?: boolean; }) { return ( <div className="rounded-2xl border border-slate-200 bg-white p-5"> <label className="flex items-start gap-3"> <input type="checkbox" name={name} defaultChecked={checked} disabled={disabled} className="mt-1 h-4 w-4" /> <span className="text-sm font-bold text-[#071A3D]">{title}</span> </label> <textarea name={detailsName} defaultValue={detailsValue} placeholder={detailsPlaceholder} disabled={disabled} rows={3} className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 disabled:bg-slate-100" /> </div> ); }
+ 4575: 
+ 4576: function Input({
+ 4577:   label,
+ 4578:   name,
+ 4579:   defaultValue,
+ 4580:   type = "text",
+ 4581:   placeholder,
+ 4582:   required = false,
+ 4583:   min,
+ 4584:   step,
+ 4585: }: {
+ 4586:   label: string;
+ 4587:   name: string;
+ 4588:   defaultValue?: string;
+ 4589:   type?: string;
+ 4590:   placeholder?: string;
+ 4591:   required?: boolean;
+ 4592:   min?: string;
+ 4593:   step?: string;
+ 4594: }) {
+ 4595:   return (
+ 4596:     <label className="grid gap-2 text-sm font-bold text-slate-700">
+ 4597:       <span>
+ 4598:         {label}
+ 4599: 
+ 4600:         {required ? (
+ 4601:           <span className="ml-1 text-red-600">
+ 4602:             *
+ 4603:           </span>
+ 4604:         ) : null}
+ 4605:       </span>
+ 4606: 
+ 4607:       <input
+ 4608:         name={name}
+ 4609:         type={type}
+ 4610:         defaultValue={defaultValue}
+ 4611:         placeholder={placeholder}
+ 4612:         required={required}
+ 4613:         min={min}
+ 4614:         step={step}
+ 4615:         className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal outline-none transition focus:border-[#071A3D] focus:ring-2 focus:ring-[#071A3D]/10"
+ 4616:       />
+ 4617:     </label>
+ 4618:   );
+ 4619: }
+ 4620: 
+ 4621: function TextArea({
+ 4622:   label,
+ 4623:   name,
+ 4624:   placeholder,
+ 4625:   rows = 4,
+ 4626: }: {
+ 4627:   label: string;
+

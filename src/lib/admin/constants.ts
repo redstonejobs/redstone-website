@@ -85,6 +85,7 @@ export const ROLE_CAPABILITIES: Record<StaffRoleName, Capability[]> = {
     "audit.read",
     "countries.manage",
     "fees.manage",
+    "payments.waive",
   ],
 };
 

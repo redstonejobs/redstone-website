@@ -89,7 +89,7 @@ function Footer() {
             {CONTACT.phones.map((phone) => <p key={phone}>{phone}</p>)}
             <p><a href={`mailto:${CONTACT.emails.general}`}>{CONTACT.emails.general}</a></p>
             <p><a href={`mailto:${CONTACT.emails.jobs}`}>{CONTACT.emails.jobs}</a></p>
-            <p><a href={`mailto:${CONTACT.emails.employers}`}>{CONTACT.emails.employers}</a></p>
+            <p><a href={`mailto:${CONTACT.emails.support}`}>{CONTACT.emails.support}</a></p>
           </div>
         </div>
         {columns.map(([title, links]) => (
