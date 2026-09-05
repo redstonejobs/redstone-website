@@ -21,7 +21,13 @@ const POSITIVE_PATTERNS: Array<{
   { pattern: /(?:sponsor|sponsorship).{0,30}(?:foreign worker|work permit|visa)/i, status: "sponsorship_confirmed", sponsorship: true },
   { pattern: /international (?:applicants|candidates) (?:are )?(?:welcome|accepted|encouraged)/i, status: "international_applicants_accepted", sponsorship: false },
   { pattern: /foreign (?:workers|applicants|candidates) (?:are )?(?:welcome|accepted|encouraged)/i, status: "international_applicants_accepted", sponsorship: false },
-  { pattern: /temporary foreign worker program/i, status: "verified_foreign_recruitment", sponsorship: true },
+];
+
+const EMPLOYER_LEVEL_FOREIGN_WORKER_PATTERNS = [
+  /temporary foreign worker program/i,
+  /recognized employer pilot/i,
+  /recognised employer pilot/i,
+  /\bREP\b.{0,40}(?:temporary foreign worker|foreign worker)/i,
 ];
 
 export function classifyExternalJob(candidate: ExternalJobCandidate): ImportClassification {
@@ -55,6 +61,20 @@ export function classifyExternalJob(candidate: ExternalJobCandidate): ImportClas
       immigrationEvidence = compactEvidence(match[0]);
       visaSponsorship = signal.sponsorship;
       break;
+    }
+  }
+
+  if (foreignWorkerStatus === "unknown") {
+    for (const pattern of EMPLOYER_LEVEL_FOREIGN_WORKER_PATTERNS) {
+      const match = text.match(pattern);
+      if (match) {
+        // Employer/program participation is useful evidence, but it does not prove
+        // that this specific vacancy has an LMIA or that sponsorship is offered.
+        foreignWorkerStatus = "sponsorship_unconfirmed";
+        immigrationEvidence = compactEvidence(match[0]);
+        visaSponsorship = false;
+        break;
+      }
     }
   }
 
