@@ -29,18 +29,17 @@ export async function fetchFoundRoleJobs(config: Record<string, unknown> = {}): 
     return fetchPartnerFeed(feedUrl, config);
   }
 
-  const token = process.env.FOUNDROLE_MCP_ACCESS_TOKEN?.trim();
-  if (!token) {
-    throw new Error(
-      "FoundRole is wired but not runtime-authorized. Configure FOUNDROLE_FEED_URL for an approved server feed, or a production-compatible FoundRole OAuth access token in FOUNDROLE_MCP_ACCESS_TOKEN."
-    );
-  }
-
+  // FoundRole documents read-only job search/details as available without sign-in.
+  // Keep an optional access token for future authenticated/partner deployments, but
+  // never require one for the public jobs_search flow.
+  const token = process.env.FOUNDROLE_MCP_ACCESS_TOKEN?.trim() || undefined;
   return fetchViaMcp(token, config);
 }
 
 export function foundRoleRuntimeReady() {
-  return Boolean(process.env.FOUNDROLE_FEED_URL?.trim() || process.env.FOUNDROLE_MCP_ACCESS_TOKEN?.trim());
+  // The official public MCP endpoint is the default, so the read-only provider is
+  // ready even when no FoundRole token/feed secret is configured.
+  return true;
 }
 
 async function fetchPartnerFeed(feedUrl: string, config: Record<string, unknown>) {
@@ -64,7 +63,7 @@ async function fetchPartnerFeed(feedUrl: string, config: Record<string, unknown>
   return dedupe(jobs.map((job) => normalizeFoundRoleJob(job, defaultCountry)).filter(isCandidate));
 }
 
-async function fetchViaMcp(token: string, config: Record<string, unknown>) {
+async function fetchViaMcp(token: string | undefined, config: Record<string, unknown>) {
   const endpoint = safeHttpUrl(process.env.FOUNDROLE_MCP_URL) ?? "https://www.foundrole.com/mcp";
   const protocolVersion = process.env.FOUNDROLE_MCP_PROTOCOL_VERSION?.trim() || "2025-06-18";
   const session = await initializeMcp(endpoint, token, protocolVersion);
@@ -88,7 +87,7 @@ async function fetchViaMcp(token: string, config: Record<string, unknown>) {
   return dedupe(found);
 }
 
-async function initializeMcp(endpoint: string, token: string, protocolVersion: string) {
+async function initializeMcp(endpoint: string, token: string | undefined, protocolVersion: string) {
   const response = await postMcp(endpoint, token, undefined, {
     jsonrpc: "2.0",
     id: 1,
@@ -113,7 +112,13 @@ async function initializeMcp(endpoint: string, token: string, protocolVersion: s
   return sessionId;
 }
 
-async function mcpCall(endpoint: string, token: string, sessionId: string | undefined, name: string, args: Record<string, unknown>) {
+async function mcpCall(
+  endpoint: string,
+  token: string | undefined,
+  sessionId: string | undefined,
+  name: string,
+  args: Record<string, unknown>
+) {
   const response = await postMcp(endpoint, token, sessionId, {
     jsonrpc: "2.0",
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -127,11 +132,16 @@ async function mcpCall(endpoint: string, token: string, sessionId: string | unde
   return body.result;
 }
 
-async function postMcp(endpoint: string, token: string, sessionId: string | undefined, body: Record<string, unknown>) {
+async function postMcp(
+  endpoint: string,
+  token: string | undefined,
+  sessionId: string | undefined,
+  body: Record<string, unknown>
+) {
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       Accept: "application/json, text/event-stream",
       "Content-Type": "application/json",
       ...(sessionId ? { "Mcp-Session-Id": sessionId } : {}),
