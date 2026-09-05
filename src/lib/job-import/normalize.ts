@@ -6,11 +6,16 @@ export function normalizedJobPayload(candidate: ExternalJobCandidate, classifica
   const sourceLabel = candidate.provider === "jobbank" ? "Canada Job Bank" : "FoundRole";
   const company = candidate.companyName || "the source employer";
   const location = [candidate.city, candidate.country].filter(Boolean).join(", ");
-  const sourceSummary = cleanSnippet(candidate.descriptionSnippet || candidate.description || "");
+  const factualNotes = [
+    candidate.employmentType ? `The source classifies the role as ${candidate.employmentType}.` : null,
+    candidate.workLocationType ? `Work arrangement is listed as ${candidate.workLocationType.replaceAll("_", " ")}.` : null,
+    candidate.postedAt ? `The source posting date is ${candidate.postedAt}.` : null,
+    candidate.vacancies && candidate.vacancies > 1 ? `${candidate.vacancies} positions are indicated by the source.` : null,
+  ].filter(Boolean).join(" ");
   const description = [
     `Current ${candidate.title} opportunity${location ? ` in ${location}` : ""}, listed by ${company} and discovered through ${sourceLabel}.`,
-    sourceSummary ? sourceSummary : "Vacancy details are based on the source listing available when this page was last checked.",
-    `Applicants should review the original ${sourceLabel} listing for complete duties, qualifications, employer terms, availability and application instructions.`,
+    factualNotes || "Vacancy metadata is based on the source listing available when this page was last checked.",
+    `This Red Stone page intentionally summarizes factual vacancy metadata instead of republishing the source description. Review the original ${sourceLabel} listing for complete duties, qualifications, employer terms, availability and application instructions.`,
   ].join(" ");
   const externalIdHash = stableHash(`${candidate.provider}:${candidate.externalId}`);
   const slug = `${slugify(candidate.title)}-${slugify(candidate.city || candidate.country)}-${externalIdHash.slice(0, 8)}`;
@@ -144,14 +149,6 @@ function normalizeContractType(value: string | null | undefined) {
   if (text.includes("temporary")) return "temporary";
   if (text.includes("contract")) return "fixed_term";
   return null;
-}
-
-function cleanSnippet(value: string) {
-  return value
-    .replace(/[#*_`>|\[\]]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 700);
 }
 
 function normalizeFingerprintPart(value: string | null | undefined) {
