@@ -11,10 +11,18 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Pre-Departure Support: https://redstone.co.ke/pre-departure-support
 - Sponsorship Jobs & Recruitment Pathways: https://redstone.co.ke/sponsorship-jobs
 - Visa Process Guides for 26 Destinations: https://redstone.co.ke/visa-process
+- Recruitment FAQ Knowledge Base: https://redstone.co.ke/faq
 - Immigration Services: https://redstone.co.ke/immigration-services
 - Countries: https://redstone.co.ke/countries
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Recruitment FAQ knowledge base
+Red Stone publishes a structured knowledge base containing 520 detailed frequently asked questions across 13 categories. The categories cover recruitment basics; applications and candidate accounts; sponsorship jobs and employer benefits; documents, CVs and verification; medicals, biometrics and compliance; payments, fees and receipts; visas, work permits and residence; countries, destinations and eligibility; jobs, employers and employment terms; interviews, selection and job offers; travel, pre-departure and arrival; safety, fraud prevention and complaints; and accounts, privacy and candidate support.
+
+Each FAQ category has its own crawlable page under https://redstone.co.ke/faq/ and contains 40 visible questions with detailed answers. The answers distinguish recruitment support from employer hiring decisions, medical-provider assessments, professional licensing decisions and government immigration decisions. They also explain the Red Stone application workflow, the KES 2,000 CV and document verification fee, sponsorship medical guidance and safe-payment rules where relevant.
+
+FAQ content is educational and process-focused. A candidate's actual next step depends on the vacancy, employer, destination, documents and current application status. Where laws, visa rules, fees, medical-provider requirements or other official requirements can change, the relevant government or authorized provider remains the final source.
 
 ## Sponsorship programme summary
 The sponsorship section describes candidate recruitment pathways for the United States, Canada, New Zealand, Australia and Gulf countries. Role pages cover duties, candidate requirements, indicative salary ranges, programme medical requirements, employer-sponsored benefits where confirmed in the written offer, and Red Stone application steps.
@@ -39,3 +47,4 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Immigration and work-authorization decisions are made by the relevant government authorities.
 - Medical decisions are made by qualified medical providers and the relevant authorities; Red Stone provides recruitment-process guidance, not medical diagnosis.
 - Treat the 26 country visa guides as educational summaries of principal routes and always verify current requirements through the official authority linked on the relevant country page.
+- Treat FAQ answers as detailed general guidance. For a live candidate case, the application record and current official instruction determine the actual next step.
