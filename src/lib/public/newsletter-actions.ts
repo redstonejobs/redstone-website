@@ -43,6 +43,12 @@ export async function subscribeNewsletter(
 
   const now = new Date().toISOString();
   const supabase = createAdminClient();
+  const { data: existing } = await supabase
+    .from("newsletter_subscribers")
+    .select("subscribed_at")
+    .eq("email", email)
+    .maybeSingle<{ subscribed_at: string }>();
+
   const { error } = await supabase.from("newsletter_subscribers").upsert(
     {
       email,
@@ -51,7 +57,7 @@ export async function subscribeNewsletter(
       source_path: sourcePath.slice(0, 500),
       consent_text:
         "I agree to receive Red Stone recruitment, jobs, blog and candidate guidance updates by email.",
-      subscribed_at: now,
+      subscribed_at: existing?.subscribed_at ?? now,
       last_subscribed_at: now,
       unsubscribed_at: null,
       updated_at: now,
@@ -73,4 +79,9 @@ export async function subscribeNewsletter(
     message:
       "You are subscribed. We will send useful Red Stone recruitment, jobs and guidance updates.",
   };
+}
+
+function value(formData: FormData, key: string) {
+  const entry = formData.get(key);
+  return typeof entry === "string" ? entry.trim() : "";
 }
