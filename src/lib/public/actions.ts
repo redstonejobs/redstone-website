@@ -89,6 +89,69 @@ export async function submitPublicComplaint(_state: EnquiryState, formData: Form
   };
 }
 
+export async function submitRefundRequest(_state: EnquiryState, formData: FormData): Promise<EnquiryState> {
+  const request = {
+    fullName: value(formData, "full_name"),
+    email: value(formData, "email"),
+    phone: value(formData, "phone"),
+    applicationReference: value(formData, "application_reference"),
+    destination: value(formData, "destination"),
+    requestType: value(formData, "request_type"),
+    paymentCategory: value(formData, "payment_category"),
+    paymentReference: value(formData, "payment_reference"),
+    paymentDate: value(formData, "payment_date"),
+    amount: value(formData, "amount"),
+    currency: value(formData, "currency") || "KES",
+    paymentMethod: value(formData, "payment_method"),
+    reason: value(formData, "reason"),
+  };
+
+  const errors = validateRefundRequest(request);
+  if (errors.length) return { ok: false, message: errors.join(" ") };
+
+  const reference = refundReference();
+  const structuredMessage = [
+    `Refund / cancellation reference: ${reference}`,
+    `Request type: ${request.requestType}`,
+    `Payment category: ${request.paymentCategory}`,
+    `Application / case reference: ${request.applicationReference || "Not provided"}`,
+    `Destination / country: ${request.destination || "Not specified"}`,
+    `Payment reference: ${request.paymentReference || "Not provided"}`,
+    `Payment date: ${request.paymentDate || "Not specified"}`,
+    `Amount claimed: ${request.amount ? `${request.currency} ${request.amount}` : "Not specified"}`,
+    `Payment method: ${request.paymentMethod || "Not specified"}`,
+    "",
+    "Reason for request:",
+    request.reason,
+  ].join("\n");
+
+  const payload = {
+    full_name: request.fullName,
+    email: request.email,
+    phone: request.phone || null,
+    enquiry_type: "refund_cancellation",
+    subject: `[${reference}] ${request.requestType}: ${request.paymentCategory}`,
+    message: structuredMessage,
+  };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("public_enquiries").insert(payload);
+
+  if (error) {
+    console.warn("[public]", "refund request insert failed", { reference, error: error.message });
+    return {
+      ok: false,
+      message: "We could not submit your refund or cancellation request right now. Please email support@redstone.co.ke through an official Red Stone channel.",
+    };
+  }
+
+  return {
+    ok: true,
+    reference,
+    message: `Your request has been received for review. Please keep reference ${reference}. Submission does not by itself confirm refund eligibility or approval.`,
+  };
+}
+
 function value(formData: FormData, key: string) {
   const entry = formData.get(key);
   return typeof entry === "string" ? entry.trim() : "";
@@ -116,8 +179,26 @@ function validateComplaint(complaint: Record<string, string>) {
   return errors;
 }
 
+function validateRefundRequest(request: Record<string, string>) {
+  const errors: string[] = [];
+  if (!request.fullName || request.fullName.length < 2) errors.push("Full name is required.");
+  if (!request.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)) errors.push("A valid email is required.");
+  if (!request.requestType) errors.push("Choose whether you are requesting a refund, cancellation, or both.");
+  if (!request.paymentCategory) errors.push("Choose the payment or service category.");
+  if (!request.reason || request.reason.length < 40) errors.push("Please explain the request in at least 40 characters.");
+  if (request.reason.length > 3000) errors.push("Request details must be 3000 characters or fewer.");
+  if (request.amount && !/^\d+(?:\.\d{1,2})?$/.test(request.amount)) errors.push("Amount must be a valid number.");
+  return errors;
+}
+
 function complaintReference() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
   return `RSEA-CMP-${date}-${random}`;
+}
+
+function refundReference() {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
+  return `RSEA-RFD-${date}-${random}`;
 }
