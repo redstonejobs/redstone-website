@@ -8,6 +8,13 @@ export function JobSearch({
   defaults?: Record<string, string | undefined>;
   countries?: Country[];
 }) {
+  const advancedFiltersActive = Boolean(
+    defaults.contract_type ||
+      defaults.salary_min ||
+      defaults.accommodation ||
+      defaults.foreign_worker
+  );
+
   return (
     <form className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(7,26,61,0.08)] md:p-6">
       <div className="mb-5">
@@ -18,12 +25,12 @@ export function JobSearch({
           Find the right opportunity
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Search current published vacancies by title, employer, country, category or source.
+          Search current vacancies by job title, employer, location or category.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <label className="grid gap-2 text-sm font-bold text-slate-700 md:col-span-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <label className="grid gap-2 text-sm font-bold text-slate-700 md:col-span-2 xl:col-span-2">
           Search
           <input
             name="q"
@@ -50,64 +57,14 @@ export function JobSearch({
         />
 
         <Select
-          name="source"
-          label="Source"
-          defaultValue={defaults.source}
-          options={["", "redstone", "foundrole", "jobbank"]}
-          labels={{
-            "": "Any source",
-            redstone: "Red Stone",
-            foundrole: "FoundRole",
-            jobbank: "Canada Job Bank",
-          }}
-        />
-
-        <Select
-          name="foreign_worker"
-          label="International Eligibility"
-          defaultValue={defaults.foreign_worker}
-          options={["", "accepted", "sponsorship", "unconfirmed"]}
-          labels={{
-            "": "Any",
-            accepted: "Foreign/international signal",
-            sponsorship: "Sponsorship evidence",
-            unconfirmed: "Not confirmed",
-          }}
-        />
-
-        <Select
           name="skill"
-          label="Skill"
+          label="Skill Level"
           defaultValue={defaults.skill}
           options={["", ...SKILL_LEVELS.map((item) => item.value)]}
           labels={{
             "": "Any skill level",
-            ...Object.fromEntries(
-              SKILL_LEVELS.map((item) => [item.value, item.label])
-            ),
+            ...Object.fromEntries(SKILL_LEVELS.map((item) => [item.value, item.label])),
           }}
-        />
-
-        <Select
-          name="contract_type"
-          label="Contract"
-          defaultValue={defaults.contract_type}
-          options={["", ...CONTRACT_TYPES]}
-          labels={{ "": "Any contract" }}
-        />
-
-        <Field
-          name="salary_min"
-          label="Salary Min"
-          defaultValue={defaults.salary_min}
-          type="number"
-        />
-
-        <Field
-          name="salary_max"
-          label="Salary Max"
-          defaultValue={defaults.salary_max}
-          type="number"
         />
 
         <Select
@@ -116,14 +73,6 @@ export function JobSearch({
           defaultValue={defaults.sponsorship}
           options={["", "true"]}
           labels={{ "": "Any", true: "Visa sponsorship" }}
-        />
-
-        <Select
-          name="accommodation"
-          label="Accommodation"
-          defaultValue={defaults.accommodation}
-          options={["", "true"]}
-          labels={{ "": "Any", true: "Provided" }}
         />
 
         <Select
@@ -140,30 +89,54 @@ export function JobSearch({
           }}
         />
 
-        <Select
-          name="sort"
-          label="Sort"
-          defaultValue={defaults.sort}
-          options={[
-            "newest",
-            "source_newest",
-            "salary_asc",
-            "salary_desc",
-            "deadline",
-          ]}
-          labels={{
-            newest: "Newest on Red Stone",
-            source_newest: "Newest at source",
-            salary_asc: "Salary Low to High",
-            salary_desc: "Salary High to Low",
-            deadline: "Closing Soon",
-          }}
-        />
-
-        <button className="min-h-12 self-end rounded-xl bg-[#D4AF37] px-6 text-sm font-black text-[#071A3D] shadow-sm transition hover:bg-[#c7a22f] focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2">
-          Filter Jobs
+        <button className="min-h-12 self-end rounded-xl bg-[#D4AF37] px-6 text-sm font-black text-[#071A3D] shadow-sm transition hover:bg-[#c7a22f] focus:outline-none focus:ring-2 focus:ring-[#D4AF37] focus:ring-offset-2 md:col-span-1">
+          Search Jobs
         </button>
       </div>
+
+      <details className="mt-5 border-t border-slate-200 pt-4" open={advancedFiltersActive}>
+        <summary className="cursor-pointer select-none text-sm font-black text-[#071A3D] marker:text-[#B8860B]">
+          More filters
+        </summary>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Select
+            name="contract_type"
+            label="Contract"
+            defaultValue={defaults.contract_type}
+            options={["", ...CONTRACT_TYPES]}
+            labels={{ "": "Any contract" }}
+          />
+
+          <Field
+            name="salary_min"
+            label="Minimum Salary"
+            defaultValue={defaults.salary_min}
+            type="number"
+          />
+
+          <Select
+            name="accommodation"
+            label="Accommodation"
+            defaultValue={defaults.accommodation}
+            options={["", "true"]}
+            labels={{ "": "Any", true: "Provided" }}
+          />
+
+          <Select
+            name="foreign_worker"
+            label="International Eligibility"
+            defaultValue={defaults.foreign_worker}
+            options={["", "accepted", "sponsorship", "unconfirmed"]}
+            labels={{
+              "": "Any",
+              accepted: "International applicants accepted",
+              sponsorship: "Sponsorship evidence",
+              unconfirmed: "Not confirmed",
+            }}
+          />
+        </div>
+      </details>
     </form>
   );
 }
