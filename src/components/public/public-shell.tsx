@@ -68,7 +68,7 @@ function Footer() {
     ["Candidates", [["All Jobs", "/jobs"], ["Apply", "/apply"], ["Success Stories", "/success-stories"], ["Candidate Protection", "/candidate-protection"], ["Recruitment Process", "/recruitment-process"], ["FAQ", "/faq"]]],
     ["Employers", [["Employers", "/employers"], ["Employer Services", "/employer-services"], ["Register", "/employer/register"], ["Login", "/login"]]],
     ["Trust & Safety", [["Ethical Recruitment", "/ethical-recruitment"], ["Compliance", "/compliance"], ["Safety", "/safety"], ["Official Channels", "/official-channels"], ["Fraud Awareness", "/fraud-awareness"], ["Complaints", "/complaints"]]],
-    ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"], ["Cookie Policy", "/cookies"], ["Accessibility", "/accessibility"]]],
+    ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"], ["Refund & Cancellation", "/refund-cancellation"], ["Cookie Policy", "/cookies"], ["Accessibility", "/accessibility"]]],
   ] as const;
 
   return (
