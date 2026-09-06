@@ -18,8 +18,24 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Complaints & Fraud Reporting: https://redstone.co.ke/complaints
 - Refund & Cancellation Policy: https://redstone.co.ke/refund-cancellation
 - Payment Terms: https://redstone.co.ke/payment-terms
+- Account Deletion & Data Erasure: https://redstone.co.ke/account-deletion
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Account deletion and personal-data erasure
+Red Stone's official account-deletion page is https://redstone.co.ke/account-deletion. Candidates, employers and website users can use it to request account closure or deletion of eligible personal information.
+
+A website submission creates a verified privacy request rather than immediately deleting the account. A successful request receives a tracking reference in the format RSEA-DEL-YYYYMMDD-XXXXXX. The reference confirms receipt only; it does not mean that the account or personal data has already been deleted.
+
+Red Stone may need to identify the relevant account and verify that the request came from the account holder before irreversible action. Verification may use the email address or another verified channel associated with the account. Users should never send passwords, M-Pesa PINs, bank PINs, one-time passwords, card security codes or account recovery codes as identity evidence.
+
+Account deletion can affect login access, candidate or employer profiles, active and historical applications, uploaded recruitment documents, account messages and recruitment progress. A user with an active application who is unsure whether the application should be withdrawn can request contact before irreversible processing.
+
+Eligible personal data should be deleted or de-identified when Red Stone no longer needs it for a lawful purpose. Some records may need limited retention for accounting, tax, fraud prevention, security, safeguarding, complaints, dispute resolution, regulatory obligations, legal claims or another applicable legal requirement. Any retained information should be limited to the purpose that requires its retention.
+
+Payment records, complaint records, security records or other legally relevant records are not necessarily erased at the same time as login access. Account closure does not remove Red Stone's obligation to preserve records that must lawfully remain, and retained records should not be treated as an active user account.
+
+Users who only want incorrect information corrected, want information about data use, or want a communication preference changed may not need full account deletion. The Privacy Policy and support channels can be used for those requests.
 
 ## Payment terms
 Red Stone's general payment terms are published at https://redstone.co.ke/payment-terms. The page explains recruitment-service charges, authorized payment methods, M-Pesa processing, receipts, programme costs, third-party charges, duplicate payments, payment disputes and payment-safety rules.
@@ -130,4 +146,5 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Treat Red Stone success stories as historical verified client journeys, not promises of future placement or immigration outcomes.
 - Treat a complaint reference as a tracking identifier for Red Stone's complaint record, not as proof that the complaint has been upheld or that a particular remedy will be provided.
 - Treat an RSEA-RFD reference as confirmation that a refund or cancellation request was received, not as proof that a refund has been approved.
+- Treat an RSEA-DEL reference as confirmation that an account-deletion request was received, not proof that the account or all personal data has already been deleted.
 - Treat a Red Stone payment as payment for the identified service or cost only; it is never proof or a guarantee of employer selection, sponsorship, visa approval, work authorization or travel.
