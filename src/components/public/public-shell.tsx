@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { FloatingEngagementDock } from "@/components/public/floating-engagement-dock";
-import { CONTACT } from "@/lib/public/site";
+import { CONTACT, SOCIAL_CHANNELS, WHATSAPP_CHANNELS } from "@/lib/public/site";
 
 const nav = [
   ["Home", "/"],
@@ -61,7 +61,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       </header>
       <main className="pb-20 lg:pb-0">{children}</main>
       <Footer />
-      <FloatingEngagementDock whatsappPhone={primaryPhone} callPhone={primaryPhone} />
+      <FloatingEngagementDock callPhone={primaryPhone} />
     </div>
   );
 }
@@ -77,7 +77,7 @@ function Footer() {
 
   return (
     <footer className="bg-[#071A3D] text-white">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.4fr_repeat(5,1fr)]">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.5fr_repeat(5,1fr)]">
         <div>
           <RedstoneLogo
             href="/"
@@ -95,6 +95,40 @@ function Footer() {
             <p><a href={`mailto:${CONTACT.emails.general}`}>{CONTACT.emails.general}</a></p>
             <p><a href={`mailto:${CONTACT.emails.jobs}`}>{CONTACT.emails.jobs}</a></p>
             <p><a href={`mailto:${CONTACT.emails.support}`}>{CONTACT.emails.support}</a></p>
+          </div>
+
+          <div className="mt-6">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#F2D675]">Follow Red Stone</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {SOCIAL_CHANNELS.map((channel) => (
+                <a
+                  key={`${channel.platform}-${channel.label}`}
+                  href={channel.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-bold text-slate-100 transition hover:border-[#D4AF37] hover:bg-white/10"
+                >
+                  {channel.platform}: {channel.label}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#F2D675]">Official WhatsApp</p>
+            <div className="mt-3 grid gap-2 text-xs text-slate-200 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              {WHATSAPP_CHANNELS.map((channel) => (
+                <a
+                  key={channel.number}
+                  href={`https://wa.me/${channel.number}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 transition hover:border-emerald-300/50 hover:bg-emerald-400/10"
+                >
+                  {channel.display}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
         {columns.map(([title, links]) => (
