@@ -10,7 +10,7 @@ import {
   SectionHeading,
 } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
-import { BLOG_POSTS } from "@/lib/public/blog";
+import { getLatestBlogPosts } from "@/lib/public/blog";
 import { getConfiguredCountries } from "@/lib/public/countries";
 import { getFeaturedJobs } from "@/lib/public/jobs";
 import {
@@ -72,9 +72,10 @@ const quickLinks = [
 ];
 
 export default async function HomePage() {
-  const [{ jobs }, countries] = await Promise.all([
+  const [{ jobs }, countries, latestPosts] = await Promise.all([
     getFeaturedJobs(6),
     getConfiguredCountries(),
+    getLatestBlogPosts(3),
   ]);
 
   return (
@@ -292,16 +293,31 @@ export default async function HomePage() {
       </Band>
 
       <Band>
-        <SectionHeading eyebrow="Insights" title="Latest Guidance" body="Educational Red Stone editorial content for candidates and employers." />
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          {BLOG_POSTS.slice(0, 3).map((post) => (
-            <Link key={post.slug} href={`/blog/${post.slug}`} className="rounded-xl border border-slate-200 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-              <p className="text-xs font-black uppercase text-[#B8860B]">{post.category}</p>
-              <h3 className="mt-2 text-lg font-black text-[#071A3D]">{post.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{post.description}</p>
-            </Link>
-          ))}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <SectionHeading eyebrow="Insights" title="Latest Recruitment Guidance" body="The newest published Red Stone articles appear here automatically." />
+          <Link href="/blog" className="shrink-0 text-sm font-black text-[#B8860B] hover:underline">View All Articles →</Link>
         </div>
+        {latestPosts.length ? (
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {latestPosts.map((post) => (
+              <Link key={post.slug} href={`/blog/${post.slug}`} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#D4AF37] hover:shadow-xl">
+                <div
+                  className="h-44 bg-gradient-to-br from-[#071A3D] via-[#174177] to-[#B8860B] bg-cover bg-center"
+                  style={post.coverImageUrl ? { backgroundImage: `linear-gradient(rgba(7,26,61,.25),rgba(7,26,61,.25)),url(${post.coverImageUrl})` } : undefined}
+                  role="img"
+                  aria-label={post.imageAlt ?? `${post.title} article image`}
+                />
+                <div className="p-5">
+                  <p className="text-xs font-black uppercase text-[#B8860B]">{post.category} · {post.readingTime}</p>
+                  <h3 className="mt-2 text-lg font-black leading-snug text-[#071A3D] group-hover:text-[#B8860B]">{post.title}</h3>
+                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">{post.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-10 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600">New recruitment articles will appear here automatically after an administrator publishes them.</div>
+        )}
         <p className="mt-10 rounded-md bg-slate-50 p-4 text-sm text-slate-600">{RECRUITMENT_DISCLAIMER}</p>
       </Band>
 
