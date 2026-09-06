@@ -129,8 +129,8 @@ export default async function HomePage() {
             body="After employer selection, candidates can access preparation guidance for required documents, official work-permit or visa steps and pre-departure requirements. Final immigration decisions remain with the relevant authorities."
             image={immigrationImage}
             imageAlt="International airport immigration and baggage reclaim area"
-            href="/countries"
-            action="Explore Country Guidance"
+            href="/immigration-services"
+            action="Explore Immigration Guidance"
           />
         </div>
       </Band>
@@ -160,9 +160,9 @@ export default async function HomePage() {
           <PathCard
             number="03"
             title="I am preparing to travel"
-            body="Review destination guidance and understand the documentation and official approval stages that may apply."
-            href="/countries"
-            action="View Destinations"
+            body="Review work-permit, visa, documentation and travel-preparation guidance for the post-selection stage."
+            href="/immigration-services"
+            action="Immigration & Travel Guidance"
           />
         </div>
       </Band>
