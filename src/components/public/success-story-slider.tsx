@@ -124,17 +124,25 @@ export function SuccessStorySlider({ stories }: { stories: SuccessStory[] }) {
       </div>
 
       <div className="border-t border-slate-100 px-6 py-5 sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <p className="text-sm font-black text-[#071A3D]">
-              Story {activeIndex + 1} of {stories.length}
-            </p>
-            <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-slate-100" aria-hidden="true">
-              <div
-                className="h-full rounded-full bg-[#D4AF37] transition-all duration-500"
-                style={{ width: `${((activeIndex + 1) / stories.length) * 100}%` }}
-              />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-black text-[#071A3D]">
+                Story {activeIndex + 1} of {stories.length.toLocaleString("en-KE")}
+              </p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                Browse all verified clients
+              </p>
             </div>
+            <input
+              type="range"
+              min={1}
+              max={stories.length}
+              value={activeIndex + 1}
+              onChange={(event) => setActiveIndex(Number(event.target.value) - 1)}
+              className="mt-3 w-full accent-[#D4AF37]"
+              aria-label={`Choose a success story from 1 to ${stories.length}`}
+            />
           </div>
 
           <div className="flex gap-2">
