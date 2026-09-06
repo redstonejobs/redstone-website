@@ -24,7 +24,7 @@ export default async function NewBlogPostPage({ searchParams }: PageProps) {
         seo_title: topic.seoTitle,
         meta_description: topic.metaDescription,
         keywords: topic.keywords,
-        status: "draft",
+        status: "draft" as const,
         featured: false,
         image_alt: topic.country
           ? `${topic.country} international recruitment and employment guidance`
