@@ -208,6 +208,62 @@ export async function submitAccountDeletionRequest(_state: EnquiryState, formDat
   };
 }
 
+export async function submitDataProtectionRequest(_state: EnquiryState, formData: FormData): Promise<EnquiryState> {
+  const request = {
+    fullName: value(formData, "full_name"),
+    email: value(formData, "email"),
+    phone: value(formData, "phone"),
+    relationship: value(formData, "relationship"),
+    applicationReference: value(formData, "application_reference"),
+    requestType: value(formData, "request_type"),
+    details: value(formData, "details"),
+    preferredResponse: value(formData, "preferred_response"),
+    acknowledgement: value(formData, "acknowledgement"),
+  };
+
+  const errors = validateDataProtectionRequest(request);
+  if (errors.length) return { ok: false, message: errors.join(" ") };
+
+  const reference = dataProtectionReference();
+  const structuredMessage = [
+    `Data protection request reference: ${reference}`,
+    `Relationship to Red Stone: ${request.relationship}`,
+    `Request type: ${request.requestType}`,
+    `Application / case reference: ${request.applicationReference || "Not provided"}`,
+    `Preferred response channel: ${request.preferredResponse || "Email"}`,
+    `Acknowledgement: ${request.acknowledgement}`,
+    "",
+    "Request details:",
+    request.details,
+  ].join("\n");
+
+  const payload = {
+    full_name: request.fullName,
+    email: request.email,
+    phone: request.phone || null,
+    enquiry_type: "data_protection",
+    subject: `[${reference}] ${request.requestType}`,
+    message: structuredMessage,
+  };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("public_enquiries").insert(payload);
+
+  if (error) {
+    console.warn("[public]", "data protection request insert failed", { reference, error: error.message });
+    return {
+      ok: false,
+      message: "We could not submit your data protection request right now. Please email support@redstone.co.ke through an official Red Stone channel.",
+    };
+  }
+
+  return {
+    ok: true,
+    reference,
+    message: `Your data protection request has been received. Keep reference ${reference}. Red Stone may verify your identity before disclosing, correcting, exporting, restricting or deleting personal data.`,
+  };
+}
+
 function value(formData: FormData, key: string) {
   const entry = formData.get(key);
   return typeof entry === "string" ? entry.trim() : "";
@@ -258,6 +314,18 @@ function validateAccountDeletionRequest(request: Record<string, string>) {
   return errors;
 }
 
+function validateDataProtectionRequest(request: Record<string, string>) {
+  const errors: string[] = [];
+  if (!request.fullName || request.fullName.length < 2) errors.push("Full name is required.");
+  if (!request.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)) errors.push("A valid email address is required.");
+  if (!request.relationship) errors.push("Choose your relationship to Red Stone.");
+  if (!request.requestType) errors.push("Choose the data protection right or request type.");
+  if (!request.details || request.details.length < 30) errors.push("Please describe your request in at least 30 characters.");
+  if (request.details.length > 3000) errors.push("Request details must be 3000 characters or fewer.");
+  if (request.acknowledgement !== "confirmed") errors.push("Confirm that the information supplied is accurate and that Red Stone may verify your identity where necessary.");
+  return errors;
+}
+
 function complaintReference() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
@@ -274,4 +342,10 @@ function deletionReference() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
   return `RSEA-DEL-${date}-${random}`;
+}
+
+function dataProtectionReference() {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
+  return `RSEA-DPR-${date}-${random}`;
 }
