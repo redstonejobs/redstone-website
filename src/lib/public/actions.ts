@@ -152,6 +152,62 @@ export async function submitRefundRequest(_state: EnquiryState, formData: FormDa
   };
 }
 
+export async function submitAccountDeletionRequest(_state: EnquiryState, formData: FormData): Promise<EnquiryState> {
+  const request = {
+    fullName: value(formData, "full_name"),
+    email: value(formData, "email"),
+    phone: value(formData, "phone"),
+    accountType: value(formData, "account_type"),
+    applicationReference: value(formData, "application_reference"),
+    requestScope: value(formData, "request_scope"),
+    reason: value(formData, "reason"),
+    acknowledgement: value(formData, "acknowledgement"),
+  };
+
+  const errors = validateAccountDeletionRequest(request);
+  if (errors.length) return { ok: false, message: errors.join(" ") };
+
+  const reference = deletionReference();
+  const structuredMessage = [
+    `Account deletion reference: ${reference}`,
+    `Account type: ${request.accountType}`,
+    `Request scope: ${request.requestScope}`,
+    `Email associated with account: ${request.email}`,
+    `Phone: ${request.phone || "Not provided"}`,
+    `Application / case reference: ${request.applicationReference || "Not provided"}`,
+    `Acknowledgement: ${request.acknowledgement}`,
+    "",
+    "Additional information / reason:",
+    request.reason || "No additional information provided",
+  ].join("\n");
+
+  const payload = {
+    full_name: request.fullName,
+    email: request.email,
+    phone: request.phone || null,
+    enquiry_type: "account_deletion",
+    subject: `[${reference}] Account deletion request`,
+    message: structuredMessage,
+  };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("public_enquiries").insert(payload);
+
+  if (error) {
+    console.warn("[public]", "account deletion request insert failed", { reference, error: error.message });
+    return {
+      ok: false,
+      message: "We could not submit your account deletion request right now. Please email support@redstone.co.ke from the email address associated with your account.",
+    };
+  }
+
+  return {
+    ok: true,
+    reference,
+    message: `Your account deletion request has been received. Keep reference ${reference}. Red Stone must verify the request before account or personal-data deletion is carried out.`,
+  };
+}
+
 function value(formData: FormData, key: string) {
   const entry = formData.get(key);
   return typeof entry === "string" ? entry.trim() : "";
@@ -191,6 +247,17 @@ function validateRefundRequest(request: Record<string, string>) {
   return errors;
 }
 
+function validateAccountDeletionRequest(request: Record<string, string>) {
+  const errors: string[] = [];
+  if (!request.fullName || request.fullName.length < 2) errors.push("Full name is required.");
+  if (!request.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.email)) errors.push("Use the valid email address associated with your account.");
+  if (!request.accountType) errors.push("Choose the account type.");
+  if (!request.requestScope) errors.push("Choose what you want Red Stone to delete or close.");
+  if (request.reason.length > 2000) errors.push("Additional information must be 2000 characters or fewer.");
+  if (request.acknowledgement !== "confirmed") errors.push("Confirm that you understand the deletion request may be irreversible after completion.");
+  return errors;
+}
+
 function complaintReference() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
@@ -201,4 +268,10 @@ function refundReference() {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
   return `RSEA-RFD-${date}-${random}`;
+}
+
+function deletionReference() {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const random = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
+  return `RSEA-DEL-${date}-${random}`;
 }
