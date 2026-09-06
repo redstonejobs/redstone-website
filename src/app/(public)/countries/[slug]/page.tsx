@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CountryIdentityHero } from "@/components/public/country-identity-hero";
 import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { Band, ContactCTA, ProcessSteps, SectionHeading } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
@@ -136,33 +137,14 @@ export default async function CountryDetailPage({ params }: Props) {
         ]}
       />
 
-      <section className="relative overflow-hidden bg-[#071A3D] text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#071A3D] via-[#0D2B59] to-[#071A3D]" />
-        <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8 lg:py-28">
-          <div className="max-w-5xl">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[#F2D675]">
-              {country.region} · Country Recruitment Guide 2026
-            </p>
-            <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
-              {country.name} Jobs, Recruitment & Work Visa Guide
-            </h1>
-            <p className="mt-6 max-w-4xl text-base leading-8 text-slate-200 sm:text-lg">
-              {recruitment.overview}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href={jobSearchUrl} className="rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D] hover:bg-[#F2D675]">
-                View {country.name} Jobs
-              </Link>
-              <Link href="/apply" className="rounded-xl bg-white px-6 py-3.5 text-sm font-black text-[#071A3D] hover:bg-slate-100">
-                Apply Now
-              </Link>
-              <Link href={visaUrl} className="rounded-xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-black text-white hover:bg-white/15">
-                Full Visa Guide
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CountryIdentityHero
+        countryName={country.name}
+        countrySlug={country.slug}
+        region={country.region}
+        overview={recruitment.overview}
+        jobSearchUrl={jobSearchUrl}
+        visaUrl={visaUrl}
+      />
 
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto grid max-w-7xl gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-5 lg:px-8">
