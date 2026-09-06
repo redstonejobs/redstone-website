@@ -91,6 +91,21 @@ function nullableDate(formData: FormData, key: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
+function authErrorText(error: unknown) {
+  if (!error || typeof error !== "object") return "";
+  const message = (error as { message?: unknown }).message;
+  return typeof message === "string" ? message : "";
+}
+
+function authAccountAlreadyExists(error: unknown) {
+  const message = authErrorText(error).toLowerCase();
+  return (
+    message.includes("already") ||
+    message.includes("registered") ||
+    message.includes("exists")
+  );
+}
+
 async function countPotentialDuplicateStaffClients({
   admin,
   staffUserId,
@@ -416,6 +431,226 @@ export async function createOwnStaffClient(
       ? "/staff/clients?created=1&duplicate=1"
       : "/staff/clients?created=1"
   );
+}
+
+/* ============================================================
+   CONVERT OWN CRM CLIENT TO CANDIDATE ACCOUNT
+
+   Staff can convert only a client in their own portfolio. The
+   candidate receives a Supabase invitation email and the CRM
+   record remains linked to the resulting candidate account.
+============================================================ */
+
+export async function convertOwnStaffClientToCandidate(
+  formData: FormData
+) {
+  const context = await requireStaff();
+  const id = text(formData, "client_id");
+
+  if (!id) {
+    throw new Error("Client record is required.");
+  }
+
+  const admin = createAdminClient();
+
+  const { data: client, error: clientError } = await admin
+    .from("staff_clients")
+    .select(
+      "id, candidate_user_id, full_name, email, phone, nationality, country, status"
+    )
+    .eq("id", id)
+    .eq("staff_user_id", context.user.id)
+    .maybeSingle<{
+      id: string;
+      candidate_user_id: string | null;
+      full_name: string;
+      email: string | null;
+      phone: string | null;
+      nationality: string | null;
+      country: string | null;
+      status: string | null;
+    }>();
+
+  if (clientError || !client) {
+    throw new Error("Client record was not found.");
+  }
+
+  if (client.candidate_user_id) {
+    redirect("/staff/clients?converted=already");
+  }
+
+  const email = normalizeEmailContact(client.email);
+
+  if (!email) {
+    redirect("/staff/clients?conversion_error=email_required");
+  }
+
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL || "https://redstone.co.ke"
+  ).replace(/\/+$/, "");
+  const callbackUrl = new URL(`${siteUrl}/auth/callback`);
+  callbackUrl.searchParams.set("next", "/candidate");
+
+  const { data: invitation, error: inviteError } =
+    await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: callbackUrl.toString(),
+      data: {
+        profile_type: "candidate",
+        full_name: client.full_name,
+        phone: client.phone ?? "",
+        nationality: client.nationality ?? "",
+        country: client.country ?? "",
+      },
+    });
+
+  if (inviteError || !invitation.user) {
+    console.error("[staff] candidate invitation failed", {
+      client_id: client.id,
+      code:
+        inviteError && typeof inviteError === "object" && "code" in inviteError
+          ? String((inviteError as { code?: unknown }).code ?? "")
+          : null,
+      message: authErrorText(inviteError) || "No invited user returned.",
+    });
+
+    redirect(
+      authAccountAlreadyExists(inviteError)
+        ? "/staff/clients?conversion_error=account_exists"
+        : "/staff/clients?conversion_error=invite_failed"
+    );
+  }
+
+  const candidateId = invitation.user.id;
+  const now = new Date().toISOString();
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({
+      referred_by_staff_id: context.user.id,
+      referral_attributed_at: now,
+      updated_at: now,
+    })
+    .eq("id", candidateId)
+    .eq("profile_type", "candidate");
+
+  if (profileError) {
+    console.error("[staff] candidate ownership link failed", {
+      client_id: client.id,
+      candidate_id: candidateId,
+      code: profileError.code ?? null,
+      message: profileError.message,
+    });
+  }
+
+  const nextStatus = ["lead", "contacted"].includes(client.status ?? "")
+    ? "registered"
+    : client.status || "registered";
+
+  const { error: linkError } = await admin
+    .from("staff_clients")
+    .update({
+      candidate_user_id: candidateId,
+      status: nextStatus,
+      updated_at: now,
+    })
+    .eq("id", client.id)
+    .eq("staff_user_id", context.user.id);
+
+  if (linkError) {
+    console.error("[staff] candidate CRM link failed", {
+      client_id: client.id,
+      candidate_id: candidateId,
+      code: linkError.code ?? null,
+      message: linkError.message,
+    });
+    throw new Error(
+      "Candidate account was invited, but the CRM record could not be linked. Contact an administrator before retrying."
+    );
+  }
+
+  await writeStaffClientAudit({
+    admin,
+    actorUserId: context.user.id,
+    action: "staff_client_converted_to_candidate",
+    clientId: client.id,
+    metadata: {
+      candidate_user_id: candidateId,
+      invitation_email: email,
+      new_status: nextStatus,
+    },
+  });
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/clients");
+  redirect("/staff/clients?converted=1");
+}
+
+/* ============================================================
+   DELETE OWN CRM CLIENT RECORD
+
+   This removes only the staff-owned CRM record. A linked
+   candidate authentication account, profile and applications are
+   intentionally left untouched.
+============================================================ */
+
+export async function deleteOwnStaffClient(
+  formData: FormData
+) {
+  const context = await requireStaff();
+  const id = text(formData, "client_id");
+
+  if (!id || formData.get("confirm") !== "yes") {
+    throw new Error("Confirm the client record deletion.");
+  }
+
+  const admin = createAdminClient();
+  const { data: existing, error: loadError } = await admin
+    .from("staff_clients")
+    .select("id, candidate_user_id, full_name, status")
+    .eq("id", id)
+    .eq("staff_user_id", context.user.id)
+    .maybeSingle<{
+      id: string;
+      candidate_user_id: string | null;
+      full_name: string;
+      status: string | null;
+    }>();
+
+  if (loadError || !existing) {
+    throw new Error("Client record was not found.");
+  }
+
+  await writeStaffClientAudit({
+    admin,
+    actorUserId: context.user.id,
+    action: "staff_client_deleted",
+    clientId: existing.id,
+    metadata: {
+      candidate_linked: Boolean(existing.candidate_user_id),
+      candidate_user_id: existing.candidate_user_id,
+      prior_status: existing.status,
+      client_name: existing.full_name,
+    },
+  });
+
+  const { error } = await admin
+    .from("staff_clients")
+    .delete()
+    .eq("id", existing.id)
+    .eq("staff_user_id", context.user.id);
+
+  if (error) {
+    console.error("[staff] delete client failed", {
+      client_id: existing.id,
+      code: error.code ?? null,
+      message: error.message,
+    });
+    throw new Error("Unable to delete this client record right now.");
+  }
+
+  revalidatePath("/staff");
+  revalidatePath("/staff/clients");
+  redirect("/staff/clients?deleted=1");
 }
 
 /* ============================================================
