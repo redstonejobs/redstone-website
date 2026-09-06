@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RedstoneLogo } from "@/components/brand/redstone-logo";
+import { FloatingEngagementDock } from "@/components/public/floating-engagement-dock";
 import { CONTACT } from "@/lib/public/site";
 
 const nav = [
@@ -15,6 +16,8 @@ const nav = [
 ];
 
 export function PublicShell({ children }: { children: React.ReactNode }) {
+  const primaryPhone = CONTACT.phones[0] ?? "+254 180 145985";
+
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <div className="bg-[#071A3D] px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-[#F2D675]">
@@ -56,8 +59,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           </details>
         </div>
       </header>
-      <main>{children}</main>
+      <main className="pb-20 lg:pb-0">{children}</main>
       <Footer />
+      <FloatingEngagementDock whatsappPhone={primaryPhone} callPhone={primaryPhone} />
     </div>
   );
 }
