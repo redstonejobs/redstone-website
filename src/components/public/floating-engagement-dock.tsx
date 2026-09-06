@@ -8,26 +8,23 @@ import {
   subscribeNewsletter,
   type NewsletterState,
 } from "@/lib/public/newsletter-actions";
+import { SOCIAL_CHANNELS, WHATSAPP_CHANNELS } from "@/lib/public/site";
 
 const initialState: NewsletterState = { ok: false, message: "" };
 
-export function FloatingEngagementDock({
-  whatsappPhone,
-  callPhone,
-}: {
-  whatsappPhone: string;
-  callPhone: string;
-}) {
+export function FloatingEngagementDock({ callPhone }: { callPhone: string }) {
   const pathname = usePathname();
   const [subscribeOpen, setSubscribeOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [state, formAction, pending] = useActionState(subscribeNewsletter, initialState);
 
-  const whatsappDigits = whatsappPhone.replace(/\D/g, "");
-  const whatsappUrl = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
-    "Hello Red Stone Employment Agency. I am visiting redstone.co.ke and would like assistance.",
-  )}`;
+  function closeOtherPanels(panel: "subscribe" | "social" | "whatsapp") {
+    if (panel !== "subscribe") setSubscribeOpen(false);
+    if (panel !== "social") setSocialOpen(false);
+    if (panel !== "whatsapp") setWhatsappOpen(false);
+  }
 
   function currentUrl() {
     return typeof window === "undefined"
@@ -60,7 +57,7 @@ export function FloatingEngagementDock({
   return (
     <>
       {subscribeOpen ? (
-        <aside className="fixed bottom-24 left-3 right-3 z-[70] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl lg:bottom-6 lg:left-auto lg:right-28 lg:mx-0 lg:w-[420px]">
+        <aside className="fixed bottom-24 left-3 right-3 z-[70] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl lg:bottom-6 lg:left-auto lg:right-32 lg:mx-0 lg:w-[420px]">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B8860B]">Free updates</p>
@@ -127,42 +124,94 @@ export function FloatingEngagementDock({
         </aside>
       ) : null}
 
-      {shareOpen ? (
-        <aside className="fixed bottom-24 left-3 right-3 z-[70] mx-auto max-w-sm rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl lg:bottom-6 lg:left-auto lg:right-28 lg:mx-0 lg:w-[350px]">
+      {whatsappOpen ? (
+        <aside className="fixed bottom-24 left-3 right-3 z-[70] mx-auto max-w-sm rounded-3xl border border-emerald-200 bg-white p-5 shadow-2xl lg:bottom-6 lg:left-auto lg:right-32 lg:mx-0 lg:w-[380px]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Official WhatsApp</p>
+              <h2 className="mt-1 text-xl font-black text-[#071A3D]">Choose a Red Stone line</h2>
+              <p className="mt-2 text-xs leading-5 text-slate-600">Use only the official numbers listed here when contacting Red Stone through WhatsApp.</p>
+            </div>
+            <button type="button" onClick={() => setWhatsappOpen(false)} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-600" aria-label="Close WhatsApp panel">×</button>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {WHATSAPP_CHANNELS.map((channel) => (
+              <a
+                key={channel.number}
+                href={`https://wa.me/${channel.number}?text=${encodeURIComponent("Hello Red Stone Employment Agency. I am visiting redstone.co.ke and would like assistance.")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-h-12 items-center justify-between gap-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm transition hover:border-emerald-300 hover:bg-emerald-100"
+              >
+                <span className="font-black text-emerald-900">{channel.label}</span>
+                <span className="text-xs font-semibold text-emerald-800">{channel.display}</span>
+              </a>
+            ))}
+          </div>
+        </aside>
+      ) : null}
+
+      {socialOpen ? (
+        <aside className="fixed bottom-24 left-3 right-3 z-[70] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl lg:bottom-6 lg:left-auto lg:right-32 lg:mx-0 lg:w-[430px]">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B8860B]">Social sharing</p>
-              <h2 className="mt-1 text-xl font-black text-[#071A3D]">Share this page</h2>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B8860B]">Social media</p>
+              <h2 className="mt-1 text-xl font-black text-[#071A3D]">Follow & share Red Stone</h2>
             </div>
-            <button type="button" onClick={() => setShareOpen(false)} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-600" aria-label="Close share panel">×</button>
+            <button type="button" onClick={() => setSocialOpen(false)} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-600" aria-label="Close social panel">×</button>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <ShareButton label="Facebook" onClick={() => shareTo("facebook")} />
-            <ShareButton label="LinkedIn" onClick={() => shareTo("linkedin")} />
-            <ShareButton label="X / Twitter" onClick={() => shareTo("x")} />
-            <ShareButton label="WhatsApp" onClick={() => shareTo("whatsapp")} />
-            <button type="button" onClick={copyLink} className="col-span-2 min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-[#071A3D] hover:border-[#D4AF37]">
-              {copied ? "Link copied ✓" : "Copy page link"}
-            </button>
+
+          <div className="mt-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Official profiles</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {SOCIAL_CHANNELS.map((channel) => (
+                <a
+                  key={`${channel.platform}-${channel.label}`}
+                  href={channel.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 transition hover:border-[#D4AF37] hover:bg-amber-50"
+                >
+                  <span className="block text-[10px] font-black uppercase tracking-wide text-[#B8860B]">{channel.platform}</span>
+                  <span className="mt-1 block text-sm font-black text-[#071A3D]">{channel.label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-slate-100 pt-5">
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Share this page</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <ShareButton label="Facebook" onClick={() => shareTo("facebook")} />
+              <ShareButton label="LinkedIn" onClick={() => shareTo("linkedin")} />
+              <ShareButton label="X / Twitter" onClick={() => shareTo("x")} />
+              <ShareButton label="WhatsApp" onClick={() => shareTo("whatsapp")} />
+              <button type="button" onClick={copyLink} className="col-span-2 min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-black text-[#071A3D] hover:border-[#D4AF37]">
+                {copied ? "Link copied ✓" : "Copy page link"}
+              </button>
+            </div>
           </div>
         </aside>
       ) : null}
 
       <div className="fixed bottom-3 left-3 right-3 z-[60] flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur lg:bottom-6 lg:left-auto lg:right-6 lg:flex-col lg:items-stretch lg:rounded-3xl">
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white shadow-sm hover:bg-emerald-700"
-          aria-label="Chat with Red Stone on WhatsApp"
-        >
-          <span className="hidden sm:inline">WhatsApp</span><span className="sm:hidden">WA</span>
-        </a>
         <button
           type="button"
           onClick={() => {
+            closeOtherPanels("whatsapp");
+            setWhatsappOpen((open) => !open);
+          }}
+          className="inline-flex min-h-12 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-black text-white shadow-sm hover:bg-emerald-700"
+          aria-expanded={whatsappOpen}
+          aria-label="Open official Red Stone WhatsApp lines"
+        >
+          <span className="hidden sm:inline">WhatsApp</span><span className="sm:hidden">WA</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            closeOtherPanels("subscribe");
             setSubscribeOpen((open) => !open);
-            setShareOpen(false);
           }}
           className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#D4AF37] px-4 text-sm font-black text-[#071A3D] shadow-sm hover:bg-[#F2D675]"
           aria-expanded={subscribeOpen}
@@ -172,13 +221,13 @@ export function FloatingEngagementDock({
         <button
           type="button"
           onClick={() => {
-            setShareOpen((open) => !open);
-            setSubscribeOpen(false);
+            closeOtherPanels("social");
+            setSocialOpen((open) => !open);
           }}
           className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-[#071A3D] hover:border-[#D4AF37]"
-          aria-expanded={shareOpen}
+          aria-expanded={socialOpen}
         >
-          Share
+          Social
         </button>
         <a
           href={`tel:${callPhone.replace(/\s/g, "")}`}
