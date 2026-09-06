@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const componentPath = path.join(root, "src", "components", "candidate", "DocumentUploadRows.tsx");
 const actionPath = path.join(root, "src", "lib", "candidate", "actions.ts");
-const pagePath = path.join(root, "src", "app", "candidate", "applications", "[id]", "page.tsx");
+const pagePath = path.join(root, "src", "app", "candidate", "applications", "[id]", "SimpleCandidateApplicationPage.tsx");
 
 test("document uploader supports separate document rows and aligned types", () => {
   const component = fs.readFileSync(componentPath, "utf8");
