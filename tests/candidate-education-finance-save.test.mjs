@@ -5,7 +5,7 @@ import path from 'node:path';
 
 const root = path.resolve(process.cwd());
 const actions = fs.readFileSync(path.join(root, 'src/lib/candidate/actions.ts'), 'utf8');
-const page = fs.readFileSync(path.join(root, 'src/app/candidate/applications/[id]/page.tsx'), 'utf8');
+const simplePage = fs.readFileSync(path.join(root, 'src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx'), 'utf8');
 
 function between(source, start, end) {
   const i = source.indexOf(start);
@@ -31,9 +31,8 @@ test('finance save prevents numeric(14,2) overflow and returns friendly errors',
   assert.doesNotMatch(body, /throw new Error/);
 });
 
-test('finance number inputs enforce the database-safe maximum', () => {
-  const matches = page.match(/max="999999999999\.99"/g) ?? [];
-  assert.equal(matches.length, 2);
-  assert.match(page, /max\?: string/);
-  assert.match(page, /max=\{max\}/);
+test('simplified candidate application does not expose legacy finance amount inputs', () => {
+  assert.doesNotMatch(simplePage, /name="available_funds"|name="monthly_income"/);
+  assert.doesNotMatch(simplePage, /max="999999999999\.99"/);
+  assert.match(simplePage, /Simple application, detailed checks later/);
 });
