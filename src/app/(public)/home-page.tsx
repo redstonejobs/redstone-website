@@ -63,6 +63,7 @@ const quickLinks = [
   { label: "Candidate Support", href: "/candidate-support" },
   { label: "Medicals & Compliance", href: "/medicals-compliance" },
   { label: "Employer Recruitment Services", href: "/employer-services" },
+  { label: "Pre-Departure Support", href: "/pre-departure-support" },
   { label: "Ethical Recruitment", href: "/ethical-recruitment" },
   { label: "International Opportunities", href: "/jobs" },
 ];
@@ -95,7 +96,7 @@ export default async function HomePage() {
       />
 
       <Band>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           {quickLinks.map((item) => (
             <Link
               key={item.label}
@@ -140,14 +141,15 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Choose your path"
           title="Start from where you are today"
-          body="Whether you are searching for work, need candidate support, are completing medical and compliance requirements, recruit internationally or are preparing to travel, Red Stone provides a clear place to begin."
+          body="Whether you are searching for work, need candidate support, are completing medical and compliance requirements, recruit internationally, are preparing for deployment or need immigration guidance, Red Stone provides a clear place to begin."
         />
-        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-6">
           <PathCard number="01" title="I am looking for a job" body="Search current skilled and entry-level vacancies and begin your application online." href="/jobs" action="Find Jobs" />
           <PathCard number="02" title="I need candidate support" body="Get guidance on CV preparation, application readiness, interviews and recruitment documents." href="/candidate-support" action="Candidate Support" />
           <PathCard number="03" title="I need medical or compliance guidance" body="Understand recruitment medicals, biometrics, police clearance and document-verification requirements." href="/medicals-compliance" action="Medicals & Compliance" />
           <PathCard number="04" title="I am an employer" body="Explore workforce sourcing, candidate screening, interview coordination and international recruitment support." href="/employer-services" action="Employer Recruitment Services" />
-          <PathCard number="05" title="I am preparing to travel" body="Review work-permit, visa, documentation and travel-preparation guidance for the post-selection stage." href="/immigration-services" action="Immigration Guidance" />
+          <PathCard number="05" title="I am preparing for departure" body="Complete final document, employer-reporting, travel-readiness and deployment preparation before international travel." href="/pre-departure-support" action="Pre-Departure Support" />
+          <PathCard number="06" title="I need immigration guidance" body="Review work-permit, visa and destination guidance for the post-selection international employment stage." href="/immigration-services" action="Immigration Guidance" />
         </div>
       </Band>
 
