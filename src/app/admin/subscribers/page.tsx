@@ -1,3 +1,4 @@
+import { setNewsletterSubscriberStatus } from "@/lib/admin/subscriber-actions";
 import { fetchNewsletterSubscribers } from "@/lib/admin/subscriber-data";
 
 export default async function NewsletterSubscribersPage() {
@@ -38,7 +39,7 @@ export default async function NewsletterSubscribersPage() {
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[1080px] text-left text-sm">
             <thead className="bg-[#071A3D] text-white">
               <tr>
                 <th className="p-4">Subscriber</th>
@@ -46,6 +47,7 @@ export default async function NewsletterSubscribersPage() {
                 <th className="p-4">Source page</th>
                 <th className="p-4">First subscribed</th>
                 <th className="p-4">Latest subscription</th>
+                <th className="p-4">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -63,11 +65,22 @@ export default async function NewsletterSubscribersPage() {
                   <td className="p-4 text-slate-600">{row.source_path || "—"}</td>
                   <td className="p-4 text-slate-600">{formatDate(row.subscribed_at)}</td>
                   <td className="p-4 text-slate-600">{formatDate(row.last_subscribed_at)}</td>
+                  <td className="p-4">
+                    {row.status === "active" ? (
+                      <form action={setNewsletterSubscriberStatus.bind(null, row.id, "unsubscribed")}>
+                        <button className="rounded-lg border border-red-200 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-50">Mark Unsubscribed</button>
+                      </form>
+                    ) : (
+                      <form action={setNewsletterSubscriberStatus.bind(null, row.id, "active")}>
+                        <button className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-50">Reactivate</button>
+                      </form>
+                    )}
+                  </td>
                 </tr>
               ))}
               {!data.rows.length ? (
                 <tr>
-                  <td colSpan={5} className="p-10 text-center text-slate-500">
+                  <td colSpan={6} className="p-10 text-center text-slate-500">
                     No subscribers yet. New website subscriptions will appear here automatically.
                   </td>
                 </tr>
