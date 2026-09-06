@@ -56,9 +56,16 @@ const process = [
 
 const recruitmentImage =
   "https://images.unsplash.com/photo-1758518730327-98070967caab?auto=format&fit=crop&fm=jpg&q=82&w=1600";
-
 const immigrationImage =
   "https://images.unsplash.com/photo-1771945029451-da143c6ea0e8?auto=format&fit=crop&fm=jpg&q=82&w=1600";
+
+const quickLinks = [
+  { label: "Candidate Support", href: "/candidate-support" },
+  { label: "Medicals & Compliance", href: "/medicals-compliance" },
+  { label: "Ethical Recruitment", href: "/ethical-recruitment" },
+  { label: "Employer Screening", href: "/employers" },
+  { label: "International Opportunities", href: "/jobs" },
+];
 
 export default async function HomePage() {
   const [{ jobs }, countries] = await Promise.all([
@@ -88,20 +95,15 @@ export default async function HomePage() {
       />
 
       <Band>
-        <div className="grid gap-4 md:grid-cols-4">
-          <Link
-            href="/candidate-support"
-            className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm font-black text-[#071A3D] shadow-sm transition hover:-translate-y-0.5 hover:border-[#D4AF37] hover:shadow-md"
-          >
-            Candidate Support
-          </Link>
-          {["Ethical Recruitment", "Employer Screening", "International Opportunities"].map((item) => (
-            <div
-              key={item}
-              className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm font-black text-[#071A3D] shadow-sm"
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm font-black text-[#071A3D] shadow-sm transition hover:-translate-y-0.5 hover:border-[#D4AF37] hover:shadow-md"
             >
-              {item}
-            </div>
+              {item.label}
+            </Link>
           ))}
         </div>
       </Band>
@@ -110,9 +112,8 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Recruitment & international mobility"
           title="Support for careers across borders"
-          body="Explore international recruitment opportunities and practical preparation for the documentation, work-permit, visa and travel stages that may follow employer selection."
+          body="Explore international recruitment opportunities and practical preparation for the documentation, medical, compliance, work-permit, visa and travel stages that may follow employer selection."
         />
-
         <div className="mt-10 grid gap-7 lg:grid-cols-2">
           <VisualServiceCard
             eyebrow="Recruitment"
@@ -123,7 +124,6 @@ export default async function HomePage() {
             href="/jobs"
             action="Browse Available Jobs"
           />
-
           <VisualServiceCard
             eyebrow="Immigration preparation"
             title="Work Permit, Visa & Travel Guidance"
@@ -140,53 +140,23 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Choose your path"
           title="Start from where you are today"
-          body="Whether you are searching for work, need candidate support, recruit internationally or are preparing for the next stage after employer selection, Red Stone provides a clear place to begin."
+          body="Whether you are searching for work, need candidate support, are completing medical and compliance requirements, recruit internationally or are preparing to travel, Red Stone provides a clear place to begin."
         />
-
-        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          <PathCard
-            number="01"
-            title="I am looking for a job"
-            body="Search current skilled and entry-level vacancies and begin your application online."
-            href="/jobs"
-            action="Find Jobs"
-          />
-          <PathCard
-            number="02"
-            title="I need candidate support"
-            body="Get guidance on CV preparation, application readiness, interviews and recruitment documents."
-            href="/candidate-support"
-            action="Candidate Support"
-          />
-          <PathCard
-            number="03"
-            title="I am an employer"
-            body="Learn how Red Stone supports candidate sourcing, screening and recruitment coordination."
-            href="/employers"
-            action="Recruit With Us"
-          />
-          <PathCard
-            number="04"
-            title="I am preparing to travel"
-            body="Review work-permit, visa, documentation and travel-preparation guidance for the post-selection stage."
-            href="/immigration-services"
-            action="Immigration & Travel Guidance"
-          />
+        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-5">
+          <PathCard number="01" title="I am looking for a job" body="Search current skilled and entry-level vacancies and begin your application online." href="/jobs" action="Find Jobs" />
+          <PathCard number="02" title="I need candidate support" body="Get guidance on CV preparation, application readiness, interviews and recruitment documents." href="/candidate-support" action="Candidate Support" />
+          <PathCard number="03" title="I need medical or compliance guidance" body="Understand recruitment medicals, biometrics, police clearance and document-verification requirements." href="/medicals-compliance" action="Medicals & Compliance" />
+          <PathCard number="04" title="I am an employer" body="Learn how Red Stone supports candidate sourcing, screening and recruitment coordination." href="/employers" action="Recruit With Us" />
+          <PathCard number="05" title="I am preparing to travel" body="Review work-permit, visa, documentation and travel-preparation guidance for the post-selection stage." href="/immigration-services" action="Immigration Guidance" />
         </div>
       </Band>
 
       <Band tone="grey">
-        <SectionHeading
-          eyebrow="Published vacancies"
-          title="Featured Jobs"
-          body="Only published vacancies from the Red Stone system appear here."
-        />
+        <SectionHeading eyebrow="Published vacancies" title="Featured Jobs" body="Only published vacancies from the Red Stone system appear here." />
         <div className="mt-10">
           {jobs.length ? (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {jobs.map((job) => (
-                <JobCard key={job.id} job={job} />
-              ))}
+              {jobs.map((job) => <JobCard key={job.id} job={job} />)}
             </div>
           ) : (
             <EmptyJobsState />
@@ -196,16 +166,8 @@ export default async function HomePage() {
 
       <Band>
         <div className="grid gap-8 lg:grid-cols-2">
-          <CategoryPanel
-            title="Skilled Jobs"
-            items={skilled}
-            href="/skilled-jobs"
-          />
-          <CategoryPanel
-            title="Entry-Level & General Jobs"
-            items={unskilled}
-            href="/unskilled-jobs"
-          />
+          <CategoryPanel title="Skilled Jobs" items={skilled} href="/skilled-jobs" />
+          <CategoryPanel title="Entry-Level & General Jobs" items={unskilled} href="/unskilled-jobs" />
         </div>
       </Band>
 
@@ -234,37 +196,16 @@ export default async function HomePage() {
       </Band>
 
       <Band tone="grey">
-        <SectionHeading
-          eyebrow="Why Red Stone"
-          title="Professional recruitment support"
-        />
+        <SectionHeading eyebrow="Why Red Stone" title="Professional recruitment support" />
         <div className="mt-10">
           <InfoGrid
             items={[
-              {
-                title: "Transparent Communication",
-                body: "Clear guidance on applications, employer requirements and official next steps.",
-              },
-              {
-                title: "Candidate Screening",
-                body: "Structured review of candidate profiles before job matching and employer consideration.",
-              },
-              {
-                title: "Document Preparation Support",
-                body: "Guidance on common recruitment documents without guaranteeing approval outcomes.",
-              },
-              {
-                title: "Employer Coordination",
-                body: "Professional support for sourcing, screening, interviews and recruitment administration.",
-              },
-              {
-                title: "Interview Guidance",
-                body: "Practical preparation to help candidates present their experience responsibly.",
-              },
-              {
-                title: "Pre-Departure Guidance",
-                body: "Supportive preparation once employer selection and required approvals are complete.",
-              },
+              { title: "Transparent Communication", body: "Clear guidance on applications, employer requirements and official next steps." },
+              { title: "Candidate Screening", body: "Structured review of candidate profiles before job matching and employer consideration." },
+              { title: "Document Preparation Support", body: "Guidance on common recruitment documents without guaranteeing approval outcomes." },
+              { title: "Employer Coordination", body: "Professional support for sourcing, screening, interviews and recruitment administration." },
+              { title: "Interview Guidance", body: "Practical preparation to help candidates present their experience responsibly." },
+              { title: "Pre-Departure Guidance", body: "Supportive preparation once employer selection and required approvals are complete." },
             ]}
           />
         </div>
@@ -273,20 +214,11 @@ export default async function HomePage() {
       <Band>
         <div className="grid gap-8 rounded-2xl bg-[#071A3D] p-8 text-white md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#F2D675]">
-              Employers
-            </p>
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#F2D675]">Employers</p>
             <h2 className="mt-2 text-3xl font-black">Need Reliable Talent?</h2>
-            <p className="mt-3 max-w-2xl text-slate-200">
-              Red Stone helps employers source and screen candidates through a responsible recruitment process.
-            </p>
+            <p className="mt-3 max-w-2xl text-slate-200">Red Stone helps employers source and screen candidates through a responsible recruitment process.</p>
           </div>
-          <Link
-            href="/employers"
-            className="rounded-md bg-[#D4AF37] px-5 py-3 text-center text-sm font-black text-[#071A3D]"
-          >
-            Recruit With Us
-          </Link>
+          <Link href="/employers" className="rounded-md bg-[#D4AF37] px-5 py-3 text-center text-sm font-black text-[#071A3D]">Recruit With Us</Link>
         </div>
       </Band>
 
@@ -299,53 +231,28 @@ export default async function HomePage() {
               body="Verify official email domains, confirm job details, avoid unofficial payment requests and use official Red Stone channels."
             />
             <div className="mt-8 text-center">
-              <Link
-                href="/fraud-awareness"
-                className="rounded-md bg-[#071A3D] px-5 py-3 text-sm font-black text-white"
-              >
-                Learn How to Stay Safe
-              </Link>
+              <Link href="/fraud-awareness" className="rounded-md bg-[#071A3D] px-5 py-3 text-sm font-black text-white">Learn How to Stay Safe</Link>
             </div>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-8">
-            <h3 className="text-xl font-black text-[#071A3D]">
-              Verified candidate stories
-            </h3>
-            <p className="mt-3 text-slate-600">
-              Verified candidate stories will appear here as candidates and employers authorize their reviews.
-            </p>
+            <h3 className="text-xl font-black text-[#071A3D]">Verified candidate stories</h3>
+            <p className="mt-3 text-slate-600">Verified candidate stories will appear here as candidates and employers authorize their reviews.</p>
           </div>
         </div>
       </Band>
 
       <Band>
-        <SectionHeading
-          eyebrow="Insights"
-          title="Latest Guidance"
-          body="Educational Red Stone editorial content for candidates and employers."
-        />
+        <SectionHeading eyebrow="Insights" title="Latest Guidance" body="Educational Red Stone editorial content for candidates and employers." />
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {BLOG_POSTS.slice(0, 3).map((post) => (
-            <Link
-              key={post.slug}
-              href={`/blog/${post.slug}`}
-              className="rounded-xl border border-slate-200 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <p className="text-xs font-black uppercase text-[#B8860B]">
-                {post.category}
-              </p>
-              <h3 className="mt-2 text-lg font-black text-[#071A3D]">
-                {post.title}
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {post.description}
-              </p>
+            <Link key={post.slug} href={`/blog/${post.slug}`} className="rounded-xl border border-slate-200 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <p className="text-xs font-black uppercase text-[#B8860B]">{post.category}</p>
+              <h3 className="mt-2 text-lg font-black text-[#071A3D]">{post.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-slate-600">{post.description}</p>
             </Link>
           ))}
         </div>
-        <p className="mt-10 rounded-md bg-slate-50 p-4 text-sm text-slate-600">
-          {RECRUITMENT_DISCLAIMER}
-        </p>
+        <p className="mt-10 rounded-md bg-slate-50 p-4 text-sm text-slate-600">{RECRUITMENT_DISCLAIMER}</p>
       </Band>
 
       <ContactCTA />
@@ -372,24 +279,12 @@ function VisualServiceCard({
 }) {
   return (
     <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div
-        role="img"
-        aria-label={imageAlt}
-        className="h-64 bg-cover bg-center sm:h-72"
-        style={{ backgroundImage: `url(${image})` }}
-      />
+      <div role="img" aria-label={imageAlt} className="h-64 bg-cover bg-center sm:h-72" style={{ backgroundImage: `url(${image})` }} />
       <div className="p-7">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">
-          {eyebrow}
-        </p>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">{eyebrow}</p>
         <h2 className="mt-2 text-2xl font-black text-[#071A3D]">{title}</h2>
         <p className="mt-3 text-sm leading-7 text-slate-600">{body}</p>
-        <Link
-          href={href}
-          className="mt-6 inline-flex rounded-lg bg-[#071A3D] px-5 py-3 text-sm font-black text-white transition hover:bg-[#102D5A]"
-        >
-          {action}
-        </Link>
+        <Link href={href} className="mt-6 inline-flex rounded-lg bg-[#071A3D] px-5 py-3 text-sm font-black text-white transition hover:bg-[#102D5A]">{action}</Link>
       </div>
     </article>
   );
@@ -410,49 +305,24 @@ function PathCard({
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#071A3D] text-sm font-black text-[#F2D675]">
-        {number}
-      </span>
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#071A3D] text-sm font-black text-[#F2D675]">{number}</span>
       <h3 className="mt-5 text-xl font-black text-[#071A3D]">{title}</h3>
       <p className="mt-3 text-sm leading-6 text-slate-600">{body}</p>
-      <Link
-        href={href}
-        className="mt-5 inline-flex text-sm font-black text-[#B8860B] hover:underline"
-      >
-        {action} →
-      </Link>
+      <Link href={href} className="mt-5 inline-flex text-sm font-black text-[#B8860B] hover:underline">{action} →</Link>
     </div>
   );
 }
 
-function CategoryPanel({
-  title,
-  items,
-  href,
-}: {
-  title: string;
-  items: string[];
-  href: string;
-}) {
+function CategoryPanel({ title, items, href }: { title: string; items: string[]; href: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-2xl font-black text-[#071A3D]">{title}</h2>
       <div className="mt-5 flex flex-wrap gap-2">
         {items.map((item) => (
-          <span
-            key={item}
-            className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700"
-          >
-            {item}
-          </span>
+          <span key={item} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">{item}</span>
         ))}
       </div>
-      <Link
-        href={href}
-        className="mt-6 inline-block rounded-md bg-[#071A3D] px-5 py-3 text-sm font-black text-white"
-      >
-        Explore
-      </Link>
+      <Link href={href} className="mt-6 inline-block rounded-md bg-[#071A3D] px-5 py-3 text-sm font-black text-white">Explore</Link>
     </div>
   );
 }
