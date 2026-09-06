@@ -66,6 +66,7 @@ const quickLinks = [
   { label: "Pre-Departure Support", href: "/pre-departure-support" },
   { label: "Sponsorship Jobs", href: "/sponsorship-jobs" },
   { label: "Visa Process", href: "/visa-process" },
+  { label: "Success Stories", href: "/success-stories" },
   { label: "Ethical Recruitment", href: "/ethical-recruitment" },
   { label: "International Opportunities", href: "/jobs" },
 ];
@@ -98,7 +99,7 @@ export default async function HomePage() {
       />
 
       <Band>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {quickLinks.map((item) => (
             <Link
               key={item.label}
@@ -276,10 +277,17 @@ export default async function HomePage() {
               <Link href="/fraud-awareness" className="rounded-md bg-[#071A3D] px-5 py-3 text-sm font-black text-white">Learn How to Stay Safe</Link>
             </div>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-8">
-            <h3 className="text-xl font-black text-[#071A3D]">Verified candidate stories</h3>
-            <p className="mt-3 text-slate-600">Verified candidate stories will appear here as candidates and employers authorize their reviews.</p>
-          </div>
+          <Link
+            href="/success-stories"
+            className="group rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition hover:-translate-y-0.5 hover:border-[#D4AF37] hover:shadow-md"
+          >
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">Client Success Stories</p>
+            <h3 className="mt-3 text-2xl font-black text-[#071A3D]">Verified recruitment journeys</h3>
+            <p className="mt-4 leading-7 text-slate-600">
+              Read client stories only after the recruitment outcome has been checked and the client has authorized publication. No fictional samples are presented as real placements.
+            </p>
+            <span className="mt-6 inline-flex text-sm font-black text-[#B8860B] group-hover:underline">View Success Stories →</span>
+          </Link>
         </div>
       </Band>
 
