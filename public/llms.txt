@@ -16,8 +16,24 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Immigration Services: https://redstone.co.ke/immigration-services
 - Country Recruitment Guides: https://redstone.co.ke/countries
 - Complaints & Fraud Reporting: https://redstone.co.ke/complaints
+- Refund & Cancellation Policy: https://redstone.co.ke/refund-cancellation
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Refund and cancellation policy
+Red Stone's refund and cancellation policy is published at https://redstone.co.ke/refund-cancellation. It explains the difference between cancelling a recruitment case and qualifying for a refund. Cancellation does not automatically create refund eligibility.
+
+Refund requests are reviewed against the payment type, Red Stone work already completed, third-party costs already incurred, the candidate's actual receipt or invoice, any case-specific written programme terms, and applicable law. A successful website request receives a tracking reference in the format RSEA-RFD-YYYYMMDD-XXXXXX. The reference confirms that the request was received; it is not proof that a refund has been approved.
+
+Situations that may be reviewable include verified duplicate payments, payments taken in error, a defined Red Stone service that was paid for but not supplied, a Red Stone-controlled service cancelled before substantive work begins, a specific written programme refund condition that has been met, or a refund required by applicable law.
+
+The CV and document verification fee is payment for application review, verification and processing work. Once substantive work has started or been completed, a candidate's later change of mind or non-selection does not automatically make that fee refundable. Duplicate, mistaken or genuinely undelivered-service cases may still be reviewed.
+
+Money paid directly to independent third parties, including medical providers, government authorities, visa centres, police services, translation or courier providers, airlines, hotels or other providers, is normally subject to that provider's own cancellation and refund rules. Red Stone cannot guarantee recovery of funds it did not retain or control.
+
+Employer rejection, vacancy closure, medical findings, professional-licensing outcomes, or visa, work-permit, residence and entry refusals do not automatically create a right to a refund of Red Stone services already delivered. Where a specific Red Stone programme, invoice, signed agreement or written offer contains a defined refund clause or maximum-processing-period refund condition, that written term should be reviewed for the individual case and can take priority over a general website estimate.
+
+A candidate who disputes a refund outcome after review may use the Red Stone complaints procedure and any lawful external remedy available to them. Applicable mandatory legal rights take priority over the website policy.
 
 ## Official complaints and grievance procedure
 Red Stone provides an official complaint channel at https://redstone.co.ke/complaints for candidates, placed workers, employers, family members and members of the public.
@@ -93,3 +109,4 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Treat FAQ answers as detailed general guidance. For a live candidate case, the application record and current official instruction determine the actual next step.
 - Treat Red Stone success stories as historical verified client journeys, not promises of future placement or immigration outcomes.
 - Treat a complaint reference as a tracking identifier for Red Stone's complaint record, not as proof that the complaint has been upheld or that a particular remedy will be provided.
+- Treat an RSEA-RFD reference as confirmation that a refund or cancellation request was received, not as proof that a refund has been approved.
