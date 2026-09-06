@@ -89,12 +89,13 @@ export default async function HomePage() {
 
       <Band>
         <div className="grid gap-4 md:grid-cols-4">
-          {[
-            "Ethical Recruitment",
-            "Candidate Support",
-            "Employer Screening",
-            "International Opportunities",
-          ].map((item) => (
+          <Link
+            href="/candidate-support"
+            className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm font-black text-[#071A3D] shadow-sm transition hover:-translate-y-0.5 hover:border-[#D4AF37] hover:shadow-md"
+          >
+            Candidate Support
+          </Link>
+          {["Ethical Recruitment", "Employer Screening", "International Opportunities"].map((item) => (
             <div
               key={item}
               className="rounded-xl border border-slate-200 bg-white p-5 text-center text-sm font-black text-[#071A3D] shadow-sm"
@@ -139,10 +140,10 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Choose your path"
           title="Start from where you are today"
-          body="Whether you are searching for work, recruiting internationally or preparing for the next stage after employer selection, Red Stone provides a clear place to begin."
+          body="Whether you are searching for work, need candidate support, recruit internationally or are preparing for the next stage after employer selection, Red Stone provides a clear place to begin."
         />
 
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           <PathCard
             number="01"
             title="I am looking for a job"
@@ -152,13 +153,20 @@ export default async function HomePage() {
           />
           <PathCard
             number="02"
+            title="I need candidate support"
+            body="Get guidance on CV preparation, application readiness, interviews and recruitment documents."
+            href="/candidate-support"
+            action="Candidate Support"
+          />
+          <PathCard
+            number="03"
             title="I am an employer"
             body="Learn how Red Stone supports candidate sourcing, screening and recruitment coordination."
             href="/employers"
             action="Recruit With Us"
           />
           <PathCard
-            number="03"
+            number="04"
             title="I am preparing to travel"
             body="Review work-permit, visa, documentation and travel-preparation guidance for the post-selection stage."
             href="/immigration-services"
