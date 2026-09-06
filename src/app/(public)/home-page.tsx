@@ -65,6 +65,7 @@ const quickLinks = [
   { label: "Employer Recruitment Services", href: "/employer-services" },
   { label: "Pre-Departure Support", href: "/pre-departure-support" },
   { label: "Sponsorship Jobs", href: "/sponsorship-jobs" },
+  { label: "Visa Process", href: "/visa-process" },
   { label: "Ethical Recruitment", href: "/ethical-recruitment" },
   { label: "International Opportunities", href: "/jobs" },
 ];
@@ -97,7 +98,7 @@ export default async function HomePage() {
       />
 
       <Band>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickLinks.map((item) => (
             <Link
               key={item.label}
@@ -129,6 +130,26 @@ export default async function HomePage() {
       </Band>
 
       <Band>
+        <div className="grid gap-7 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#B8860B]">Visa process guides</p>
+            <h2 className="mt-3 text-3xl font-black text-[#071A3D] sm:text-4xl">
+              Detailed visa guidance for all 26 recruitment destinations
+            </h2>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
+              Compare work, visitor, student, family, business and residence routes for every Red Stone destination, then verify the latest requirements with each country&apos;s official immigration authority.
+            </p>
+          </div>
+          <Link
+            href="/visa-process"
+            className="inline-flex rounded-xl bg-[#071A3D] px-6 py-3.5 text-center text-sm font-black text-white transition hover:bg-[#102D5A]"
+          >
+            Explore 26 Visa Guides
+          </Link>
+        </div>
+      </Band>
+
+      <Band tone="grey">
         <SectionHeading
           eyebrow="Recruitment & international mobility"
           title="Support for careers across borders"
@@ -156,11 +177,11 @@ export default async function HomePage() {
         </div>
       </Band>
 
-      <Band tone="grey">
+      <Band>
         <SectionHeading
           eyebrow="Choose your path"
           title="Start from where you are today"
-          body="Whether you are searching for work, need candidate support, are completing medical and compliance requirements, recruit internationally, are preparing for deployment or need immigration guidance, Red Stone provides a clear place to begin."
+          body="Whether you are searching for work, need candidate support, are completing medical and compliance requirements, recruit internationally, are preparing for deployment or need country-specific visa guidance, Red Stone provides a clear place to begin."
         />
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-6">
           <PathCard number="01" title="I am looking for a job" body="Search current skilled and entry-level vacancies and begin your application online." href="/jobs" action="Find Jobs" />
@@ -168,11 +189,11 @@ export default async function HomePage() {
           <PathCard number="03" title="I need medical or compliance guidance" body="Understand recruitment medicals, biometrics, police clearance and document-verification requirements." href="/medicals-compliance" action="Medicals & Compliance" />
           <PathCard number="04" title="I am an employer" body="Explore workforce sourcing, candidate screening, interview coordination and international recruitment support." href="/employer-services" action="Employer Recruitment Services" />
           <PathCard number="05" title="I am preparing for departure" body="Complete final document, employer-reporting, travel-readiness and deployment preparation before international travel." href="/pre-departure-support" action="Pre-Departure Support" />
-          <PathCard number="06" title="I need immigration guidance" body="Review work-permit, visa and destination guidance for the post-selection international employment stage." href="/immigration-services" action="Immigration Guidance" />
+          <PathCard number="06" title="I need visa process guidance" body="Compare work, visitor, student, family, business and residence routes across all 26 Red Stone destinations." href="/visa-process" action="Visa Process Guides" />
         </div>
       </Band>
 
-      <Band>
+      <Band tone="grey">
         <SectionHeading eyebrow="Published vacancies" title="Featured Jobs" body="Only published vacancies from the Red Stone system appear here." />
         <div className="mt-10">
           {jobs.length ? (
