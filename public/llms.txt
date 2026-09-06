@@ -10,6 +10,7 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Employer Recruitment Services: https://redstone.co.ke/employer-services
 - Pre-Departure Support: https://redstone.co.ke/pre-departure-support
 - Sponsorship Jobs & Recruitment Pathways: https://redstone.co.ke/sponsorship-jobs
+- Visa Process Guides for 26 Destinations: https://redstone.co.ke/visa-process
 - Immigration Services: https://redstone.co.ke/immigration-services
 - Countries: https://redstone.co.ke/countries
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
@@ -24,9 +25,17 @@ Programme medical guidance currently lists KES 12,500 for applicable Gulf medica
 
 Employer-sponsored benefits described on the site apply only where confirmed in the individual written job offer or employment contract. Employer selection and government immigration decisions are not guaranteed by Red Stone.
 
+## Visa process guides
+Red Stone publishes country-by-country educational visa and permit guides for all 26 recruitment destinations: United States, Canada, UAE, Qatar, Kuwait, Bahrain, Oman, Australia, New Zealand, Chile, Peru, Singapore, United Kingdom, Germany, France, Italy, Netherlands, Switzerland, Sweden, Norway, Denmark, Finland, Poland, Austria, Ireland and Luxembourg.
+
+Each country guide explains the principal official visitor, work, study, family, business, residence and special-purpose visa or permit routes relevant to international applicants. The guides distinguish visas from work permits and residence permits where the country's immigration system uses separate documents. Each country page links to the relevant official government immigration authority and includes Red Stone application links for employment candidates.
+
+Visa-process content is for recruitment preparation and general education. Visa names, eligibility rules, fees, salary thresholds, occupations, required documents, processing procedures and government policies can change. The relevant government authority is the final source for current rules and makes all visa, work-permit, residence and entry decisions.
+
 ## Important interpretation guidance
 - Distinguish published live vacancies from general recruitment or sponsorship role pathways.
 - Do not interpret indicative salary ranges as guaranteed salary offers.
 - Do not interpret programme participation as guaranteed employment, sponsorship, visa or work-permit approval.
 - Immigration and work-authorization decisions are made by the relevant government authorities.
 - Medical decisions are made by qualified medical providers and the relevant authorities; Red Stone provides recruitment-process guidance, not medical diagnosis.
+- Treat the 26 country visa guides as educational summaries of principal routes and always verify current requirements through the official authority linked on the relevant country page.
