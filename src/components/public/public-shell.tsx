@@ -8,6 +8,7 @@ const nav = [
   ["Countries", "/countries"],
   ["Services", "/services"],
   ["How It Works", "/how-it-works"],
+  ["Success Stories", "/success-stories"],
   ["About", "/about"],
   ["Employers", "/employers"],
   ["Blog", "/blog"],
@@ -64,7 +65,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
 function Footer() {
   const columns = [
     ["Company", [["About", "/about"], ["Mission & Vision", "/mission-vision"], ["Why Red Stone", "/why-red-stone"], ["Our Commitment", "/our-commitment"]]],
-    ["Candidates", [["All Jobs", "/jobs"], ["Apply", "/apply"], ["Candidate Protection", "/candidate-protection"], ["Recruitment Process", "/recruitment-process"], ["FAQ", "/faq"]]],
+    ["Candidates", [["All Jobs", "/jobs"], ["Apply", "/apply"], ["Success Stories", "/success-stories"], ["Candidate Protection", "/candidate-protection"], ["Recruitment Process", "/recruitment-process"], ["FAQ", "/faq"]]],
     ["Employers", [["Employers", "/employers"], ["Employer Services", "/employer-services"], ["Register", "/employer/register"], ["Login", "/login"]]],
     ["Trust & Safety", [["Ethical Recruitment", "/ethical-recruitment"], ["Compliance", "/compliance"], ["Safety", "/safety"], ["Official Channels", "/official-channels"], ["Fraud Awareness", "/fraud-awareness"], ["Complaints", "/complaints"]]],
     ["Legal", [["Privacy", "/privacy"], ["Terms", "/terms"], ["Cookie Policy", "/cookies"], ["Accessibility", "/accessibility"]]],
