@@ -20,9 +20,10 @@ test("external imports have source identity, duplicate protection and external a
 });
 
 test("automatic importer quality-screens overseas eligibility and never treats LMIA requested as approved", () => {
-  assert.match(classifier, /requested|pending|submitted/i);
-  assert.match(classifier, /approved|positive lmia|lmia provided/i);
-  assert.match(run, /foreign_worker_eligibility/);
+  assert.match(classifier, /lmia \(\?:has been \)\?requested[\s\S]{0,120}status: "lmia_requested", sponsorship: false/);
+  assert.match(classifier, /lmia \(\?:is \)\?approved[\s\S]{0,120}status: "lmia_approved", sponsorship: true/);
+  assert.match(run, /classification\.foreignWorkerStatus/);
+  assert.match(run, /POSITIVE_FOREIGN_STATUSES\.has\(classification\.foreignWorkerStatus\)/);
 });
 
 test("employer-level TFWP or REP participation never becomes vacancy-specific sponsorship automatically", () => {
