@@ -64,6 +64,7 @@ const quickLinks = [
   { label: "Medicals & Compliance", href: "/medicals-compliance" },
   { label: "Employer Recruitment Services", href: "/employer-services" },
   { label: "Pre-Departure Support", href: "/pre-departure-support" },
+  { label: "Sponsorship Jobs", href: "/sponsorship-jobs" },
   { label: "Ethical Recruitment", href: "/ethical-recruitment" },
   { label: "International Opportunities", href: "/jobs" },
 ];
@@ -96,7 +97,7 @@ export default async function HomePage() {
       />
 
       <Band>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {quickLinks.map((item) => (
             <Link
               key={item.label}
@@ -110,6 +111,24 @@ export default async function HomePage() {
       </Band>
 
       <Band tone="grey">
+        <div className="overflow-hidden rounded-3xl bg-[#071A3D] p-8 text-white shadow-xl sm:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#F2D675]">2026 sponsorship candidate intake</p>
+            <h2 className="mt-3 text-3xl font-black sm:text-4xl">24 sponsorship role pathways across 5 destination groups</h2>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200">
+              Explore USA, Canada, New Zealand, Australia and Gulf sponsorship pathways with realistic salary guidance, clear medical requirements, employer-sponsored benefits and a structured Red Stone application process.
+            </p>
+          </div>
+          <Link
+            href="/sponsorship-jobs"
+            className="mt-6 inline-flex rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D] lg:mt-0 lg:shrink-0"
+          >
+            View Sponsorship Jobs
+          </Link>
+        </div>
+      </Band>
+
+      <Band>
         <SectionHeading
           eyebrow="Recruitment & international mobility"
           title="Support for careers across borders"
@@ -137,7 +156,7 @@ export default async function HomePage() {
         </div>
       </Band>
 
-      <Band>
+      <Band tone="grey">
         <SectionHeading
           eyebrow="Choose your path"
           title="Start from where you are today"
@@ -153,7 +172,7 @@ export default async function HomePage() {
         </div>
       </Band>
 
-      <Band tone="grey">
+      <Band>
         <SectionHeading eyebrow="Published vacancies" title="Featured Jobs" body="Only published vacancies from the Red Stone system appear here." />
         <div className="mt-10">
           {jobs.length ? (
