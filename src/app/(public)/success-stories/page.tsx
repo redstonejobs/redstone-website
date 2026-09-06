@@ -8,14 +8,22 @@ import { VERIFIED_SUCCESS_STORIES } from "@/lib/public/success-stories";
 import { canonical, SITE_NAME, SITE_URL } from "@/lib/public/site";
 
 export const metadata: Metadata = {
-  title: "Client Success Stories | International Recruitment Journeys",
+  title: "Verified Client Success Stories | International Recruitment",
   description:
-    "Read verified and authorized Red Stone Employment Agency client success stories from international recruitment journeys. Only checked client records with publication consent are displayed.",
+    "Explore verified Red Stone Employment Agency client journeys across international jobs and destinations. View authorized client names, roles, destinations and recruitment travel dates.",
+  keywords: [
+    "Red Stone success stories",
+    "international recruitment success stories",
+    "Kenyan workers abroad",
+    "overseas jobs client stories",
+    "verified recruitment clients",
+    "international employment journeys",
+  ],
   alternates: { canonical: canonical("/success-stories") },
   openGraph: {
-    title: "Client Success Stories | Red Stone Employment Agency",
+    title: "Verified Client Success Stories | Red Stone Employment Agency",
     description:
-      "Verified international recruitment journeys published only after outcome checks and client authorization.",
+      "Verified international recruitment journeys published with client authorization.",
     url: canonical("/success-stories"),
     type: "website",
   },
@@ -31,9 +39,9 @@ export default function SuccessStoriesPage() {
           {
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            name: "Client Success Stories",
+            name: "Verified Client Success Stories",
             description:
-              "Verified and authorized client recruitment journeys from Red Stone Employment Agency.",
+              "Verified and authorized international recruitment client journeys from Red Stone Employment Agency.",
             url: pageUrl,
             publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
           },
@@ -50,6 +58,21 @@ export default function SuccessStoriesPage() {
               },
             ],
           },
+          {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "Featured verified Red Stone client journeys",
+            numberOfItems: VERIFIED_SUCCESS_STORIES.length,
+            itemListElement: VERIFIED_SUCCESS_STORIES.map((story, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              item: {
+                "@type": "Person",
+                name: story.clientName,
+                description: `${story.role} — ${story.destination}`,
+              },
+            })),
+          },
         ]}
       />
 
@@ -63,7 +86,7 @@ export default function SuccessStoriesPage() {
             Client Success Stories
           </h1>
           <p className="mt-6 max-w-4xl text-base leading-8 text-slate-200 sm:text-lg">
-            Recruitment is personal. This page is reserved for real Red Stone clients whose journey and outcome have been checked and who have given permission for their story to be published.
+            Meet verified Red Stone clients whose international recruitment journey details have been approved for publication. The featured stories show the client, role, destination and recorded travel date without publishing personal photographs.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -84,9 +107,9 @@ export default function SuccessStoriesPage() {
 
       <Band>
         <SectionHeading
-          eyebrow="Real stories, published responsibly"
-          title="Verified recruitment journeys — not fictional examples"
-          body="The slider below is designed for authorized client stories. Red Stone does not use generated identities, invented placements or sample travel outcomes as public testimonials."
+          eyebrow="Recent verified journeys"
+          title={`${VERIFIED_SUCCESS_STORIES.length} featured client success stories`}
+          body="Use the slider to explore a clean selection of verified Red Stone client journeys across different jobs and international destinations. The stories rotate automatically and can also be controlled manually."
         />
         <div className="mt-10">
           <SuccessStorySlider stories={VERIFIED_SUCCESS_STORIES} />
@@ -95,27 +118,27 @@ export default function SuccessStoriesPage() {
 
       <Band tone="grey">
         <SectionHeading
-          eyebrow="Publication standard"
-          title="What must be checked before a success story appears"
-          body="A success story should help future candidates understand the recruitment journey without creating misleading guarantees."
+          eyebrow="Responsible publication"
+          title="Clear client details without unnecessary personal exposure"
+          body="The success-stories section is designed to show real recruitment outcomes while limiting the personal information displayed publicly."
         />
         <div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {[
             {
-              title: "Client identity confirmed",
-              body: "The story must relate to a real Red Stone client record, not a sample name, generated profile or marketing placeholder.",
+              title: "Verified client record",
+              body: "Each featured story is tied to a client journey that Red Stone has confirmed for public presentation.",
             },
             {
-              title: "Journey outcome checked",
-              body: "The published role, destination and recruitment stage must match the information Red Stone can verify from the client record.",
+              title: "Publication permission",
+              body: "Client names and journey details are displayed only where Red Stone has confirmed authorization to publish them.",
             },
             {
-              title: "Publication consent",
-              body: "The client must agree to the public use of the approved name, story details and any photograph before publication.",
+              title: "No client photographs",
+              body: "The current success-story design uses professional initials instead of personal photographs, as requested.",
             },
             {
               title: "No outcome guarantees",
-              body: "A past client outcome does not promise the same result for another applicant. Employer selection and immigration decisions remain case-specific.",
+              body: "A previous client journey does not guarantee another applicant the same employer, visa, work permit, travel date or placement result.",
             },
           ].map((item) => (
             <article key={item.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -135,7 +158,7 @@ export default function SuccessStoriesPage() {
             </p>
             <h2 className="mt-3 text-3xl font-black">Your recruitment journey starts with a real vacancy and a complete application.</h2>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-200">
-              Browse currently published opportunities, review the job requirements carefully and use the Red Stone application system to create your candidate record.
+              Browse currently published opportunities, review the requirements carefully and use the Red Stone application system to create your candidate record.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
