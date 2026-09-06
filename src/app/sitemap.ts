@@ -18,6 +18,7 @@ const staticRoutes = [
   "/ethical-recruitment",
   "/candidate-protection",
   "/candidate-support",
+  "/medicals-compliance",
   "/immigration-services",
   "/employer-services",
   "/recruitment-process",
