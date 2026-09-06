@@ -4,11 +4,16 @@ import type { AdminBlogPost } from "@/lib/admin/blog-data";
 
 export function BlogPostForm({
   post,
+  initial,
   action,
 }: {
   post?: AdminBlogPost | null;
+  initial?: Partial<AdminBlogPost> | null;
   action: (formData: FormData) => void | Promise<void>;
 }) {
+  const values = post ?? initial;
+  const isEditing = Boolean(post);
+
   return (
     <form action={action} className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
@@ -18,8 +23,8 @@ export function BlogPostForm({
             <h2 className="mt-2 text-2xl font-black text-[#071A3D]">Article details</h2>
           </div>
 
-          <Field name="title" label="Article Title" defaultValue={post?.title} required placeholder="Example: How to Prepare for a Canada Job Interview" />
-          <Field name="slug" label="URL Slug" defaultValue={post?.slug} placeholder="Leave blank to generate from the title" help="Use short, descriptive words. Example: canada-job-interview-guide" />
+          <Field name="title" label="Article Title" defaultValue={values?.title} required placeholder="Example: How to Prepare for a Canada Job Interview" />
+          <Field name="slug" label="URL Slug" defaultValue={values?.slug} placeholder="Leave blank to generate from the title" help="Use short, descriptive words. Example: canada-job-interview-guide" />
 
           <label className="grid gap-2 text-sm font-bold text-slate-700">
             Article Summary / Description <span className="text-red-600">*</span>
@@ -27,7 +32,7 @@ export function BlogPostForm({
               name="description"
               required
               rows={4}
-              defaultValue={post?.description ?? ""}
+              defaultValue={values?.description ?? ""}
               placeholder="Write a clear 1–3 sentence summary that explains exactly what the reader will learn."
               className="rounded-xl border border-slate-300 px-4 py-3 font-normal leading-7 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
             />
@@ -35,8 +40,8 @@ export function BlogPostForm({
           </label>
 
           <div className="grid gap-5 md:grid-cols-2">
-            <Field name="category" label="Category" defaultValue={post?.category ?? "Recruitment Insights"} required placeholder="Candidate Guidance" />
-            <Field name="author_name" label="Author / Editorial Team" defaultValue={post?.author_name ?? "Red Stone Editorial Team"} required />
+            <Field name="category" label="Category" defaultValue={values?.category ?? "Recruitment Insights"} required placeholder="Candidate Guidance" />
+            <Field name="author_name" label="Author / Editorial Team" defaultValue={values?.author_name ?? "Red Stone Editorial Team"} required />
           </div>
 
           <label className="grid gap-2 text-sm font-bold text-slate-700">
@@ -45,7 +50,7 @@ export function BlogPostForm({
               name="content_markdown"
               required
               rows={24}
-              defaultValue={post?.content_markdown ?? ""}
+              defaultValue={values?.content_markdown ?? ""}
               placeholder={"## Main section heading\n\nWrite useful, original paragraphs here.\n\n### Subheading\n\n- Bullet point\n- Another bullet point\n\n> Optional important note"}
               className="min-h-[560px] rounded-xl border border-slate-300 px-4 py-4 font-mono text-sm font-normal leading-7 outline-none transition focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
             />
@@ -64,7 +69,7 @@ export function BlogPostForm({
 
             <label className="grid gap-2 text-sm font-bold text-slate-700">
               Status
-              <select name="status" defaultValue={post?.status ?? "draft"} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-normal outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20">
+              <select name="status" defaultValue={values?.status ?? "draft"} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-normal outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20">
                 <option value="draft">Draft — admin only</option>
                 <option value="published">Published — public + homepage</option>
                 <option value="archived">Archived — hidden</option>
@@ -75,12 +80,12 @@ export function BlogPostForm({
               name="published_at"
               label="Publication Date & Time"
               type="datetime-local"
-              defaultValue={toDateTimeLocal(post?.published_at)}
+              defaultValue={toDateTimeLocal(values?.published_at)}
               help="Leave blank when publishing for the first time to use the current time."
             />
 
             <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-              <input type="checkbox" name="featured" defaultChecked={post?.featured ?? false} className="mt-1 h-4 w-4 accent-[#D4AF37]" />
+              <input type="checkbox" name="featured" defaultChecked={values?.featured ?? false} className="mt-1 h-4 w-4 accent-[#D4AF37]" />
               <span><strong>Featured article.</strong> Gives this post priority as the main feature on the blog page.</span>
             </label>
 
@@ -94,8 +99,8 @@ export function BlogPostForm({
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#B8860B]">Visual</p>
               <h2 className="mt-2 text-xl font-black text-[#071A3D]">Cover image</h2>
             </div>
-            <Field name="cover_image_url" label="Cover Image URL" type="url" defaultValue={post?.cover_image_url ?? ""} placeholder="https://..." help="Use a clear 16:9 or wide editorial image. The page still works without an image." />
-            <Field name="image_alt" label="Image Alt Text" defaultValue={post?.image_alt ?? ""} placeholder="Describe what is visible in the image" help="Useful for accessibility and image search. Do not stuff keywords." />
+            <Field name="cover_image_url" label="Cover Image URL" type="url" defaultValue={values?.cover_image_url ?? ""} placeholder="https://..." help="Use a clear 16:9 or wide editorial image. The page still works without an image." />
+            <Field name="image_alt" label="Image Alt Text" defaultValue={values?.image_alt ?? ""} placeholder="Describe what is visible in the image" help="Useful for accessibility and image search. Do not stuff keywords." />
           </section>
 
           <section className="space-y-5 rounded-2xl border border-[#D4AF37]/40 bg-amber-50/40 p-6 shadow-sm">
@@ -104,14 +109,14 @@ export function BlogPostForm({
               <h2 className="mt-2 text-xl font-black text-[#071A3D]">SEO controls</h2>
             </div>
 
-            <Field name="seo_title" label="SEO Title" defaultValue={post?.seo_title ?? ""} placeholder="Clear search-focused title" help="Recommended: about 45–65 characters. If blank, the article title is used." />
+            <Field name="seo_title" label="SEO Title" defaultValue={values?.seo_title ?? ""} placeholder="Clear search-focused title" help="Recommended: about 45–65 characters. If blank, the article title is used." />
 
             <label className="grid gap-2 text-sm font-bold text-slate-700">
               Meta Description
               <textarea
                 name="meta_description"
                 rows={4}
-                defaultValue={post?.meta_description ?? ""}
+                defaultValue={values?.meta_description ?? ""}
                 placeholder="A compelling, accurate summary for search results."
                 className="rounded-xl border border-slate-300 px-4 py-3 font-normal leading-6 outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
               />
@@ -123,7 +128,7 @@ export function BlogPostForm({
               <textarea
                 name="keywords"
                 rows={4}
-                defaultValue={(post?.keywords ?? []).join(", ")}
+                defaultValue={(values?.keywords ?? []).join(", ")}
                 placeholder="international jobs Kenya, Canada jobs, overseas recruitment"
                 className="rounded-xl border border-slate-300 px-4 py-3 font-normal leading-6 outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
               />
@@ -150,7 +155,7 @@ export function BlogPostForm({
         <p className="text-xs leading-6 text-slate-500">Publishing makes the article publicly indexable and eligible to appear automatically on the homepage.</p>
         <div className="flex flex-wrap gap-2">
           <Link href="/admin/blog" className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-black text-slate-700">Cancel</Link>
-          <button type="submit" className="rounded-xl bg-[#071A3D] px-6 py-3 text-sm font-black text-white hover:bg-[#102D5A]">{post ? "Save Article" : "Create Article"}</button>
+          <button type="submit" className="rounded-xl bg-[#071A3D] px-6 py-3 text-sm font-black text-white hover:bg-[#102D5A]">{isEditing ? "Save Article" : "Create Article"}</button>
         </div>
       </div>
     </form>
