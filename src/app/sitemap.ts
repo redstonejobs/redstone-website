@@ -48,6 +48,7 @@ const staticRoutes = [
   "/complaints",
   "/refund-cancellation",
   "/payment-terms",
+  "/account-deletion",
   "/privacy",
   "/terms",
   "/cookies",
