@@ -10,7 +10,7 @@ import { canonical, SITE_NAME, SITE_URL } from "@/lib/public/site";
 export const metadata: Metadata = {
   title: "Verified Client Success Stories | International Recruitment",
   description:
-    "Explore verified Red Stone Employment Agency client journeys across international jobs and destinations. View authorized client names, roles, destinations and recruitment travel dates.",
+    "Explore 1,000 verified Red Stone Employment Agency client journeys across international jobs and destinations. View authorized client names, roles, destinations and recruitment travel dates.",
   keywords: [
     "Red Stone success stories",
     "international recruitment success stories",
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: canonical("/success-stories") },
   openGraph: {
-    title: "Verified Client Success Stories | Red Stone Employment Agency",
+    title: "1,000 Verified Client Success Stories | Red Stone Employment Agency",
     description:
-      "Verified international recruitment journeys published with client authorization.",
+      "Browse 1,000 verified international recruitment journeys published with client authorization.",
     url: canonical("/success-stories"),
     type: "website",
   },
@@ -39,7 +39,7 @@ export default function SuccessStoriesPage() {
           {
             "@context": "https://schema.org",
             "@type": "CollectionPage",
-            name: "Verified Client Success Stories",
+            name: "1,000 Verified Client Success Stories",
             description:
               "Verified and authorized international recruitment client journeys from Red Stone Employment Agency.",
             url: pageUrl,
@@ -61,7 +61,7 @@ export default function SuccessStoriesPage() {
           {
             "@context": "https://schema.org",
             "@type": "ItemList",
-            name: "Featured verified Red Stone client journeys",
+            name: "Verified Red Stone client journeys",
             numberOfItems: VERIFIED_SUCCESS_STORIES.length,
             itemListElement: VERIFIED_SUCCESS_STORIES.map((story, index) => ({
               "@type": "ListItem",
@@ -83,10 +83,10 @@ export default function SuccessStoriesPage() {
             Verified client journeys
           </p>
           <h1 className="mt-4 max-w-5xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
-            Client Success Stories
+            1,000 Client Success Stories
           </h1>
           <p className="mt-6 max-w-4xl text-base leading-8 text-slate-200 sm:text-lg">
-            Meet verified Red Stone clients whose international recruitment journey details have been approved for publication. The featured stories show the client, role, destination and recorded travel date without publishing personal photographs.
+            Browse the complete set of 1,000 verified Red Stone client journeys approved for publication. Each record shows the client name, role, destination and recorded travel date without publishing personal photographs.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -107,9 +107,9 @@ export default function SuccessStoriesPage() {
 
       <Band>
         <SectionHeading
-          eyebrow="Recent verified journeys"
-          title={`${VERIFIED_SUCCESS_STORIES.length} featured client success stories`}
-          body="Use the slider to explore a clean selection of verified Red Stone client journeys across different jobs and international destinations. The stories rotate automatically and can also be controlled manually."
+          eyebrow="Complete verified register"
+          title={`${VERIFIED_SUCCESS_STORIES.length.toLocaleString("en-KE")} verified client success stories`}
+          body="All 1,000 authorized client journeys are loaded into the slider. They rotate automatically, and you can use Previous, Next or the browse control to jump directly through the full collection."
         />
         <div className="mt-10">
           <SuccessStorySlider stories={VERIFIED_SUCCESS_STORIES} />
@@ -126,7 +126,7 @@ export default function SuccessStoriesPage() {
           {[
             {
               title: "Verified client record",
-              body: "Each featured story is tied to a client journey that Red Stone has confirmed for public presentation.",
+              body: "Each story is tied to a client journey that Red Stone has confirmed for public presentation.",
             },
             {
               title: "Publication permission",
