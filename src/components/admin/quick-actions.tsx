@@ -4,6 +4,7 @@ const actions = [
   { label: "Create Job", href: "/admin/jobs/new" },
   { label: "Create Blog Post", href: "/admin/blog/new" },
   { label: "Manage Blog & SEO", href: "/admin/blog" },
+  { label: "SEO Content Strategy", href: "/admin/blog/content-strategy" },
   { label: "Add Employer", href: "/admin/employers" },
   { label: "Review Applications", href: "/admin/applications" },
   { label: "Review Documents", href: "/admin/documents" },
@@ -12,7 +13,7 @@ const actions = [
 
 export function QuickActions() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
       {actions.map((action) => (
         <Link
           key={action.href}
