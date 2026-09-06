@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { JobSearch } from "@/components/public/job-search";
-import { getPublishedJobs } from "@/lib/public/jobs";
+import { getPublishedJobs, type PublicJob } from "@/lib/public/jobs";
 import { getConfiguredCountries } from "@/lib/public/countries";
 import { canonical } from "@/lib/public/site";
 
@@ -39,7 +39,9 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   delete params.source;
   delete params.salary_max;
 
+  const selectedSort = params.sort ?? "mixed";
   const [result, countries] = await Promise.all([getPublishedJobs(params), getConfiguredCountries()]);
+  const displayJobs = selectedSort === "mixed" ? mixJobs(result.jobs, result.page) : result.jobs;
   const totalPages = Math.max(Math.ceil(result.count / result.pageSize), 1);
   const queryWithoutPage = new URLSearchParams(
     Object.entries(params).filter(
@@ -82,9 +84,10 @@ export default async function JobsPage({ searchParams }: JobsProps) {
                 Sort
                 <select
                   name="sort"
-                  defaultValue={params.sort ?? "newest"}
+                  defaultValue={selectedSort}
                   className="min-h-10 min-w-48 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-700 outline-none transition focus:border-[#B8860B] focus:ring-2 focus:ring-[#D4AF37]/20"
                 >
+                  <option value="mixed">Mixed Jobs</option>
                   <option value="newest">Newest on Red Stone</option>
                   <option value="source_newest">Newest at source</option>
                   <option value="salary_asc">Salary Low to High</option>
@@ -99,9 +102,9 @@ export default async function JobsPage({ searchParams }: JobsProps) {
           </div>
 
           <div className="mt-7">
-            {result.jobs.length ? (
+            {displayJobs.length ? (
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {result.jobs.map((job) => (
+                {displayJobs.map((job) => (
                   <JobCard key={job.id} job={job} />
                 ))}
               </div>
@@ -139,6 +142,25 @@ export default async function JobsPage({ searchParams }: JobsProps) {
       </section>
     </>
   );
+}
+
+function mixJobs(jobs: PublicJob[], page: number) {
+  return [...jobs].sort((a, b) => {
+    const aScore = stableMixScore(`${page}:${a.id}`);
+    const bScore = stableMixScore(`${page}:${b.id}`);
+    return aScore - bScore;
+  });
+}
+
+function stableMixScore(value: string) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
 }
 
 function pageQuery(params: URLSearchParams, page: number) {
