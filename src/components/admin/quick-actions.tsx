@@ -2,6 +2,8 @@ import Link from "next/link";
 
 const actions = [
   { label: "Create Job", href: "/admin/jobs/new" },
+  { label: "Create Blog Post", href: "/admin/blog/new" },
+  { label: "Manage Blog & SEO", href: "/admin/blog" },
   { label: "Add Employer", href: "/admin/employers" },
   { label: "Review Applications", href: "/admin/applications" },
   { label: "Review Documents", href: "/admin/documents" },
@@ -10,7 +12,7 @@ const actions = [
 
 export function QuickActions() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
       {actions.map((action) => (
         <Link
           key={action.href}
@@ -23,4 +25,3 @@ export function QuickActions() {
     </div>
   );
 }
-
