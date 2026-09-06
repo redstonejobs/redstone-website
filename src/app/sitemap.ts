@@ -21,6 +21,7 @@ const staticRoutes = [
   "/medicals-compliance",
   "/immigration-services",
   "/employer-services",
+  "/pre-departure-support",
   "/recruitment-process",
   "/compliance",
   "/our-commitment",
