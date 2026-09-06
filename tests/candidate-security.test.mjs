@@ -14,7 +14,7 @@ const loginPage = readFileSync("src/app/login/page.tsx", "utf8");
 const registerPage = readFileSync("src/app/register/page.tsx", "utf8");
 const redirectHelper = readFileSync("src/lib/auth/redirect.ts", "utf8");
 const applyPage = readFileSync("src/app/apply/[slug]/page.tsx", "utf8");
-const candidatePage = readFileSync("src/app/candidate/applications/[id]/page.tsx", "utf8");
+const candidatePage = readFileSync("src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx", "utf8");
 const logoutRoute = readFileSync("src/app/auth/logout/route.ts", "utf8");
 const publicSite = readFileSync("src/lib/public/site.ts", "utf8");
 
@@ -133,14 +133,14 @@ test("apply route stays lightweight for Cloudflare Workers", () => {
 });
 
 test("candidate stepper derives review and payment visual state from application status", () => {
-  assert.match(candidatePage, /function applicationStepState/);
-  assert.match(candidatePage, /key === "review" &&\s*\["ready_for_payment", "payment_pending", "submitted"\]\.includes/);
-  assert.match(candidatePage, /key === "payment" && applicationStatus === "ready_for_payment"/);
-  assert.match(candidatePage, /key === "payment" && applicationStatus === "payment_pending"/);
-  assert.match(candidatePage, /key === "payment" && applicationStatus === "submitted"/);
-  assert.match(candidatePage, /aria-current=\{current \? "step" : undefined\}/);
-  assert.match(candidatePage, /stepStateLabel\(stepState\)/);
-  assert.match(candidatePage, /progressStatus === "complete"/);
+  assert.match(candidatePage, /const coreComplete = progress\.get\(step\.key\) === "complete"/);
+  assert.match(candidatePage, /step\.key === "review" && \["ready_for_payment", "payment_pending", "submitted"\]\.includes\(status\)/);
+  assert.match(candidatePage, /step\.key === "payment" && \(Boolean\(paidPayment\) \|\| status === "submitted"\)/);
+  assert.match(candidatePage, /const complete = coreComplete \|\| reviewComplete \|\| paymentComplete/);
+  assert.match(candidatePage, /const current = section === step\.key/);
+  assert.match(candidatePage, /const target = step\.key === "payment" && !paymentAllowed \? "review" : step\.key/);
+  assert.match(candidatePage, /href=\{`\/candidate\/applications\/\$\{id\}\?section=\$\{target\}`\}/);
+  assert.match(candidatePage, /prefetch=\{false\}/);
 });
 
 test("candidate signup only succeeds after Supabase creates an auth user", () => {

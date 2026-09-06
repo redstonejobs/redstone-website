@@ -22,9 +22,13 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: AI foundation tests
+        run: node --test tests/ai-foundation.test.mjs
       - name: Run tests
         run: npm test
       - name: Type check
+        if: ${{ always() }}
         run: npx tsc --noEmit
       - name: Lint
+        if: ${{ always() }}
         run: npm run lint
