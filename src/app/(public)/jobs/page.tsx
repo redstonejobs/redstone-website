@@ -40,16 +40,36 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   delete params.salary_max;
 
   const selectedSort = params.sort ?? "mixed";
+
+  // Mixed mode gets a stable seed for the current result set, plus a fresh
+  // seed for the next Shuffle Jobs submission. This means pagination stays
+  // stable, but pressing Shuffle Jobs actually produces a new mixture.
+  const mixSeed = params.mix_seed || crypto.randomUUID();
+  const nextMixSeed = crypto.randomUUID();
+
+  if (selectedSort !== "mixed") {
+    delete params.mix_seed;
+  }
+
   const [result, countries] = await Promise.all([
-    selectedSort === "mixed" ? getMixedPublishedJobs(params) : getPublishedJobs(params),
+    selectedSort === "mixed"
+      ? getMixedPublishedJobs(params, mixSeed)
+      : getPublishedJobs(params),
     getConfiguredCountries(),
   ]);
+
   const totalPages = Math.max(Math.ceil(result.count / result.pageSize), 1);
   const queryWithoutPage = new URLSearchParams(
     Object.entries(params).filter(
-      (entry): entry is [string, string] => entry[0] !== "page" && typeof entry[1] === "string" && entry[1] !== ""
+      (entry): entry is [string, string] =>
+        entry[0] !== "page" && typeof entry[1] === "string" && entry[1] !== ""
     )
   );
+
+  if (selectedSort === "mixed") {
+    queryWithoutPage.set("sort", "mixed");
+    queryWithoutPage.set("mix_seed", mixSeed);
+  }
 
   return (
     <>
@@ -78,10 +98,11 @@ export default async function JobsPage({ searchParams }: JobsProps) {
               </p>
             </div>
 
-            <form className="flex flex-wrap items-end gap-2" aria-label="Sort jobs">
+            <form method="get" className="flex flex-wrap items-end gap-2" aria-label="Sort jobs">
               {SORT_FILTER_KEYS.map((key) =>
                 params[key] ? <input key={key} type="hidden" name={key} value={params[key]} /> : null
               )}
+              <input type="hidden" name="mix_seed" value={nextMixSeed} />
               <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
                 Sort
                 <select
@@ -98,7 +119,7 @@ export default async function JobsPage({ searchParams }: JobsProps) {
                 </select>
               </label>
               <button className="min-h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-black text-[#071A3D] transition hover:border-[#D4AF37] hover:bg-[#fffaf0]">
-                Apply
+                {selectedSort === "mixed" ? "Shuffle Jobs" : "Apply Sort"}
               </button>
             </form>
           </div>
@@ -146,29 +167,51 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   );
 }
 
-async function getMixedPublishedJobs(params: Record<string, string | undefined>) {
-  const displayPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-  const groupStart = Math.floor((displayPage - 1) / 3) * 3 + 1;
-  const slot = (displayPage - 1) % 3;
+async function getMixedPublishedJobs(
+  params: Record<string, string | undefined>,
+  seed: string
+) {
+  const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
-  // Pull three neighboring result pages, mix all 27 jobs together, then split
-  // them back into three display pages. This prevents imported alphabetical
-  // batches from appearing together while keeping pagination stable and free
-  // from duplicates across the three-page group.
+  // First query gives us the filtered catalogue size. The source-page order is
+  // then deterministically shuffled across the entire catalogue, rather than
+  // mixing only neighboring pages that may contain similar imported titles.
+  const first = await getPublishedJobs({
+    ...params,
+    sort: "newest",
+    page: "1",
+  });
+
+  const sourcePageCount = Math.max(Math.ceil(first.count / first.pageSize), 1);
+  const displayPage = Math.min(requestedPage, sourcePageCount);
+  const sourcePageOrder = Array.from({ length: sourcePageCount }, (_, index) => index + 1).sort(
+    (a, b) => {
+      const difference =
+        stableMixScore(`${seed}:source-page:${a}`) -
+        stableMixScore(`${seed}:source-page:${b}`);
+      return difference || a - b;
+    }
+  );
+
+  const groupStartIndex = Math.floor((displayPage - 1) / 3) * 3;
+  const slot = (displayPage - 1) % 3;
+  const sourcePageNumbers = sourcePageOrder.slice(groupStartIndex, groupStartIndex + 3);
+
   const sourcePages = await Promise.all(
-    [groupStart, groupStart + 1, groupStart + 2].map((sourcePage) =>
-      getPublishedJobs({
-        ...params,
-        sort: "newest",
-        page: String(sourcePage),
-      })
+    sourcePageNumbers.map((sourcePage) =>
+      sourcePage === 1
+        ? Promise.resolve(first)
+        : getPublishedJobs({
+            ...params,
+            sort: "newest",
+            page: String(sourcePage),
+          })
     )
   );
 
-  const first = sourcePages[0];
   const mixed = mixJobs(
     sourcePages.flatMap((source) => source.jobs),
-    groupStart
+    `${seed}:display-group:${groupStartIndex}`
   );
   const from = slot * first.pageSize;
   const jobs = mixed.slice(from, from + first.pageSize);
@@ -180,11 +223,15 @@ async function getMixedPublishedJobs(params: Record<string, string | undefined>)
   };
 }
 
-function mixJobs(jobs: PublicJob[], seed: number) {
+function mixJobs(jobs: PublicJob[], seed: string) {
   return [...jobs].sort((a, b) => {
-    const aScore = stableMixScore(`${seed}:${a.id}:${a.title ?? ""}:${a.country ?? ""}`);
-    const bScore = stableMixScore(`${seed}:${b.id}:${b.title ?? ""}:${b.country ?? ""}`);
-    return aScore - bScore;
+    const aScore = stableMixScore(
+      `${seed}:${a.id}:${a.title ?? ""}:${a.country ?? ""}:${a.category ?? ""}`
+    );
+    const bScore = stableMixScore(
+      `${seed}:${b.id}:${b.title ?? ""}:${b.country ?? ""}:${b.category ?? ""}`
+    );
+    return aScore - bScore || a.id.localeCompare(b.id);
   });
 }
 
