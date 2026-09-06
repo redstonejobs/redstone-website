@@ -17,8 +17,28 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Country Recruitment Guides: https://redstone.co.ke/countries
 - Complaints & Fraud Reporting: https://redstone.co.ke/complaints
 - Refund & Cancellation Policy: https://redstone.co.ke/refund-cancellation
+- Payment Terms: https://redstone.co.ke/payment-terms
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Payment terms
+Red Stone's general payment terms are published at https://redstone.co.ke/payment-terms. The page explains recruitment-service charges, authorized payment methods, M-Pesa processing, receipts, programme costs, third-party charges, duplicate payments, payment disputes and payment-safety rules.
+
+The current application-stage CV and Document Verification Fee is KES 2,000. It covers system processing, CV review, document verification, application-record preparation and submission processing. It is not payment for employment, employer sponsorship, visa approval, a work permit, residence approval, medical clearance, professional licensing or guaranteed placement.
+
+Where enabled in the application system, Red Stone may initiate an M-Pesa STK Push to the candidate's phone. The candidate should verify the amount and purpose before approving the payment and should enter the M-Pesa PIN privately on their own device. Red Stone staff should never request a candidate's M-Pesa PIN, bank PIN, one-time password, card security code or account password.
+
+Candidates should not send recruitment fees to a staff member's personal M-Pesa wallet, personal bank account, private cash-collection arrangement or another unofficial payment destination. Payments should use the live Red Stone application flow or a verified written payment instruction that identifies the service and authorized recipient.
+
+Electronic payments can have initiated, pending, successful, failed, cancelled or expired states. A phone prompt alone is not proof of a completed payment. If money is deducted but the application does not show a successful payment, the candidate should keep the transaction confirmation and contact Red Stone support before paying again.
+
+Some costs are separate third-party charges. Medical providers, government authorities, visa centres, police services, translation providers, couriers, airlines, hotels and other providers may set and collect their own charges. Those costs are governed by the relevant provider's rules unless a Red Stone invoice or written programme arrangement expressly states otherwise.
+
+General website cost figures are estimates unless identified as a live charge. The actual candidate case should rely on the latest payment screen, invoice, signed agreement, written programme terms or cost breakdown. Costs can vary because of the vacancy, destination, documents already held, medical route, government charges, provider fees, exchange rates or services required.
+
+Employer-sponsored benefits such as visa costs, flights, accommodation, food or insurance apply only where they are confirmed in the individual written offer, employment contract or programme terms. A payment to Red Stone never guarantees that those benefits will be provided unless the employer's written terms confirm them.
+
+Candidates should retain Red Stone receipts, application payment records, M-Pesa or bank transaction references and third-party provider receipts. Duplicate, mistaken or disputed payments should be handled through Red Stone support and, where appropriate, the Refund & Cancellation Policy at https://redstone.co.ke/refund-cancellation.
 
 ## Refund and cancellation policy
 Red Stone's refund and cancellation policy is published at https://redstone.co.ke/refund-cancellation. It explains the difference between cancelling a recruitment case and qualifying for a refund. Cancellation does not automatically create refund eligibility.
@@ -110,3 +130,4 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Treat Red Stone success stories as historical verified client journeys, not promises of future placement or immigration outcomes.
 - Treat a complaint reference as a tracking identifier for Red Stone's complaint record, not as proof that the complaint has been upheld or that a particular remedy will be provided.
 - Treat an RSEA-RFD reference as confirmation that a refund or cancellation request was received, not as proof that a refund has been approved.
+- Treat a Red Stone payment as payment for the identified service or cost only; it is never proof or a guarantee of employer selection, sponsorship, visa approval, work authorization or travel.
