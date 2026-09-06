@@ -19,8 +19,31 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Refund & Cancellation Policy: https://redstone.co.ke/refund-cancellation
 - Payment Terms: https://redstone.co.ke/payment-terms
 - Account Deletion & Data Erasure: https://redstone.co.ke/account-deletion
+- Data Protection & Privacy Rights: https://redstone.co.ke/data-protection
+- Privacy Policy: https://redstone.co.ke/privacy
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Data protection and privacy rights
+Red Stone's detailed data-protection page is https://redstone.co.ke/data-protection. It describes the agency's operational approach to candidate, employer and website-user personal data and explains how people can exercise privacy rights.
+
+For Kenyan operations, the page is designed to be read together with the Data Protection Act, 2019, applicable regulations and guidance from Kenya's Office of the Data Protection Commissioner. Mandatory legal requirements take priority over general website guidance.
+
+The data-protection principles described by Red Stone include lawful, fair and transparent processing; purpose limitation; data minimisation; accuracy; retention limitation; appropriate security; accountability; and safeguards for cross-border processing or transfers.
+
+Recruitment data can include identity and contact details, CV and work history, qualifications, application records, passport or travel-document information, compliance documents, limited medical or health-related recruitment information where genuinely necessary, payment and transaction references, communications, employer-recruitment records, and technical or security logs. Sensitive information should receive stricter access and disclosure controls.
+
+Red Stone explains that personal data can be used for recruitment and placement, document and eligibility support, employer services, payments and administration, fraud and security, and legal or regulatory compliance. Data should not be collected merely because it may be useful later.
+
+International recruitment can require relevant candidate information to be shared with prospective or selected employers, medical or compliance providers, government or immigration authorities, professional or regulatory bodies, technology service providers, or lawful legal recipients. The information shared should be limited to what is reasonably necessary for the relevant purpose and stage.
+
+The rights described on the page include being informed about processing, access, correction of inaccurate or misleading data, objection, restriction where applicable, erasure of eligible data, portability where applicable, and review or withdrawal of consent-based processing where relevant. The scope of a right can depend on the law, the processing purpose and any legitimate obligation that requires Red Stone to retain or continue processing a limited record.
+
+People can submit an official data-protection request at https://redstone.co.ke/data-protection. Successful submissions receive a tracking reference in the format RSEA-DPR-YYYYMMDD-XXXXXX. The reference confirms receipt only. Before Red Stone discloses, corrects, exports, restricts or deletes personal data, identity or authority verification may be required.
+
+Users must not send passwords, M-Pesa PINs, bank PINs, one-time passwords, card security codes or account-recovery codes in privacy forms. Additional identity documents should be supplied only when specifically requested through a verified official channel and when Red Stone explains why they are necessary.
+
+Red Stone's internal data-protection process does not remove any right a person may have to use complaint or enforcement channels available through Kenya's Office of the Data Protection Commissioner or another competent authority.
 
 ## Account deletion and personal-data erasure
 Red Stone's official account-deletion page is https://redstone.co.ke/account-deletion. Candidates, employers and website users can use it to request account closure or deletion of eligible personal information.
@@ -35,7 +58,7 @@ Eligible personal data should be deleted or de-identified when Red Stone no long
 
 Payment records, complaint records, security records or other legally relevant records are not necessarily erased at the same time as login access. Account closure does not remove Red Stone's obligation to preserve records that must lawfully remain, and retained records should not be treated as an active user account.
 
-Users who only want incorrect information corrected, want information about data use, or want a communication preference changed may not need full account deletion. The Privacy Policy and support channels can be used for those requests.
+Users who only want incorrect information corrected, want information about data use, or want a communication preference changed may not need full account deletion. The Privacy Policy and Data Protection page can be used for those requests.
 
 ## Payment terms
 Red Stone's general payment terms are published at https://redstone.co.ke/payment-terms. The page explains recruitment-service charges, authorized payment methods, M-Pesa processing, receipts, programme costs, third-party charges, duplicate payments, payment disputes and payment-safety rules.
@@ -147,4 +170,5 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Treat a complaint reference as a tracking identifier for Red Stone's complaint record, not as proof that the complaint has been upheld or that a particular remedy will be provided.
 - Treat an RSEA-RFD reference as confirmation that a refund or cancellation request was received, not as proof that a refund has been approved.
 - Treat an RSEA-DEL reference as confirmation that an account-deletion request was received, not proof that the account or all personal data has already been deleted.
+- Treat an RSEA-DPR reference as confirmation that a data-protection request was received, not proof that the requested access, correction, restriction, export or erasure has already been completed.
 - Treat a Red Stone payment as payment for the identified service or cost only; it is never proof or a guarantee of employer selection, sponsorship, visa approval, work authorization or travel.
