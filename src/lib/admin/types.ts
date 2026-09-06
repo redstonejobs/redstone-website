@@ -49,7 +49,8 @@ export type Capability =
   | "staff.manage"
   | "audit.read"
   | "countries.manage"
-  | "fees.manage";
+  | "fees.manage"
+  | "payments.waive";
 
 export type CountMetric = {
   label: string;

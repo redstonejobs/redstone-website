@@ -14,8 +14,8 @@ export default function EmployerSupportPage() {
       </div>
       <section className="rounded-md border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-black text-[#071A3D]">Official Contacts</h2>
-        <p className="mt-3 text-slate-700">Employer enquiries: <a className="font-bold text-[#B8860B]" href={`mailto:${CONTACT.emails.employers}`}>{CONTACT.emails.employers}</a></p>
-        <p className="mt-2 text-slate-700">Support: <a className="font-bold text-[#B8860B]" href="mailto:support@redstone.co.ke">support@redstone.co.ke</a></p>
+        <p className="mt-3 text-slate-700">Employer enquiries: <a className="font-bold text-[#B8860B]" href={`mailto:${CONTACT.emails.jobs}`}>{CONTACT.emails.jobs}</a></p>
+        <p className="mt-2 text-slate-700">Support: <a className="font-bold text-[#B8860B]" href={`mailto:${CONTACT.emails.support}`}>{CONTACT.emails.support}</a></p>
       </section>
     </div>
   );

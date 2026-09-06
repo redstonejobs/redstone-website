@@ -15,7 +15,7 @@ export default function FraudAwarenessPage() {
           { title: "Phone Verification", body: CONTACT.phones.join(" or ") },
           { title: "Warning Signs", body: "Guaranteed visas, vague jobs, pressure to pay quickly, and requests from personal accounts are warning signs." },
           { title: "Document Safety", body: "Do not send sensitive documents to unverified contacts or social media impersonators." },
-          { title: "Report Concerns", body: `Send suspicious activity to ${CONTACT.emails.complaints}.` },
+          { title: "Report Concerns", body: `Send suspicious activity to ${CONTACT.emails.support}.` },
         ]} />
       </Band>
     </>

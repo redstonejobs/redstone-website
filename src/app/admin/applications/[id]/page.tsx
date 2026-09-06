@@ -119,6 +119,7 @@ export default async function ApplicationDetailPage({
     related,
     "assigned_staff",
   );
+  const referralStaff = nestedRow(related, "referral_staff");
 
   /*
    * Resolve names for staff assignment options so admins
@@ -379,6 +380,24 @@ export default async function ApplicationDetailPage({
               assigned,
               ["full_name"],
               "Unassigned",
+            )}
+          />
+
+          <Field
+            label="Referral Staff"
+            value={textValue(
+              referralStaff,
+              ["full_name"],
+              "Direct / Unattributed",
+            )}
+          />
+
+          <Field
+            label="Referral Code"
+            value={textValue(
+              referralStaff,
+              ["referral_code"],
+              "No staff referral",
             )}
           />
         </Panel>

@@ -1,5 +1,7 @@
 export const CANDIDATE_STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
+  ready_for_payment: "Ready for Payment",
+  payment_pending: "Payment Processing",
   submitted: "Application Submitted",
   under_review: "Under Review",
   shortlisted: "Shortlisted",
@@ -17,6 +19,8 @@ export const CANDIDATE_STATUS_LABELS: Record<string, string> = {
 
 export const WITHDRAWABLE_STATUSES = [
   "draft",
+  "ready_for_payment",
+  "payment_pending",
   "submitted",
   "under_review",
   "shortlisted",

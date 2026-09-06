@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   alternates: { canonical: canonical("/countries") },
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function CountriesPage() {
   const countries = await getCountriesWithPublishedCounts();
 

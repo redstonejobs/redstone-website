@@ -48,6 +48,21 @@ export async function countRowsSince(
   return error ? null : count ?? 0;
 }
 
+export async function countExpiringJobs(days = 14) {
+  const today = new Date();
+  const horizon = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("jobs")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "published")
+    .gte("application_deadline", today.toISOString().slice(0, 10))
+    .lte("application_deadline", horizon.toISOString().slice(0, 10));
+
+  return error ? null : count ?? 0;
+}
+
 export async function fetchRows({
   table,
   page = 1,
@@ -86,6 +101,68 @@ export async function fetchRows({
 
   const { data, count, error } = await request
     .order(orderBy, { ascending })
+    .range(from, to)
+    .returns<Row[]>();
+
+  return {
+    rows: data ?? [],
+    count: error ? null : count ?? 0,
+    error,
+    page: currentPage,
+    pageSize: PAGE_SIZE,
+  };
+}
+
+export async function fetchAdminJobs(options: {
+  page: number;
+  query?: string;
+  status?: string;
+  country?: string;
+  category?: string;
+  skillLevel?: string;
+  employer?: string;
+}) {
+  const supabase = await createClient();
+  const currentPage = Math.max(options.page, 1);
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const status = options.status;
+
+  let request = supabase
+    .from("jobs")
+    .select(
+      "id, title, country, city, category, skill_level, vacancies, status, application_deadline, published_at, updated_at, created_at, employer_id, employer:employers(company_name), applications(count)",
+      { count: "exact" }
+    );
+
+  if (options.query) {
+    const pattern = `%${options.query
+      .replaceAll("%", "")
+      .replaceAll(",", " ")}%`;
+
+    request = request.or(
+      ["title", "country", "city", "category", "skill_level", "status"]
+        .map((column) => `${column}.ilike.${pattern}`)
+        .join(",")
+    );
+  }
+
+  if (status === "expired") {
+    request = request
+      .neq("status", "archived")
+      .not("application_deadline", "is", null)
+      .lt("application_deadline", new Date().toISOString().slice(0, 10));
+  } else if (status && status !== "all") {
+    request = request.eq("status", status);
+  }
+
+  if (options.country) request = request.eq("country", options.country);
+  if (options.category) request = request.eq("category", options.category);
+  if (options.skillLevel) request = request.eq("skill_level", options.skillLevel);
+  if (options.employer) request = request.eq("employer_id", options.employer);
+
+  const { data, count, error } = await request
+    .order("updated_at", { ascending: false, nullsFirst: false })
     .range(from, to)
     .returns<Row[]>();
 
@@ -296,39 +373,27 @@ export async function fetchEmployersWithJobCounts(options: {
     };
   }
 
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, employer_id, status")
-    .in("employer_id", ids)
-    .returns<Row[]>();
-
   const counts = new Map<
     string,
     {
-      total: number;
-      published: number;
+      total: number | null;
+      published: number | null;
     }
   >();
 
-  for (const job of jobs ?? []) {
-    const employerId = String(
-      job.employer_id ?? ""
-    );
+  await Promise.all(
+    ids.map(async (employerId) => {
+      const [total, published] = await Promise.all([
+        countJobsForEmployer(supabase, employerId),
+        countJobsForEmployer(supabase, employerId, "published"),
+      ]);
 
-    const current =
-      counts.get(employerId) ?? {
-        total: 0,
-        published: 0,
-      };
-
-    current.total += 1;
-
-    if (job.status === "published") {
-      current.published += 1;
-    }
-
-    counts.set(employerId, current);
-  }
+      counts.set(employerId, {
+        total,
+        published,
+      });
+    })
+  );
 
   return {
     ...result,
@@ -343,6 +408,25 @@ export async function fetchEmployersWithJobCounts(options: {
         counts.get(String(row.id))?.published ?? 0,
     })),
   };
+}
+
+async function countJobsForEmployer(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  employerId: string,
+  status?: string
+) {
+  let request = supabase
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("employer_id", employerId);
+
+  if (status) {
+    request = request.eq("status", status);
+  }
+
+  const { count, error } = await request;
+
+  return error ? null : count ?? 0;
 }
 
 /* =========================================================
@@ -405,7 +489,7 @@ export async function attachApplicationRelations<
       ? supabase
           .from("profiles")
           .select(
-            "id, full_name, nationality, city, country, phone"
+            "id, full_name, nationality, city, country, phone, referred_by_staff_id, referral_attributed_at"
           )
           .in("id", candidateIds)
           .returns<Row[]>()
@@ -452,6 +536,22 @@ export async function attachApplicationRelations<
           data: [] as Row[],
         };
 
+  const referralStaffIds = Array.from(
+    new Set(
+      (candidates ?? [])
+        .map((candidate) => String(candidate.referred_by_staff_id ?? ""))
+        .filter(Boolean),
+    ),
+  );
+
+  const { data: referralStaff } = referralStaffIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, staff_id, referral_code")
+        .in("id", referralStaffIds)
+        .returns<Row[]>()
+    : { data: [] as Row[] };
+
   const candidateMap = mapById(
     candidates ?? []
   );
@@ -462,6 +562,10 @@ export async function attachApplicationRelations<
 
   const staffMap = mapById(
     staff ?? []
+  );
+
+  const referralStaffMap = mapById(
+    referralStaff ?? []
   );
 
   const employerMap = mapById(
@@ -475,14 +579,13 @@ export async function attachApplicationRelations<
       const job = jobMap.get(
         String(application.job_id ?? "")
       );
+      const candidate =
+        candidateMap.get(String(application.candidate_id ?? "")) ?? null;
 
       return {
         ...application,
 
-        candidate:
-          candidateMap.get(
-            String(application.candidate_id ?? "")
-          ) ?? null,
+        candidate,
 
         job: job ?? null,
 
@@ -498,6 +601,10 @@ export async function attachApplicationRelations<
               application.assigned_staff_id ?? ""
             )
           ) ?? null,
+
+        referral_staff: candidate?.referred_by_staff_id
+          ? referralStaffMap.get(String(candidate.referred_by_staff_id)) ?? null
+          : null,
       };
     }),
   };
@@ -648,6 +755,8 @@ export async function getDashboardData() {
   const [
     publishedJobs,
     draftJobs,
+    totalJobs,
+    expiringSoon,
     totalApplications,
     applicationsToday,
     candidates,
@@ -675,7 +784,12 @@ export async function getDashboardData() {
       status: "draft",
     }),
 
+    countRows("jobs"),
+
+    countExpiringJobs(14),
+
     countRows("applications"),
+
 
     countRowsSince(
       "applications",
@@ -836,6 +950,12 @@ export async function getDashboardData() {
       tone: "slate",
     },
     {
+      label: "Total Jobs",
+      value: totalJobs,
+      href: "/admin/jobs",
+      tone: "navy",
+    },
+    {
       label: "Total Applications",
       value: totalApplications,
       href: "/admin/applications",
@@ -846,6 +966,12 @@ export async function getDashboardData() {
       value: applicationsToday,
       href: "/admin/applications",
       tone: "gold",
+    },
+    {
+      label: "Expiring Soon",
+      value: expiringSoon,
+      href: "/admin/jobs?status=expired",
+      tone: "red",
     },
     {
       label: "Candidates",

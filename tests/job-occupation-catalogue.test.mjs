@@ -59,13 +59,13 @@ test("skilled and professional defaults cover poster examples", () => {
   assert.match(catalogue, /certified welder/);
 });
 
-test("admin, employer and public search surfaces use the shared occupation catalogue", () => {
+test("admin and employer forms use the shared occupation catalogue while public search stays lightweight", () => {
   assert.match(adminJobForm, /JOB_OCCUPATIONS/);
   assert.match(adminJobForm, /admin-job-occupation-options/);
   assert.match(employerVacancyForm, /JOB_OCCUPATIONS/);
   assert.match(employerVacancyForm, /employer-job-occupation-options/);
-  assert.match(publicJobSearch, /JOB_OCCUPATIONS/);
-  assert.match(publicJobSearch, /public-job-occupation-options/);
+  assert.match(publicJobSearch, /JOB_CATEGORIES/);
+  assert.doesNotMatch(publicJobSearch, /JOB_OCCUPATIONS/);
 });
 
 test("public search expands occupation keywords while returning only published jobs", () => {
@@ -76,11 +76,11 @@ test("public search expands occupation keywords while returning only published j
   assert.match(catalogue, /warehouse/);
 });
 
-test("public catalogue presentation is distinct from current vacancies", () => {
-  assert.match(publicJobsPage, /Job Categories \/ Occupations We Recruit For/);
-  assert.match(publicJobsPage, /not current vacancies/);
-  assert.match(publicJobsPage, /Apply buttons appear only on published job vacancies above/);
-  assert.doesNotMatch(publicJobsPage, /href=\{`\/apply\?\$\{occupation|Apply Now[\s\S]+JOB_OCCUPATIONS/);
+test("public jobs page shows current vacancies only and omits the occupation template catalogue", () => {
+  assert.match(publicJobsPage, /Available Jobs/);
+  assert.match(publicJobsPage, /result\.jobs\.map/);
+  assert.doesNotMatch(publicJobsPage, /JOB_OCCUPATIONS|Job Categories \/ Occupations We Recruit For/);
+  assert.doesNotMatch(publicJobsPage, /href=\{`\/apply\?\$\{occupation/);
 });
 
 test("occupation description library covers every canonical occupation", () => {
@@ -119,13 +119,12 @@ test("country-specific generated jobs can reuse occupation defaults without dupl
   assert.match(validation, /occupationContent\.occupation/);
 });
 
-test("public job detail falls back to occupation content after job-specific overrides", () => {
-  assert.match(publicJobDetail, /resolveOccupationJobContent\(job\)/);
-  assert.match(publicJobDetail, /jobContent\.description/);
-  assert.match(catalogue, /resolveText\(job\.description, occupation\?\.full_description/);
-  assert.match(catalogue, /resolveList\(job\.responsibilities, occupation\?\.responsibilities/);
-  assert.match(catalogue, /resolveList\(job\.requirements, occupation\?\.requirements/);
-  assert.match(catalogue, /if \(jobText\?\.trim\(\)\) return "job"/);
+test("public job detail uses vacancy-specific database content without loading the occupation catalogue", () => {
+  assert.match(publicJobDetail, /cleanText\(job\.description\)/);
+  assert.match(publicJobDetail, /cleanText\(job\.responsibilities\)/);
+  assert.match(publicJobDetail, /cleanText\(job\.requirements\)/);
+  assert.match(publicJobDetail, /getJobDetailContext\(job\)/);
+  assert.doesNotMatch(publicJobDetail, /resolveOccupationJobContent|occupationContentAsText|JOB_OCCUPATIONS/);
 });
 
 function occurrences(text, needle) {

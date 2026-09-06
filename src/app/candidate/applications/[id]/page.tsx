@@ -1,4 +1,6 @@
+import PaymentStatusRefresher from "./PaymentStatusRefresher";
 import Link from "next/link";
+import { DocumentUploadRows } from "@/components/candidate/DocumentUploadRows";
 import { notFound } from "next/navigation";
 
 import {
@@ -26,6 +28,7 @@ import {
   completeCandidateReferencesSection,
   completeCandidateFinancesSection,
   completeCandidateDeclarationsSection,
+  completeCandidateDocumentsSection,
   deleteCandidateAddress,
   deleteCandidateDependant,
   deleteCandidateEducation,
@@ -38,6 +41,8 @@ import {
   deleteCandidateReference,
   saveCandidatePassportInformation,
   saveCandidatePersonalInformation,
+  initiateApplicationPayment,
+  prepareApplicationPayment,
   uploadCandidateDocument,
   withdrawApplication,
 } from "@/lib/candidate/actions";
@@ -53,6 +58,10 @@ import {
 } from "@/lib/candidate/constants";
 
 import { getCandidateApplication } from "@/lib/candidate/data";
+import {
+  CV_DOCUMENT_VERIFICATION_FEE,
+  paymentConfigurationState,
+} from "@/lib/payments/config";
 import { createClient } from "@/utils/supabase/server";
 
 type Props = {
@@ -289,6 +298,7 @@ const SECTIONS = [
   },
   { key: "documents", label: "Documents" },
   { key: "review", label: "Review" },
+  { key: "payment", label: "Payment" },
 ];
 
 const LANGUAGE_LEVELS = [
@@ -302,6 +312,65 @@ const LANGUAGE_LEVELS = [
 
 function value(input: unknown) {
   return input == null ? "" : String(input);
+}
+
+function applicationStepState({
+  key,
+  currentSection,
+  applicationStatus,
+  progressStatus,
+}: {
+  key: string;
+  currentSection: string;
+  applicationStatus: string;
+  progressStatus?: string;
+}) {
+  if (
+    key === "review" &&
+    ["ready_for_payment", "payment_pending", "submitted"].includes(
+      applicationStatus
+    )
+  ) {
+    return "complete";
+  }
+
+  if (key === "payment" && applicationStatus === "submitted") {
+    return "complete";
+  }
+
+  if (key === "payment" && applicationStatus === "payment_pending") {
+    return "pending";
+  }
+
+  if (key === "payment" && applicationStatus === "ready_for_payment") {
+    return "current";
+  }
+
+  if (key === currentSection) {
+    return "current";
+  }
+
+  if (progressStatus === "complete") {
+    return "complete";
+  }
+
+  if (progressStatus === "in_progress") {
+    return "in_progress";
+  }
+
+  return "incomplete";
+}
+
+function stepStateLabel(state: string) {
+  const labels: Record<string, string> = {
+    complete: "Completed",
+    current: "Current",
+    pending: "Current, payment pending",
+    in_progress: "In progress",
+    incomplete: "Not complete",
+  };
+
+  return labels[state] ?? "Not complete";
 }
 
 function titleCase(input: string) {
@@ -370,13 +439,29 @@ export default async function CandidateApplicationDetailPage({
 
   const query = (await searchParams) ?? {};
 
+  const requestedSection =
+    typeof query.section === "string"
+      ? query.section
+      : "personal";
+
+  const section = SECTIONS.some(
+    (item) => item.key === requestedSection,
+  )
+    ? requestedSection
+    : "personal";
+
   const context = await requireCandidate();
 
   const {
     application,
     documents,
+    payments,
     timeline,
-  } = await getCandidateApplication(context, id);
+  } = await getCandidateApplication(context, id, {
+    includeDocuments: section === "documents",
+    includePayments: section === "payment",
+    includeTimeline: true,
+  });
 
   if (!application) {
     notFound();
@@ -384,312 +469,183 @@ export default async function CandidateApplicationDetailPage({
 
   const supabase = await createClient();
 
-  const [
-    { data: immigrationProfile },
-    { data: progressRows },
-    { data: addressRows },
-    { data: dependantRows },
-    { data: educationRows },
-    { data: employmentRows },
-    { data: languageRows },
-    { data: licenseRows },
-    { data: travelRows },
-    { data: visaRows },
-    { data: emergencyContactRows },
-    { data: referenceRows },
-    { data: financialInformation },
-    { data: immigrationDeclarations },
-  ] = await Promise.all([
-    supabase
-      .from(
-        "application_immigration_profiles",
-      )
-      .select("*")
-      .eq("application_id", id)
-      .maybeSingle<ImmigrationProfile>(),
+  // Keep each wizard request small on Cloudflare. Only progress plus the
+  // currently visible section is loaded. The previous implementation fetched
+  // every immigration table on every click, which could exceed Worker CPU.
+  const needsImmigrationProfile = ["personal", "passport", "family"].includes(section);
 
+  const [{ data: progressRows }, { data: immigrationProfile }] = await Promise.all([
     supabase
-      .from(
-        "application_section_progress",
-      )
+      .from("application_section_progress")
       .select("section_key, status")
       .eq("application_id", id)
       .returns<ProgressRow[]>(),
-
-    supabase
-      .from("application_addresses")
-      .select(
-        `
-        id,
-        address_type,
-        address_line_1,
-        address_line_2,
-        city,
-        state_province,
-        postal_code,
-        country,
-        from_date,
-        to_date,
-        is_current
-        `,
-      )
-      .eq("application_id", id)
-      .order("is_current", {
-        ascending: false,
-      })
-      .order("from_date", {
-        ascending: false,
-      })
-      .returns<AddressRow[]>(),
-
-    supabase
-      .from("application_dependants")
-      .select(
-        `
-        id,
-        full_name,
-        relationship,
-        date_of_birth,
-        nationality,
-        country_of_residence,
-        passport_number,
-        accompanying_applicant,
-        visa_required
-        `,
-      )
-      .eq("application_id", id)
-      .order("created_at", {
-        ascending: true,
-      })
-      .returns<DependantRow[]>(),
-
-    supabase
-      .from(
-        "application_education_history",
-      )
-      .select(
-        `
-        id,
-        institution_name,
-        country,
-        qualification,
-        field_of_study,
-        start_date,
-        end_date,
-        completed,
-        graduation_date,
-        certificate_available
-        `,
-      )
-      .eq("application_id", id)
-      .order("start_date", {
-        ascending: false,
-      })
-      .returns<EducationRow[]>(),
-
-    supabase
-      .from(
-        "application_employment_history",
-      )
-      .select(
-        `
-        id,
-        employer_name,
-        job_title,
-        country,
-        city,
-        start_date,
-        end_date,
-        is_current,
-        duties,
-        reason_for_leaving,
-        supervisor_name,
-        supervisor_contact,
-        reference_permission
-        `,
-      )
-      .eq("application_id", id)
-      .order("is_current", {
-        ascending: false,
-      })
-      .order("start_date", {
-        ascending: false,
-      })
-      .returns<EmploymentRow[]>(),
-
-    supabase
-      .from("application_languages")
-      .select(
-        `
-        id,
-        language,
-        speaking_level,
-        reading_level,
-        writing_level,
-        listening_level,
-        test_name,
-        test_score,
-        test_date
-        `,
-      )
-      .eq("application_id", id)
-      .order("created_at", {
-        ascending: true,
-      })
-      .returns<LanguageRow[]>(),
-
-    supabase
-      .from(
-        "application_professional_licenses",
-      )
-      .select(
-        `
-        id,
-        license_name,
-        issuing_authority,
-        license_number,
-        country,
-        issue_date,
-        expiry_date
-        `,
-      )
-      .eq("application_id", id)
-      .order("issue_date", {
-        ascending: false,
-      })
-      .returns<LicenseRow[]>(),
-
-    supabase
-      .from("application_travel_history")
-      .select(
-        `
-        id,
-        country,
-        purpose,
-        arrival_date,
-        departure_date,
-        visa_type
-        `,
-      )
-      .eq("application_id", id)
-      .order("arrival_date", {
-        ascending: false,
-      })
-      .returns<TravelRow[]>(),
-    supabase
-      .from("application_visa_history")
-      .select(
-        `
-        id,
-        country,
-        visa_type,
-        application_date,
-        decision,
-        decision_date,
-        visa_number,
-        valid_from,
-        valid_until,
-        refusal_reason
-        `,
-      )
-      .eq("application_id", id)
-      .order("application_date", {
-        ascending: false,
-      })
-      .returns<VisaRow[]>(),
-    supabase
-      .from("application_emergency_contacts")
-      .select(
-        `
-        id,
-        full_name,
-        relationship,
-        phone,
-        alternate_phone,
-        email,
-        city,
-        country
-        `,
-      )
-      .eq("application_id", id)
-      .order("created_at", {
-        ascending: true,
-      })
-      .returns<EmergencyContactRow[]>(),
-    supabase
-      .from("application_references")
-      .select(
-        `
-        id,
-        full_name,
-        relationship,
-        organisation,
-        job_title,
-        phone,
-        email,
-        country,
-        can_contact
-        `,
-      )
-      .eq("application_id", id)
-      .order("created_at", {
-        ascending: true,
-      })
-      .returns<ReferenceRow[]>(),
-    supabase
-      .from("application_financial_information")
-      .select(
-        `
-        application_id,
-        funding_source,
-        sponsor_name,
-        sponsor_relationship,
-        currency,
-        available_funds,
-        monthly_income,
-        proof_of_funds_available,
-        employer_sponsorship_expected,
-        employer_covers_visa,
-        employer_covers_flight,
-        employer_covers_accommodation,
-        employer_covers_medical,
-        financial_notes
-        `,
-      )
-      .eq("application_id", id)
-      .maybeSingle<FinancialInformationRow>(),
-    supabase
-      .from("application_immigration_declarations")
-      .select(
-        `
-        application_id,
-        previous_visa_refusal,
-        previous_visa_refusal_details,
-        previous_overstay,
-        previous_overstay_details,
-        previous_deportation_or_removal,
-        previous_deportation_details,
-        immigration_violation,
-        immigration_violation_details,
-        criminal_charge_or_conviction,
-        criminal_details,
-        military_service,
-        military_service_details,
-        government_service,
-        government_service_details,
-        medical_disclosure_required,
-        medical_disclosure_details,
-        consent_to_data_processing,
-        consent_to_employer_sharing,
-        consent_to_authority_sharing,
-        certify_true_and_complete,
-        declaration_signed_name,
-        declaration_signed_at
-        `,
-      )
-      .eq("application_id", id)
-      .maybeSingle<ImmigrationDeclarationsRow>(),
+    needsImmigrationProfile
+      ? supabase
+          .from("application_immigration_profiles")
+          .select("*")
+          .eq("application_id", id)
+          .maybeSingle<ImmigrationProfile>()
+      : Promise.resolve({ data: null as ImmigrationProfile | null }),
   ]);
+
+  let addressRows: AddressRow[] = [];
+  let dependantRows: DependantRow[] = [];
+  let educationRows: EducationRow[] = [];
+  let employmentRows: EmploymentRow[] = [];
+  let languageRows: LanguageRow[] = [];
+  let licenseRows: LicenseRow[] = [];
+  let travelRows: TravelRow[] = [];
+  let visaRows: VisaRow[] = [];
+  let emergencyContactRows: EmergencyContactRow[] = [];
+  let referenceRows: ReferenceRow[] = [];
+  let financialInformation: FinancialInformationRow | null = null;
+  let immigrationDeclarations: ImmigrationDeclarationsRow | null = null;
+
+  switch (section) {
+    case "addresses": {
+      const { data } = await supabase
+        .from("application_addresses")
+        .select(
+          "id, address_type, address_line_1, address_line_2, city, state_province, postal_code, country, from_date, to_date, is_current"
+        )
+        .eq("application_id", id)
+        .order("is_current", { ascending: false })
+        .order("from_date", { ascending: false })
+        .returns<AddressRow[]>();
+      addressRows = data ?? [];
+      break;
+    }
+    case "family": {
+      const { data } = await supabase
+        .from("application_dependants")
+        .select(
+          "id, full_name, relationship, date_of_birth, nationality, country_of_residence, passport_number, accompanying_applicant, visa_required"
+        )
+        .eq("application_id", id)
+        .order("created_at", { ascending: true })
+        .returns<DependantRow[]>();
+      dependantRows = data ?? [];
+      break;
+    }
+    case "education": {
+      const { data } = await supabase
+        .from("application_education_history")
+        .select(
+          "id, institution_name, country, qualification, field_of_study, start_date, end_date, completed, graduation_date, certificate_available"
+        )
+        .eq("application_id", id)
+        .order("start_date", { ascending: false })
+        .returns<EducationRow[]>();
+      educationRows = data ?? [];
+      break;
+    }
+    case "employment": {
+      const { data } = await supabase
+        .from("application_employment_history")
+        .select(
+          "id, employer_name, job_title, country, city, start_date, end_date, is_current, duties, reason_for_leaving, supervisor_name, supervisor_contact, reference_permission"
+        )
+        .eq("application_id", id)
+        .order("is_current", { ascending: false })
+        .order("start_date", { ascending: false })
+        .returns<EmploymentRow[]>();
+      employmentRows = data ?? [];
+      break;
+    }
+    case "languages": {
+      const { data } = await supabase
+        .from("application_languages")
+        .select(
+          "id, language, speaking_level, reading_level, writing_level, listening_level, test_name, test_score, test_date"
+        )
+        .eq("application_id", id)
+        .order("created_at", { ascending: true })
+        .returns<LanguageRow[]>();
+      languageRows = data ?? [];
+      break;
+    }
+    case "licenses": {
+      const { data } = await supabase
+        .from("application_professional_licenses")
+        .select(
+          "id, license_name, issuing_authority, license_number, country, issue_date, expiry_date"
+        )
+        .eq("application_id", id)
+        .order("issue_date", { ascending: false })
+        .returns<LicenseRow[]>();
+      licenseRows = data ?? [];
+      break;
+    }
+    case "travel": {
+      const { data } = await supabase
+        .from("application_travel_history")
+        .select("id, country, purpose, arrival_date, departure_date, visa_type")
+        .eq("application_id", id)
+        .order("arrival_date", { ascending: false })
+        .returns<TravelRow[]>();
+      travelRows = data ?? [];
+      break;
+    }
+    case "visas": {
+      const { data } = await supabase
+        .from("application_visa_history")
+        .select(
+          "id, country, visa_type, application_date, decision, decision_date, visa_number, valid_from, valid_until, refusal_reason"
+        )
+        .eq("application_id", id)
+        .order("application_date", { ascending: false })
+        .returns<VisaRow[]>();
+      visaRows = data ?? [];
+      break;
+    }
+    case "emergency": {
+      const { data } = await supabase
+        .from("application_emergency_contacts")
+        .select(
+          "id, full_name, relationship, phone, alternate_phone, email, city, country"
+        )
+        .eq("application_id", id)
+        .order("created_at", { ascending: true })
+        .returns<EmergencyContactRow[]>();
+      emergencyContactRows = data ?? [];
+      break;
+    }
+    case "references": {
+      const { data } = await supabase
+        .from("application_references")
+        .select(
+          "id, full_name, relationship, organisation, job_title, phone, email, country, can_contact"
+        )
+        .eq("application_id", id)
+        .order("created_at", { ascending: true })
+        .returns<ReferenceRow[]>();
+      referenceRows = data ?? [];
+      break;
+    }
+    case "finances": {
+      const { data } = await supabase
+        .from("application_financial_information")
+        .select(
+          "application_id, funding_source, sponsor_name, sponsor_relationship, currency, available_funds, monthly_income, proof_of_funds_available, employer_sponsorship_expected, employer_covers_visa, employer_covers_flight, employer_covers_accommodation, employer_covers_medical, financial_notes"
+        )
+        .eq("application_id", id)
+        .maybeSingle<FinancialInformationRow>();
+      financialInformation = data ?? null;
+      break;
+    }
+    case "declarations": {
+      const { data } = await supabase
+        .from("application_immigration_declarations")
+        .select(
+          "application_id, previous_visa_refusal, previous_visa_refusal_details, previous_overstay, previous_overstay_details, previous_deportation_or_removal, previous_deportation_details, immigration_violation, immigration_violation_details, criminal_charge_or_conviction, criminal_details, military_service, military_service_details, government_service, government_service_details, medical_disclosure_required, medical_disclosure_details, consent_to_data_processing, consent_to_employer_sharing, consent_to_authority_sharing, certify_true_and_complete, declaration_signed_name, declaration_signed_at"
+        )
+        .eq("application_id", id)
+        .maybeSingle<ImmigrationDeclarationsRow>();
+      immigrationDeclarations = data ?? null;
+      break;
+    }
+  }
 
   const profile = immigrationProfile ?? {};
 
@@ -705,28 +661,29 @@ export default async function CandidateApplicationDetailPage({
   const references = referenceRows ?? [];
   const finances = financialInformation ?? null;
   const declarations = immigrationDeclarations ?? null;
+  const paymentRows = payments ?? [];
+  const activePayment = paymentRows.find((payment) =>
+    ["initiated", "pending"].includes(String(payment.status ?? ""))
+  );
+  const paidPayment = paymentRows.find(
+    (payment) => String(payment.status ?? "") === "paid"
+  );
+  const latestPayment = paymentRows[0] ?? null;
+  const paymentState = paymentConfigurationState();
   const progressMap = new Map(
     (progressRows ?? []).map((row) => [
       row.section_key,
       row.status,
     ]),
   );
-
-  const requestedSection =
-    typeof query.section === "string"
-      ? query.section
-      : "personal";
-
-  const section = SECTIONS.some(
-    (item) =>
-      item.key === requestedSection,
-  )
-    ? requestedSection
-    : "personal";
-
   const saved =
     typeof query.saved === "string"
       ? query.saved
+      : "";
+
+  const sectionError =
+    typeof query.error === "string"
+      ? query.error
       : "";
 
   const job =
@@ -738,6 +695,7 @@ export default async function CandidateApplicationDetailPage({
   const status = String(
     application.status ?? "draft",
   );
+  const applicationStatus = status.toLowerCase();
 
   const editable = ![
     "withdrawn",
@@ -788,11 +746,11 @@ export default async function CandidateApplicationDetailPage({
 
   return (
     <div className="space-y-7">
-      <Link
+      <Link prefetch={false}
         href="/candidate/applications"
         className="inline-flex items-center gap-2 text-sm font-bold text-[#071A3D] transition hover:text-[#B8860B]"
       >
-        ← My Applications
+        ÃƒÂ¢Ã¢â‚¬Â Ã‚Â My Applications
       </Link>
 
       {/* HERO */}
@@ -904,23 +862,30 @@ export default async function CandidateApplicationDetailPage({
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex gap-2 overflow-x-auto pb-1">
           {SECTIONS.map((item) => {
-            const active =
-              section === item.key;
+            const stepState = applicationStepState({
+              key: item.key,
+              currentSection: section,
+              applicationStatus,
+              progressStatus: progressMap.get(item.key),
+            });
 
-            const complete =
-              progressMap.get(item.key) ===
-              "complete";
+            const current =
+              stepState === "current" ||
+              stepState === "pending";
 
-            const inProgress =
-              progressMap.get(item.key) ===
-              "in_progress";
+            const complete = stepState === "complete";
+
+            const inProgress = stepState === "in_progress";
 
             return (
               <Link
                 key={item.key}
+                prefetch={false}
                 href={`/candidate/applications/${id}?section=${item.key}`}
+                aria-current={current ? "step" : undefined}
+                aria-label={`${item.label}: ${stepStateLabel(stepState)}`}
                 className={`whitespace-nowrap rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
-                  active
+                  current
                     ? "border-[#071A3D] bg-[#071A3D] text-white"
                     : complete
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -929,14 +894,30 @@ export default async function CandidateApplicationDetailPage({
                         : "border-slate-200 bg-white text-slate-600 hover:border-[#D4AF37]"
                 }`}
               >
-                {complete ? "✓ " : ""}
+                {complete ? "\u2713 " : ""}
                 {item.label}
+                {stepState === "pending" ? (
+                  <span className="ml-1 text-xs font-black uppercase text-[#F2D675]">
+                    Pending
+                  </span>
+                ) : null}
+                <span className="sr-only"> {stepStateLabel(stepState)}</span>
               </Link>
             );
           })}
         </div>
       </section>
 
+      {sectionError ? (
+        <section className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-black text-red-800">
+            Please check this section before continuing.
+          </p>
+          <p className="mt-1 text-sm text-red-700">
+            {sectionError}
+          </p>
+        </section>
+      ) : null}
       {/* PERSONAL */}
       {section === "personal" ? (
         <SectionPanel
@@ -1277,7 +1258,7 @@ export default async function CandidateApplicationDetailPage({
                       {dateText(
                         address.from_date,
                       )}{" "}
-                      →{" "}
+                      ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢{" "}
                       {address.is_current
                         ? "Present"
                         : dateText(
@@ -3400,7 +3381,7 @@ export default async function CandidateApplicationDetailPage({
                       <p className="mt-2 text-sm font-semibold text-slate-700">
                         {[reference.job_title, reference.organisation]
                           .filter(Boolean)
-                          .join(" — ")}
+                          .join(" ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ")}
                       </p>
                     ) : null}
 
@@ -3652,6 +3633,7 @@ export default async function CandidateApplicationDetailPage({
                 name="available_funds"
                 type="number"
                 min="0"
+                max="999999999999.99"
                 step="0.01"
                 defaultValue={String(finances?.available_funds ?? "")}
               />
@@ -3661,6 +3643,7 @@ export default async function CandidateApplicationDetailPage({
                 name="monthly_income"
                 type="number"
                 min="0"
+                max="999999999999.99"
                 step="0.01"
                 defaultValue={String(finances?.monthly_income ?? "")}
               />
@@ -3994,46 +3977,11 @@ export default async function CandidateApplicationDetailPage({
             title="Only upload genuine documents"
             text="Required documents vary according to the destination, employer and immigration program."
           />
-
-          <form
-            action={uploadCandidateDocument.bind(
-              null,
-              id,
-            )}
-            className="grid gap-3 rounded-2xl bg-slate-50 p-4 lg:grid-cols-[240px_1fr_auto]"
-          >
-            <select
-              name="document_type"
-              className="min-h-12 rounded-xl border border-slate-300 bg-white px-3"
-            >
-              {DOCUMENT_TYPES.map(
-                (type) => (
-                  <option
-                    key={type}
-                    value={type}
-                  >
-                    {titleCase(type)}
-                  </option>
-                ),
-              )}
-            </select>
-
-            <input
-              name="file"
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-              required
-              className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 py-2"
-            />
-
-            <button
-              type="submit"
-              disabled={!editable}
-              className="rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-black text-white disabled:bg-slate-400"
-            >
-              Upload Document
-            </button>
-          </form>
+          <DocumentUploadRows
+            action={uploadCandidateDocument.bind(null, id)}
+            documentTypes={[...DOCUMENT_TYPES]}
+            disabled={!editable}
+          />
 
           <div className="space-y-3">
             {documents.map(
@@ -4073,7 +4021,7 @@ export default async function CandidateApplicationDetailPage({
                     ) : null}
                   </div>
 
-                  <Link
+                  <Link prefetch={false}
                     href={`/candidate/documents/${String(
                       document.id,
                     )}/view`}
@@ -4092,7 +4040,22 @@ export default async function CandidateApplicationDetailPage({
               />
             ) : null}
           </div>
-        </SectionPanel>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600">
+            Add one row for each document type. You can upload up to 10 documents in one batch. After uploading, the documents will remain listed here and you can add more documents if needed.
+          </div>
+
+          <CompletionBox
+            title="Finished uploading documents?"
+            text="Upload all supporting documents you want included with this application, then mark this section complete and continue to Final Review."
+          >
+            <form action={completeCandidateDocumentsSection.bind(null, id)}>
+              <SaveButton
+                label="Complete Documents & Continue to Review"
+                disabled={!editable}
+              />
+            </form>
+          </CompletionBox>        </SectionPanel>
       ) : null}
 
       {/* REVIEW */}
@@ -4108,6 +4071,7 @@ export default async function CandidateApplicationDetailPage({
 
           <div className="grid gap-3 md:grid-cols-2">
             {SECTIONS.filter((item) => item.key !== "review").map((item) => {
+              if (item.key === "payment") return null;
               const progress = (progressRows ?? []).find(
                 (row) => row.section_key === item.key,
               );
@@ -4137,7 +4101,7 @@ export default async function CandidateApplicationDetailPage({
                     </span>
                   </div>
 
-                  <Link
+                  <Link prefetch={false}
                     href={`/candidate/applications/${id}?section=${item.key}`}
                     className="mt-4 inline-flex text-sm font-bold text-[#B8860B]"
                   >
@@ -4157,7 +4121,136 @@ export default async function CandidateApplicationDetailPage({
               declaration and document information is accurate and current before
               relying on this application record for recruitment processing.
             </p>
+            <form
+              action={prepareApplicationPayment.bind(null, id)}
+              className="mt-5"
+            >
+              <button className="rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-black text-white">
+                Continue to Verification Fee
+              </button>
+            </form>
           </div>
+        </SectionPanel>
+      ) : null}
+
+      {/* PAYMENT */}
+      {section === "payment" ? (
+        <SectionPanel
+          title={CV_DOCUMENT_VERIFICATION_FEE.displayName}
+          subtitle="Payment is required only at final submission and is verified server-side."
+        >
+          <PaymentStatusRefresher
+            active={
+              Boolean(activePayment) ||
+              (Boolean(paidPayment) &&
+                ["draft", "ready_for_payment", "payment_pending"].includes(
+                  String(status)
+                ))
+            }
+          />
+          <Notice
+            title={paymentState.paymentsEnabled ? "Secure M-Pesa Payment" : "Payment service is being configured"}
+            text={
+              paymentState.paymentsEnabled
+                ? "Enter your M-Pesa phone number to receive a secure STK Push request."
+                : "Payment collection is not enabled yet. No real M-Pesa STK Push will be sent from this environment."
+            }
+          />
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Detail
+              label="Purpose"
+              value={CV_DOCUMENT_VERIFICATION_FEE.displayName}
+            />
+            <Detail
+              label="Amount"
+              value={`${CV_DOCUMENT_VERIFICATION_FEE.currency} ${CV_DOCUMENT_VERIFICATION_FEE.amount.toLocaleString("en-KE")}`}
+            />
+            <Detail
+              label="Application Stage"
+              value={candidateStatusLabel(status)}
+            />
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <p className="text-sm leading-6 text-slate-700">
+              {CV_DOCUMENT_VERIFICATION_FEE.description}
+            </p>
+          </div>
+
+          {paidPayment ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <p className="text-sm font-black text-emerald-800">
+                Payment received and application submitted
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <Detail
+                  label="Receipt Number"
+                  value={value(paidPayment.receipt_number) || "Receipt pending"}
+                />
+                <Detail
+                  label="M-Pesa Receipt"
+                  value={value(paidPayment.provider_receipt) || "Provider receipt pending"}
+                />
+                <Detail
+                  label="Paid At"
+                  value={dateText(paidPayment.paid_at)}
+                />
+                <Detail
+                  label="Reference"
+                  value={value(paidPayment.internal_reference)}
+                />
+              </div>
+            </div>
+          ) : (
+            <form
+              action={initiateApplicationPayment.bind(null, id)}
+              className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5"
+            >
+              {activePayment ? (
+                <Notice
+                  title="Payment request already prepared"
+                  text={`Reference ${value(activePayment.internal_reference)} is ${value(activePayment.status)}. Repeated Pay clicks reuse active requests instead of creating uncontrolled charges.`}
+                />
+              ) : null}
+              {latestPayment && !activePayment ? (
+                <Notice
+                  title="Latest payment attempt"
+                  text={`Reference ${value(latestPayment.internal_reference)} is ${value(latestPayment.status)}. You may retry after failed, cancelled or expired attempts.`}
+                />
+              ) : null}
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                M-Pesa Phone Number
+                <input
+                  name="mpesa_phone"
+                  defaultValue={context.profile.phone ?? ""}
+                  placeholder="07XXXXXXXX"
+                  required
+                  className="min-h-11 rounded-xl border border-slate-300 px-4 font-normal"
+                />
+              </label>
+              <label className="flex items-start gap-3 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  name="fee_acknowledgement"
+                  value="yes"
+                  required
+                  className="mt-1 h-4 w-4 accent-[#D4AF37]"
+                />
+                <span>
+                  I understand this is a CV and document verification fee, not
+                  payment for employment, sponsorship, visa approval or
+                  guaranteed placement.
+                </span>
+              </label>
+              <button
+                disabled={!paymentState.paymentsEnabled}
+                className="w-fit rounded-xl bg-[#D4AF37] px-5 py-3 text-sm font-black text-[#071A3D] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+              >
+                Pay & Submit
+              </button>
+            </form>
+          )}
         </SectionPanel>
       ) : null}
 
@@ -4178,6 +4271,7 @@ export default async function CandidateApplicationDetailPage({
         "finances",
         "declarations",
         "documents",
+        "payment",
       ].includes(section) ? (
         <SectionPanel
           title={
@@ -4398,6 +4492,7 @@ function Input({
   placeholder,
   required = false,
   min,
+  max,
   step,
 }: {
   label: string;
@@ -4407,6 +4502,7 @@ function Input({
   placeholder?: string;
   required?: boolean;
   min?: string;
+  max?: string;
   step?: string;
 }) {
   return (
@@ -4428,6 +4524,7 @@ function Input({
         placeholder={placeholder}
         required={required}
         min={min}
+        max={max}
         step={step}
         className="min-h-12 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal outline-none transition focus:border-[#071A3D] focus:ring-2 focus:ring-[#071A3D]/10"
       />

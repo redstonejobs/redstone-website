@@ -9,7 +9,9 @@ export function CountryCard({ country }: { country: Country }) {
       <h3 className="mt-2 text-xl font-black text-[#071A3D]">{country.name}</h3>
       <p className="mt-3 text-sm leading-6 text-slate-600">{country.shortDescription}</p>
       <dl className="mt-4 grid gap-2 text-sm text-slate-700">
-        <div><dt className="font-bold">Published Jobs</dt><dd>{country.publishedJobCount ?? 0}</dd></div>
+        {typeof country.publishedJobCount === "number" ? (
+          <div><dt className="font-bold">Published Jobs</dt><dd>{country.publishedJobCount}</dd></div>
+        ) : null}
         <div><dt className="font-bold">{country.feeLabel}</dt><dd>{formatMoney(country.baseRecruitmentFee, country.feeCurrency)}</dd></div>
         <div><dt className="font-bold">Estimated Processing Time</dt><dd>{processing(country)}</dd></div>
       </dl>

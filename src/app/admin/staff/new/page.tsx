@@ -660,7 +660,7 @@ export default async function CreateStaffPage() {
 
               <p className="mt-2 max-w-4xl text-sm leading-6 text-blue-800">
                 A company mailbox such as
-                firstname.lastname@redstoneagency.co.ke can be assigned
+                hr@redstone.co.ke can be assigned
                 separately after the employee record is created. The
                 employee&apos;s accessible contact email above is used for
                 secure initial account activation.

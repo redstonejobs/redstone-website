@@ -1,7 +1,23 @@
 import type { MetadataRoute } from "next";
+import {
+  getPublishedJobSitemapCount,
+  getPublishedJobSitemapShardCount,
+} from "@/lib/public/jobs";
 import { SITE_URL } from "@/lib/public/site";
 
-export default function robots(): MetadataRoute.Robots {
+export const dynamic = "force-dynamic";
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const jobCount = await getPublishedJobSitemapCount();
+  const jobShardCount = getPublishedJobSitemapShardCount(jobCount);
+  const sitemaps = [
+    `${SITE_URL}/sitemap.xml`,
+    ...Array.from(
+      { length: jobShardCount },
+      (_, id) => `${SITE_URL}/sitemap/${id}.xml`
+    ),
+  ];
+
   return {
     rules: [
       {
@@ -10,7 +26,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin/", "/auth/", "/login"],
       },
     ],
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: sitemaps,
   };
 }
 

@@ -47,6 +47,8 @@ function statusStyle(status: string) {
 
   if (
     [
+      "ready_for_payment",
+      "payment_pending",
       "processing",
       "under_review",
       "reviewing",
@@ -73,6 +75,12 @@ function estimatedProgress(status: string) {
   switch (status.toLowerCase()) {
     case "draft":
       return 15;
+
+    case "ready_for_payment":
+      return 70;
+
+    case "payment_pending":
+      return 80;
 
     case "submitted":
       return 30;
@@ -294,6 +302,7 @@ export default async function CandidateApplicationsPage({
             return (
               <Link
                 key={item.key}
+                prefetch={false}
                 href={`/candidate/applications?filter=${item.key}`}
                 className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
                   selected
@@ -328,6 +337,18 @@ export default async function CandidateApplicationsPage({
 
           const progress =
             estimatedProgress(status);
+          const applicationHref = ["ready_for_payment", "payment_pending"].includes(
+            status.toLowerCase(),
+          )
+            ? `/candidate/applications/${id}?section=payment`
+            : `/candidate/applications/${id}`;
+          const actionLabel = status.toLowerCase() === "draft"
+            ? "Continue Application"
+            : ["ready_for_payment", "payment_pending"].includes(
+                  status.toLowerCase(),
+                )
+              ? "Pay & Submit"
+              : "Open Application";
 
           const title = String(
             job?.title ?? "Employment Application",
@@ -390,10 +411,11 @@ export default async function CandidateApplicationsPage({
 
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
                     <Link
-                      href={`/candidate/applications/${id}`}
+                      prefetch={false}
+                      href={applicationHref}
                       className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#071A3D] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#0B2859]"
                     >
-                      Open Application
+                      {actionLabel}
                     </Link>
                   </div>
                 </div>

@@ -77,6 +77,8 @@ const countrySeeds: CountrySeed[] = [
 
 export const COUNTRIES: Country[] = countrySeeds.map(enrichCountry);
 
+const COUNTRY_COUNT_CONCURRENCY = 6;
+
 export async function getConfiguredCountries() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -101,24 +103,45 @@ export async function getConfiguredCountry(slug: string) {
 export async function getCountriesWithPublishedCounts() {
   const supabase = await createClient();
   const countries = await getConfiguredCountries();
-  const { data } = await supabase
-    .from("jobs")
-    .select("country")
-    .eq("status", "published")
-    .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
-    .or("vacancies.is.null,vacancies.gt.0")
-    .returns<Row[]>();
-  const counts = new Map<string, number>();
+  const result: Country[] = [];
 
-  for (const row of data ?? []) {
-    const country = normalizeCountryName(String(row.country ?? ""));
-    counts.set(country, (counts.get(country) ?? 0) + 1);
+  // Count in the database instead of downloading every published job into the
+  // Worker. Small batches cap concurrent subrequests while keeping memory/CPU
+  // predictable on Cloudflare.
+  for (let index = 0; index < countries.length; index += COUNTRY_COUNT_CONCURRENCY) {
+    const batch = countries.slice(index, index + COUNTRY_COUNT_CONCURRENCY);
+    const counted = await Promise.all(
+      batch.map(async (country) => {
+        const values = [...new Set([
+          country.name,
+          country.countryName,
+          country.countryCode,
+          ...country.aliases,
+        ].map((value) => value.trim()).filter(Boolean))];
+
+        let query = supabase
+          .from("jobs")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "published")
+          .or(`application_deadline.is.null,application_deadline.gte.${todayDate()}`)
+          .or("vacancies.is.null,vacancies.gt.0");
+
+        if (values.length === 1) query = query.eq("country", values[0]);
+        else query = query.in("country", values);
+
+        const { count, error } = await query;
+
+        return {
+          ...country,
+          publishedJobCount: error ? 0 : count ?? 0,
+        };
+      })
+    );
+
+    result.push(...counted);
   }
 
-  return countries.map((country) => ({
-    ...country,
-    publishedJobCount: counts.get(normalizeCountryName(country.name)) ?? 0,
-  }));
+  return result;
 }
 
 export function getCountry(slug: string) {

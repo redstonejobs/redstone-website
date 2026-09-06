@@ -14,10 +14,8 @@ export default function ContactPage() {
           <div>
             <InfoGrid items={[
               { title: "Phone", body: CONTACT.phones.join(" / ") },
-              { title: "Jobs", body: CONTACT.emails.jobs },
-              { title: "Employers", body: CONTACT.emails.employers },
-              { title: "Support", body: CONTACT.emails.support },
-              { title: "Complaints", body: CONTACT.emails.complaints },
+              { title: "Jobs and Employers", body: CONTACT.emails.jobs },
+              { title: "Support and Complaints", body: CONTACT.emails.support },
               { title: "General", body: CONTACT.emails.general },
             ]} />
           </div>

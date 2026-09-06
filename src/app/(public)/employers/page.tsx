@@ -34,7 +34,7 @@ export default function EmployersPage() {
         <div id="employer-form" className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
             <h2 className="text-3xl font-black text-[#071A3D]">Contact Recruitment Team</h2>
-            <p className="mt-4 text-slate-600">Email: <a className="font-bold text-[#071A3D]" href={`mailto:${CONTACT.emails.employers}`}>{CONTACT.emails.employers}</a></p>
+            <p className="mt-4 text-slate-600">Email: <a className="font-bold text-[#071A3D]" href={`mailto:${CONTACT.emails.jobs}`}>{CONTACT.emails.jobs}</a></p>
           </div>
           <ContactForm type="employer" />
         </div>
