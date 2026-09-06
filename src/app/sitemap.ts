@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { BLOG_POSTS } from "@/lib/public/blog";
+import { getBlogSitemapEntries } from "@/lib/public/blog";
 import { COUNTRIES } from "@/lib/public/countries";
 import { FAQ_CATEGORIES } from "@/lib/public/faq-library";
 import {
@@ -72,7 +72,10 @@ export default async function sitemap({
 } = {}): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const isJobShard = typeof id === "number";
-  const jobs = isJobShard ? await getPublishedJobSitemapEntries(id) : [];
+  const [jobs, blogPosts] = await Promise.all([
+    isJobShard ? getPublishedJobSitemapEntries(id) : Promise.resolve([]),
+    isJobShard ? Promise.resolve([]) : getBlogSitemapEntries(),
+  ]);
 
   return [
     ...(isJobShard
@@ -110,12 +113,10 @@ export default async function sitemap({
           lastModified: now,
         }))),
 
-    ...(isJobShard
-      ? []
-      : BLOG_POSTS.map((post) => ({
-          url: `${SITE_URL}/blog/${post.slug}`,
-          lastModified: safeDate(post.date, now),
-        }))),
+    ...blogPosts.map((post) => ({
+      url: `${SITE_URL}/blog/${post.slug}`,
+      lastModified: firstValidDate([post.updatedAt, post.publishedAt], now),
+    })),
 
     ...jobs.map((job) => ({
       url: `${SITE_URL}${job.route}`,
@@ -142,10 +143,4 @@ function firstValidDate(
   }
 
   return fallback;
-}
-
-function safeDate(value: string, fallback: Date) {
-  const parsed = new Date(value);
-
-  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
 }
