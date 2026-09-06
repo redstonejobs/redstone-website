@@ -134,7 +134,7 @@ export default async function FaqCategoryPage({ params }: Props) {
                 {faq.question}
               </summary>
               <div className="mt-5 border-t border-slate-100 pt-5">
-                <p className="text-sm leading-8 text-slate-650 sm:text-base">{faq.answer}</p>
+                <p className="text-sm leading-8 text-slate-600 sm:text-base">{faq.answer}</p>
               </div>
             </details>
           ))}
