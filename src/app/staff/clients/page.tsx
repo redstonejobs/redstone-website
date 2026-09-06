@@ -4,7 +4,9 @@ import { RedstoneLogo } from "@/components/brand/redstone-logo";
 import { ReferralLinkCard } from "@/components/staff/referral-link-card";
 import { requireStaff } from "@/lib/admin/auth";
 import {
+  convertOwnStaffClientToCandidate,
   createOwnStaffClient,
+  deleteOwnStaffClient,
   updateOwnClientStatus,
 } from "@/lib/staff/actions";
 import { createClient } from "@/utils/supabase/server";
@@ -84,6 +86,9 @@ type PageProps = {
     created?: string;
     updated?: string;
     duplicate?: string;
+    converted?: string;
+    deleted?: string;
+    conversion_error?: string;
     page?: string;
   }>;
 };
@@ -240,6 +245,36 @@ export default async function StaffClientsPage({ searchParams }: PageProps) {
           <Alert tone="info">Client status updated successfully.</Alert>
         ) : null}
 
+        {params.converted === "1" ? (
+          <Alert tone="success">
+            Candidate account created and invitation sent. The candidate remains linked to your portfolio.
+          </Alert>
+        ) : null}
+
+        {params.converted === "already" ? (
+          <Alert tone="info">This client is already linked to a candidate account.</Alert>
+        ) : null}
+
+        {params.deleted === "1" ? (
+          <Alert tone="success">Client record deleted from your portfolio.</Alert>
+        ) : null}
+
+        {params.conversion_error === "email_required" ? (
+          <Alert tone="warning">Add an email address before converting this client to a candidate account.</Alert>
+        ) : null}
+
+        {params.conversion_error === "account_exists" ? (
+          <Alert tone="warning">
+            An account already exists with this email. Nothing was changed. Ask the candidate to sign in, or have an administrator link the existing account.
+          </Alert>
+        ) : null}
+
+        {params.conversion_error === "invite_failed" ? (
+          <Alert tone="warning">
+            The candidate invitation could not be sent. Try again later or contact an administrator.
+          </Alert>
+        ) : null}
+
         <section className="overflow-hidden rounded-2xl border border-[#071A3D]/10 bg-white shadow-sm">
           <div className="bg-[#071A3D] px-6 py-8 text-white sm:px-8">
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#F2D675]">
@@ -294,7 +329,7 @@ export default async function StaffClientsPage({ searchParams }: PageProps) {
                   <Field label="Email Address" name="email" type="email" placeholder="client@example.com" />
                 </div>
                 <p className="-mt-2 text-[11px] leading-5 text-slate-500">
-                  At least one phone number or email address is required. This CRM entry does not create a candidate login.
+                  At least one phone number or email address is required. Create the client first, then use Convert to Candidate when they are ready for a portal account.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
                   <Field label="Nationality" name="nationality" placeholder="e.g. Kenyan" />
@@ -446,7 +481,7 @@ export default async function StaffClientsPage({ searchParams }: PageProps) {
                               Created {formatDate(client.created_at)}
                             </p>
                           </td>
-                          <td className="min-w-[230px] px-5 py-5">
+                          <td className="min-w-[250px] px-5 py-5">
                             <form action={updateOwnClientStatus} className="space-y-2">
                               <input type="hidden" name="client_id" value={client.id} />
                               <select
@@ -467,6 +502,49 @@ export default async function StaffClientsPage({ searchParams }: PageProps) {
                                 Update Status
                               </button>
                             </form>
+
+                            <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                              {client.candidate_user_id ? (
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-blue-700">
+                                  Candidate Linked
+                                </div>
+                              ) : client.email ? (
+                                <form action={convertOwnStaffClientToCandidate}>
+                                  <input type="hidden" name="client_id" value={client.id} />
+                                  <button
+                                    type="submit"
+                                    className="w-full rounded-lg bg-[#D4AF37] px-3 py-2.5 text-xs font-black uppercase tracking-wide text-[#071A3D] transition hover:bg-[#F2D675]"
+                                  >
+                                    Convert to Candidate
+                                  </button>
+                                </form>
+                              ) : (
+                                <p className="rounded-lg bg-amber-50 px-3 py-2 text-center text-[10px] font-bold text-amber-800">
+                                  Add an email before converting.
+                                </p>
+                              )}
+
+                              <details className="rounded-lg border border-red-200 bg-red-50/50">
+                                <summary className="cursor-pointer px-3 py-2.5 text-center text-[10px] font-black uppercase tracking-wide text-red-700">
+                                  Delete Client Record
+                                </summary>
+                                <div className="border-t border-red-100 px-3 pb-3 pt-3">
+                                  <p className="mb-3 text-[10px] leading-4 text-red-700">
+                                    This removes only this staff CRM record. A linked candidate login, profile and applications will not be deleted.
+                                  </p>
+                                  <form action={deleteOwnStaffClient}>
+                                    <input type="hidden" name="client_id" value={client.id} />
+                                    <input type="hidden" name="confirm" value="yes" />
+                                    <button
+                                      type="submit"
+                                      className="w-full rounded-lg bg-red-700 px-3 py-2.5 text-xs font-black uppercase tracking-wide text-white transition hover:bg-red-800"
+                                    >
+                                      Confirm Delete
+                                    </button>
+                                  </form>
+                                </div>
+                              </details>
+                            </div>
                           </td>
                         </tr>
                       ))}
