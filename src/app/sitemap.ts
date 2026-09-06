@@ -7,6 +7,7 @@ import {
   getPublishedJobSitemapShardCount,
 } from "@/lib/public/jobs";
 import { SPONSORSHIP_JOBS } from "@/lib/public/sponsorship-jobs";
+import { VISA_GUIDES } from "@/lib/public/visa-guides";
 import { SITE_URL } from "@/lib/public/site";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ const staticRoutes = [
   "/employer-services",
   "/pre-departure-support",
   "/sponsorship-jobs",
+  "/visa-process",
   "/recruitment-process",
   "/compliance",
   "/our-commitment",
@@ -86,6 +88,13 @@ export default async function sitemap({
       ? []
       : SPONSORSHIP_JOBS.map((job) => ({
           url: `${SITE_URL}/sponsorship-jobs/${job.countrySlug}/${job.roleSlug}`,
+          lastModified: now,
+        }))),
+
+    ...(isJobShard
+      ? []
+      : VISA_GUIDES.map((guide) => ({
+          url: `${SITE_URL}/visa-process/${guide.slug}`,
           lastModified: now,
         }))),
 
