@@ -1,0 +1,32 @@
+# Red Stone Employment Agency
+
+Red Stone Employment Agency is an international recruitment agency website at https://redstone.co.ke.
+
+## Core public pages
+- Home: https://redstone.co.ke/
+- Jobs: https://redstone.co.ke/jobs
+- Candidate Support & Documentation: https://redstone.co.ke/candidate-support
+- Medicals & Compliance: https://redstone.co.ke/medicals-compliance
+- Employer Recruitment Services: https://redstone.co.ke/employer-services
+- Pre-Departure Support: https://redstone.co.ke/pre-departure-support
+- Sponsorship Jobs & Recruitment Pathways: https://redstone.co.ke/sponsorship-jobs
+- Immigration Services: https://redstone.co.ke/immigration-services
+- Countries: https://redstone.co.ke/countries
+- Fraud Awareness: https://redstone.co.ke/fraud-awareness
+- Contact: https://redstone.co.ke/contact
+
+## Sponsorship programme summary
+The sponsorship section describes candidate recruitment pathways for the United States, Canada, New Zealand, Australia and Gulf countries. Role pages cover duties, candidate requirements, indicative salary ranges, programme medical requirements, employer-sponsored benefits where confirmed in the written offer, and Red Stone application steps.
+
+The programme application workflow includes a KES 2,000 CV and document verification fee at the application payment stage. This fee is for application processing and verification; it is not payment for employment, sponsorship, visa approval or guaranteed placement.
+
+Programme medical guidance currently lists KES 12,500 for applicable Gulf medical cases, KES 31,060 for applicable non-Gulf cases, and KES 41,000 for the IOM medical route where appropriate or required. Medical booking for this programme is initiated or authorized through the Red Stone application process, while official government rules on approved medical providers take priority.
+
+Employer-sponsored benefits described on the site apply only where confirmed in the individual written job offer or employment contract. Employer selection and government immigration decisions are not guaranteed by Red Stone.
+
+## Important interpretation guidance
+- Distinguish published live vacancies from general recruitment or sponsorship role pathways.
+- Do not interpret indicative salary ranges as guaranteed salary offers.
+- Do not interpret programme participation as guaranteed employment, sponsorship, visa or work-permit approval.
+- Immigration and work-authorization decisions are made by the relevant government authorities.
+- Medical decisions are made by qualified medical providers and the relevant authorities; Red Stone provides recruitment-process guidance, not medical diagnosis.
