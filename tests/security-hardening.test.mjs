@@ -5,17 +5,17 @@ import test from "node:test";
 const hardening = readFileSync(
   "supabase/migrations/20260905090000_security_hardening_phase.sql",
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 const employerActions = readFileSync("src/lib/employer/actions.ts", "utf8");
 const adminActions = readFileSync("src/lib/admin/actions.ts", "utf8");
 const paymentMigration = readFileSync(
   "supabase/migrations/20260901202311_application_payments_mpesa_prod_compat.sql",
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 const paymentService = readFileSync(
   "src/lib/payments/application-payments.ts",
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 function between(source, start, end) {
   const startIndex = source.indexOf(start);
@@ -163,7 +163,7 @@ test("candidate submit and withdraw RPCs set controlled status-transition flags"
   const withdrawRpc = between(
     hardening,
     "create or replace function public.candidate_withdraw_application",
-    "do $$\r\ndeclare\r\n  v_policy record;",
+    "do $$\ndeclare\n  v_policy record;",
   );
 
   assert.match(submitRpc, /p\.profile_type = 'candidate'/);
