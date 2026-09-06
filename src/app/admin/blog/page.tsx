@@ -20,6 +20,7 @@ export default async function AdminBlogPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/admin/blog/content-strategy" className="rounded-xl border border-[#D4AF37] bg-amber-50 px-4 py-3 text-sm font-black text-[#071A3D]">182-Topic SEO Strategy</Link>
           <Link href="/blog" target="_blank" className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-[#071A3D]">View Public Blog ↗</Link>
           <Link href="/admin/blog/new" className="rounded-xl bg-[#D4AF37] px-5 py-3 text-sm font-black text-[#071A3D]">+ Create Blog Post</Link>
         </div>
@@ -41,7 +42,7 @@ export default async function AdminBlogPage() {
       </div>
 
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-7 text-amber-950">
-        <strong>SEO workflow:</strong> publish only useful, original articles with a strong title, summary, detailed content, meta description and focused keywords. The system automatically creates canonical URLs, Article structured data, Open Graph metadata, sitemap entries and homepage discovery.
+        <strong>SEO workflow:</strong> publish only useful, original articles with a strong title, summary, detailed content, meta description and focused keywords. The system automatically creates canonical URLs, Article structured data, Open Graph metadata, sitemap entries and homepage discovery. The 182-topic strategy gives administrators a structured country-by-country roadmap instead of publishing random articles.
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
