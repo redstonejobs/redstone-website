@@ -11,13 +11,25 @@ import {
 } from "@/lib/payments/application-payments";
 import { normalizeMpesaPhone } from "@/lib/payments/mpesa/phone";
 
+function sectionRedirect(
+  applicationId: string,
+  section: "review" | "payment",
+  message: string,
+): never {
+  redirect(
+    `/candidate/applications/${applicationId}?section=${section}&error=${encodeURIComponent(message)}`,
+  );
+}
+
 function reviewRedirect(
   applicationId: string,
   message = "Complete the application review before starting payment.",
 ): never {
-  redirect(
-    `/candidate/applications/${applicationId}?section=review&error=${encodeURIComponent(message)}`,
-  );
+  return sectionRedirect(applicationId, "review", message);
+}
+
+function paymentRedirect(applicationId: string, message: string): never {
+  return sectionRedirect(applicationId, "payment", message);
 }
 
 function readinessMessage(error: unknown) {
@@ -84,24 +96,25 @@ export async function initiateApplicationPayment(
 ) {
   const context = await requireCandidate();
 
-  // Do not let a candidate reach M-Pesa until the application has passed the
-  // server-side review/readiness transition. This prevents a draft application
-  // from being reported as an STK/Daraja failure.
+  // Stop payment before any Daraja request if Final Review has not moved the
+  // application into its server-verified payment stage.
   await requirePaymentStage(applicationId, context.user.id);
 
   const phone = String(formData.get("mpesa_phone") ?? "");
 
   if (formData.get("fee_acknowledgement") !== "yes") {
-    redirect(
-      `/candidate/applications/${applicationId}?section=payment&payment_error=acknowledgement_required`,
+    paymentRedirect(
+      applicationId,
+      "Confirm that you understand the verification fee before continuing.",
     );
   }
 
   try {
     normalizeMpesaPhone(phone);
   } catch {
-    redirect(
-      `/candidate/applications/${applicationId}?section=payment&payment_error=invalid_phone`,
+    paymentRedirect(
+      applicationId,
+      "Enter a valid Kenyan M-Pesa phone number before continuing.",
     );
   }
 
@@ -129,8 +142,9 @@ export async function initiateApplicationPayment(
       reviewRedirect(applicationId);
     }
 
-    redirect(
-      `/candidate/applications/${applicationId}?section=payment&payment_error=stk_unavailable`,
+    paymentRedirect(
+      applicationId,
+      "M-Pesa payment could not be started. Please try again. If the problem continues, contact Red Stone support.",
     );
   }
 
