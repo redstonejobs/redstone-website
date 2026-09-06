@@ -56,9 +56,9 @@ export function SectionHeading({ eyebrow, title, body }: { eyebrow?: string; tit
   );
 }
 
-export function Band({ children, tone = "white" }: { children: React.ReactNode; tone?: "white" | "grey" | "navy" }) {
+export function Band({ children, tone = "white", id }: { children: React.ReactNode; tone?: "white" | "grey" | "navy"; id?: string }) {
   const classes = tone === "navy" ? "bg-[#071A3D] text-white" : tone === "grey" ? "bg-[#F3F4F6]" : "bg-white";
-  return <section className={`${classes} px-4 py-16 sm:py-20`}><div className="mx-auto max-w-7xl">{children}</div></section>;
+  return <section id={id} className={`${classes} scroll-mt-24 px-4 py-16 sm:py-20`}><div className="mx-auto max-w-7xl">{children}</div></section>;
 }
 
 export function InfoGrid({ items }: { items: { title: string; body: string }[] }) {
