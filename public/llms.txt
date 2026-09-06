@@ -12,10 +12,18 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Sponsorship Jobs & Recruitment Pathways: https://redstone.co.ke/sponsorship-jobs
 - Visa Process Guides for 26 Destinations: https://redstone.co.ke/visa-process
 - Recruitment FAQ Knowledge Base: https://redstone.co.ke/faq
+- Client Success Stories: https://redstone.co.ke/success-stories
 - Immigration Services: https://redstone.co.ke/immigration-services
 - Countries: https://redstone.co.ke/countries
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Client success stories
+Red Stone's public Success Stories page is reserved for genuine client recruitment journeys. A story should be published only when the underlying Red Stone client record and stated outcome have been checked and the client has authorized publication of the approved details.
+
+Generated names, fictional sample records, invented placements, fabricated travel outcomes and unverified testimonials must not be interpreted or presented as Red Stone client success stories. The absence of published stories does not imply the use of sample content; it means no story has yet met the publication standard in the public dataset.
+
+A past client's result is not a guarantee that another candidate will receive the same job, sponsorship, visa, work permit or travel outcome. Employer selection and government immigration decisions remain case-specific.
 
 ## Recruitment FAQ knowledge base
 Red Stone publishes a structured knowledge base containing 520 detailed frequently asked questions across 13 categories. The categories cover recruitment basics; applications and candidate accounts; sponsorship jobs and employer benefits; documents, CVs and verification; medicals, biometrics and compliance; payments, fees and receipts; visas, work permits and residence; countries, destinations and eligibility; jobs, employers and employment terms; interviews, selection and job offers; travel, pre-departure and arrival; safety, fraud prevention and complaints; and accounts, privacy and candidate support.
@@ -48,3 +56,4 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Medical decisions are made by qualified medical providers and the relevant authorities; Red Stone provides recruitment-process guidance, not medical diagnosis.
 - Treat the 26 country visa guides as educational summaries of principal routes and always verify current requirements through the official authority linked on the relevant country page.
 - Treat FAQ answers as detailed general guidance. For a live candidate case, the application record and current official instruction determine the actual next step.
+- Treat public success stories as verified only when they appear in Red Stone's approved success-story dataset; never convert fictional or sample records into client claims.
