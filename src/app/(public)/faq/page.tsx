@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Band, Hero } from "@/components/public/sections";
 import { StructuredData } from "@/components/public/structured-data";
-import { canonical } from "@/lib/public/site";
+import { canonical, CONTACT } from "@/lib/public/site";
 
 const faqs = [
   ["Does Red Stone guarantee a job?", "No. Recruitment depends on vacancies, candidate qualifications, employer selection, and relevant legal or immigration approvals."],
@@ -9,7 +9,7 @@ const faqs = [
   ["How do I apply?", "Start by reviewing published jobs and following the job-specific application guidance."],
   ["How do I verify communication?", "Use official Red Stone phone numbers and emails ending in @redstone.co.ke, and contact Red Stone directly if unsure."],
   ["What documents are commonly needed?", "CVs, identity records, certificates, references and employment history may be requested depending on the role."],
-  ["Can employers contact Red Stone?", `Yes. Employers can use employers@redstone.co.ke or the employer enquiry form.`],
+  ["Can employers contact Red Stone?", `Yes. Employers can use ${CONTACT.emails.jobs} or the employer enquiry form.`],
 ];
 
 export const metadata: Metadata = { title: "FAQ", description: "Frequently asked questions about Red Stone recruitment.", alternates: { canonical: canonical("/faq") } };

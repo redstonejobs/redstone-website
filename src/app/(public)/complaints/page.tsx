@@ -12,7 +12,7 @@ export default function ComplaintsPage() {
       <Band>
         <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
           <InfoGrid items={[
-            { title: "Complaints Email", body: CONTACT.emails.complaints },
+            { title: "Complaints Email", body: CONTACT.emails.support },
             { title: "Confidentiality", body: "Complaints are reviewed through official channels. Share only information needed to understand the issue." },
             { title: "Escalation", body: "Use the complaints channel for suspected fraud, impersonation, misconduct or unresolved recruitment concerns." },
           ]} />

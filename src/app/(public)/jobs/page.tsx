@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { EmptyJobsState, JobCard } from "@/components/public/job-card";
 import { JobSearch } from "@/components/public/job-search";
-import { Band, Hero } from "@/components/public/sections";
-import { JOB_OCCUPATIONS } from "@/lib/jobs/catalogue";
 import { getPublishedJobs } from "@/lib/public/jobs";
 import { getConfiguredCountries } from "@/lib/public/countries";
 import { canonical } from "@/lib/public/site";
@@ -13,50 +11,91 @@ export const metadata: Metadata = {
   alternates: { canonical: canonical("/jobs") },
 };
 
+export const dynamic = "force-dynamic";
+
 type JobsProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
 export default async function JobsPage({ searchParams }: JobsProps) {
   const raw = (await searchParams) ?? {};
-  const params = Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])) as Record<string, string | undefined>;
+  const params = Object.fromEntries(
+    Object.entries(raw).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])
+  ) as Record<string, string | undefined>;
+
   const [result, countries] = await Promise.all([getPublishedJobs(params), getConfiguredCountries()]);
   const totalPages = Math.max(Math.ceil(result.count / result.pageSize), 1);
   const queryWithoutPage = new URLSearchParams(
-    Object.entries(params).filter((entry): entry is [string, string] => entry[0] !== "page" && typeof entry[1] === "string" && entry[1] !== "")
+    Object.entries(params).filter(
+      (entry): entry is [string, string] => entry[0] !== "page" && typeof entry[1] === "string" && entry[1] !== ""
+    )
   );
-  const occupationGroups = catalogueGroups();
 
   return (
     <>
-      <Hero eyebrow="Published vacancies" title="Browse Genuine Published Jobs" body="Search active opportunities that have been published in the Red Stone recruitment system. No fabricated vacancies are shown." primary={{ label: "Start Application", href: "/apply" }} />
-      <Band tone="grey">
-        <JobSearch defaults={params} countries={countries} />
-        <div className="mt-8">
-          {result.jobs.length ? <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{result.jobs.map((job) => <JobCard key={job.id} job={job} />)}</div> : <EmptyJobsState />}
-        </div>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm font-bold text-slate-700">
-          <span>Page {result.page} of {totalPages}</span>
-          {result.page > 1 ? <a className="rounded-md border px-4 py-2" href={`/jobs?${pageQuery(queryWithoutPage, result.page - 1)}`}>Previous</a> : null}
-          {result.page < totalPages ? <a className="rounded-md border px-4 py-2" href={`/jobs?${pageQuery(queryWithoutPage, result.page + 1)}`}>Next</a> : null}
-        </div>
-      </Band>
-      <Band>
-        <div>
-          <p className="text-sm font-black uppercase text-[#B8860B]">Catalogue</p>
-          <h2 className="mt-2 text-3xl font-black text-[#071A3D]">Job Categories / Occupations We Recruit For</h2>
-          <p className="mt-3 max-w-3xl text-slate-600">
-            These are recruitment categories and occupation types, not current vacancies. Apply buttons appear only on published job vacancies above.
+      <section className="bg-[#071A3D] px-4 pb-24 pt-14 text-white sm:pb-28 sm:pt-16">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-[#F2D675]">Available Opportunities</p>
+          <h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight sm:text-4xl lg:text-5xl">Find Your Next Job</h1>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">
+            Browse current published vacancies and apply directly through Red Stone Employment Agency.
           </p>
         </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {occupationGroups.map((group) => (
-            <section key={group.category} className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="text-base font-black text-[#071A3D]">{group.category}</h3>
-              <p className="mt-1 text-xs font-bold uppercase text-slate-500">{group.skillLabel}</p>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{group.occupations.slice(0, 6).join(", ")}{group.occupations.length > 6 ? ` and ${group.occupations.length - 6} more` : ""}</p>
-            </section>
-          ))}
+      </section>
+
+      <section className="bg-[#F3F4F6] px-4 pb-16 sm:pb-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="relative -mt-14 sm:-mt-16">
+            <JobSearch defaults={params} countries={countries} />
+          </div>
+
+          <div className="mt-10 flex flex-col gap-2 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">Current Vacancies</p>
+              <h2 className="mt-1 text-2xl font-black text-[#071A3D]">Available Jobs</h2>
+            </div>
+            <p className="text-sm font-semibold text-slate-500">
+              {result.count.toLocaleString()} {result.count === 1 ? "opportunity" : "opportunities"}
+            </p>
+          </div>
+
+          <div className="mt-7">
+            {result.jobs.length ? (
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {result.jobs.map((job) => (
+                  <JobCard key={job.id} job={job} />
+                ))}
+              </div>
+            ) : (
+              <EmptyJobsState />
+            )}
+          </div>
+
+          {totalPages > 1 ? (
+            <nav className="mt-10 flex flex-wrap items-center justify-center gap-3 text-sm font-bold text-slate-700" aria-label="Jobs pagination">
+              {result.page > 1 ? (
+                <a
+                  className="rounded-xl border border-slate-300 bg-white px-5 py-3 transition hover:border-[#D4AF37] hover:text-[#071A3D]"
+                  href={`/jobs?${pageQuery(queryWithoutPage, result.page - 1)}`}
+                >
+                  Previous
+                </a>
+              ) : null}
+
+              <span className="px-3 py-3 text-slate-500">
+                Page {result.page} of {totalPages}
+              </span>
+
+              {result.page < totalPages ? (
+                <a
+                  className="rounded-xl border border-slate-300 bg-white px-5 py-3 transition hover:border-[#D4AF37] hover:text-[#071A3D]"
+                  href={`/jobs?${pageQuery(queryWithoutPage, result.page + 1)}`}
+                >
+                  Next
+                </a>
+              ) : null}
+            </nav>
+          ) : null}
         </div>
-      </Band>
+      </section>
     </>
   );
 }
@@ -65,26 +104,4 @@ function pageQuery(params: URLSearchParams, page: number) {
   const next = new URLSearchParams(params);
   next.set("page", String(page));
   return next.toString();
-}
-
-function catalogueGroups() {
-  const labels: Record<string, string> = {
-    unskilled: "Entry Level",
-    semi_skilled: "Semi-Skilled",
-    skilled: "Skilled",
-    professional: "Professional",
-  };
-  const groups = new Map<string, { category: string; skillLabel: string; occupations: string[] }>();
-
-  for (const occupation of JOB_OCCUPATIONS) {
-    const group = groups.get(occupation.category) ?? {
-      category: occupation.category,
-      skillLabel: labels[occupation.skill_level] ?? occupation.skill_level,
-      occupations: [],
-    };
-    group.occupations.push(occupation.name);
-    groups.set(occupation.category, group);
-  }
-
-  return [...groups.values()];
 }

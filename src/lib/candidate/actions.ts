@@ -3,7 +3,24 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { requireCandidate } from "./auth";
-import { normalizeFileName, validateApplicationDraft, validateDocumentUpload, validateProfile } from "./validation";
+import { normalizeFileName, validateDocumentUpload, validateProfile } from "./validation";
+import {
+  createOrReuseApplicationPayment,
+  markApplicationReadyForPayment,
+} from "@/lib/payments/application-payments";
+import { normalizeMpesaPhone } from "@/lib/payments/mpesa/phone";
+import { attributeCandidateFromCurrentReferral } from "@/lib/referrals/attribution";
+
+
+function failCandidateSection(
+  applicationId: string,
+  section: string,
+  message: string,
+): never {
+  redirect(
+    `/candidate/applications/${applicationId}?section=${encodeURIComponent(section)}&error=${encodeURIComponent(message)}`,
+  );
+}
 
 export async function updateCandidateProfile(formData: FormData) {
   const context = await requireCandidate();
@@ -17,31 +34,124 @@ export async function updateCandidateProfile(formData: FormData) {
 }
 
 export async function startApplication(slug: string) {
-  await requireCandidate();
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("candidate_start_application", { p_job_slug: slug });
-  if (error || !data) throw new Error("That job is no longer accepting applications.");
-  redirect(`/apply/${slug}?application=${data}`);
+
+  if (error || !data) {
+    const reason = applicationStartErrorReason(error, data);
+
+    console.warn("[candidate]", "application start failed", {
+      slug,
+      reason,
+      code: authRpcError(error)?.code ?? null,
+      message: authRpcError(error)?.message ?? "No application id returned.",
+    });
+
+    redirect(`/apply/${slug}?error=${reason}`);
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+
+  if (userData.user) {
+    try {
+      await attributeCandidateFromCurrentReferral(userData.user.id, {
+        status: "applied",
+        applicationId: String(data),
+        jobSlug: slug,
+      });
+    } catch (referralError) {
+      console.warn("[referral] application attribution failed", {
+        application_id: String(data),
+        candidate_id: userData.user.id,
+        slug,
+        message:
+          referralError instanceof Error ? referralError.message : "unknown_error",
+      });
+    }
+  }
+
+  redirect(`/candidate/applications/${data}`);
 }
 
-export async function submitApplication(applicationId: string, formData: FormData) {
-  await requireCandidate();
-  const validation = validateApplicationDraft(formData);
-  if (!validation.ok) throw new Error(validation.error);
+function applicationStartErrorReason(error: unknown, data: unknown) {
+  const message = authRpcError(error)?.message?.toLowerCase() ?? "";
 
-  if (formData.get("confirm") !== "yes") throw new Error("Please confirm before submitting.");
+  if (message.includes("candidate_required")) return "candidate_required";
+  if (message.includes("job_not_available")) return "job_not_available";
+  if (!data) return "application_not_started";
 
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("candidate_submit_application", {
-    p_application_id: applicationId,
-    p_cover_letter: validation.value.cover_letter,
-    p_relevant_experience: validation.value.relevant_experience,
-    p_availability: validation.value.availability,
-    p_candidate_message: validation.value.candidate_message,
+  return "application_start_failed";
+}
+
+function authRpcError(error: unknown) {
+  return error && typeof error === "object"
+    ? (error as { code?: string; message?: string })
+    : null;
+}
+
+export async function prepareApplicationPayment(applicationId: string) {
+  const context = await requireCandidate();
+
+  try {
+    await markApplicationReadyForPayment(applicationId, context.user.id);
+  } catch (error) {
+    console.warn("[candidate] payment readiness check failed", {
+      application_id: applicationId,
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
+    redirect(
+      `/candidate/applications/${applicationId}?section=review&payment_error=application_not_ready`
+    );
+  }
+
+  redirect(`/candidate/applications/${applicationId}?section=payment&ready=1`);
+}
+
+export async function initiateApplicationPayment(applicationId: string, formData: FormData) {
+  const context = await requireCandidate();
+  const phone = String(formData.get("mpesa_phone") ?? "");
+
+  if (formData.get("fee_acknowledgement") !== "yes") {
+    redirect(
+      `/candidate/applications/${applicationId}?section=payment&payment_error=acknowledgement_required`
+    );
+  }
+
+  try {
+    normalizeMpesaPhone(phone);
+  } catch {
+    redirect(
+      `/candidate/applications/${applicationId}?section=payment&payment_error=invalid_phone`
+    );
+  }
+
+  let result;
+
+  try {
+    result = await createOrReuseApplicationPayment({
+      applicationId,
+      candidateId: context.user.id,
+      phoneNumber: phone,
+    });
+  } catch (error) {
+    console.error("[candidate] payment initiation failed", {
+      application_id: applicationId,
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
+    redirect(
+      `/candidate/applications/${applicationId}?section=payment&payment_error=stk_unavailable`
+    );
+  }
+
+  const reference = String(result.payment.internal_reference ?? "");
+  const params = new URLSearchParams({
+    section: "payment",
+    payment: result.stkStarted ? "pending" : "configuring",
   });
 
-  if (error) throw new Error("We could not submit this application.");
-  redirect(`/candidate/applications/${applicationId}?submitted=1`);
+  if (reference) params.set("reference", reference);
+
+  redirect(`/candidate/applications/${applicationId}?${params.toString()}`);
 }
 
 export async function withdrawApplication(applicationId: string, formData: FormData) {
@@ -54,12 +164,70 @@ export async function withdrawApplication(applicationId: string, formData: FormD
   redirect(`/candidate/applications/${applicationId}?withdrawn=1`);
 }
 
+const MAX_DOCUMENT_BATCH_FILES = 10;
+const MAX_DOCUMENT_BATCH_BYTES = 30 * 1024 * 1024;
+
 export async function uploadCandidateDocument(applicationId: string, formData: FormData) {
   const context = await requireCandidate();
-  const file = formData.get("file");
-  const documentType = String(formData.get("document_type") ?? "");
-  const validation = validateDocumentUpload(file instanceof File ? file : null, documentType);
-  if (!validation.ok) throw new Error(validation.error);
+  const documentTypeEntries = formData
+    .getAll("document_type")
+    .map((entry) => String(entry ?? "").trim());
+
+  const multiFileEntries = formData.getAll("files");
+  const legacyFile = formData.get("file");
+  const files = (multiFileEntries.length ? multiFileEntries : [legacyFile]).filter(
+    (entry): entry is File => entry instanceof File && entry.size > 0,
+  );
+
+  if (!files.length) {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "Choose at least one document to upload.",
+    );
+  }
+
+  if (files.length > MAX_DOCUMENT_BATCH_FILES) {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      `Upload no more than ${MAX_DOCUMENT_BATCH_FILES} files at a time.`,
+    );
+  }
+
+  if (
+    documentTypeEntries.length > 1 &&
+    documentTypeEntries.length !== files.length
+  ) {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "Each selected document must have its own document type.",
+    );
+  }
+
+  const documentTypes =
+    documentTypeEntries.length === 1
+      ? files.map(() => documentTypeEntries[0])
+      : documentTypeEntries;
+
+  const validations = files.map((file, index) =>
+    validateDocumentUpload(file, documentTypes[index] ?? ""),
+  );
+  const invalid = validations.find((validation) => !validation.ok);
+
+  if (invalid && !invalid.ok) {
+    return failCandidateSection(applicationId, "documents", invalid.error);
+  }
+
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > MAX_DOCUMENT_BATCH_BYTES) {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "The selected files are too large as a group. Upload up to 30 MB per batch.",
+    );
+  }
 
   const supabase = await createClient();
   const { data: application } = await supabase
@@ -69,32 +237,110 @@ export async function uploadCandidateDocument(applicationId: string, formData: F
     .eq("candidate_id", context.user.id)
     .maybeSingle<{ id: string; candidate_id: string }>();
 
-  if (!application) throw new Error("Application not found.");
+  if (!application) {
+    return failCandidateSection(applicationId, "documents", "Application not found.");
+  }
 
-  const safeName = `${Date.now()}-${normalizeFileName(validation.value.file.name)}`;
-  const storagePath = `${context.user.id}/${applicationId}/${safeName}`;
-  const { error: uploadError } = await supabase.storage
-    .from("candidate-documents")
-    .upload(storagePath, validation.value.file, {
-      contentType: validation.value.file.type,
-      upsert: false,
+  const batchStamp = Date.now();
+  const uploadedPaths: string[] = [];
+  const metadataRows: Array<Record<string, unknown>> = [];
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
+    const validation = validations[index];
+    if (!validation.ok) continue;
+
+    const safeName = `${batchStamp}-${index + 1}-${normalizeFileName(file.name)}`;
+    const storagePath = `${context.user.id}/${applicationId}/${safeName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("candidate-documents")
+      .upload(storagePath, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      if (uploadedPaths.length) {
+        await supabase.storage.from("candidate-documents").remove(uploadedPaths);
+      }
+
+      return failCandidateSection(
+        applicationId,
+        "documents",
+        "We couldn't upload all selected documents. No partial batch was kept; please retry.",
+      );
+    }
+
+    uploadedPaths.push(storagePath);
+    metadataRows.push({
+      application_id: applicationId,
+      document_type: validation.value.documentType,
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type,
+      storage_path: storagePath,
+      candidate_id: context.user.id,
+      verification_status: "pending",
     });
+  }
 
-  if (uploadError) throw new Error("We couldn't upload that document.");
+  const { error: metadataError } = await supabase
+    .from("application_documents")
+    .insert(metadataRows);
 
-  const { error: metadataError } = await supabase.from("application_documents").insert({
-    application_id: applicationId,
-    document_type: validation.value.documentType,
-    file_name: validation.value.file.name,
-    file_size: validation.value.file.size,
-    mime_type: validation.value.file.type,
-    storage_path: storagePath,
-    uploaded_by: context.user.id,
-    verification_status: "pending",
-  });
+  if (metadataError) {
+    if (uploadedPaths.length) {
+      await supabase.storage.from("candidate-documents").remove(uploadedPaths);
+    }
 
-  if (metadataError) throw new Error("The file uploaded, but document metadata could not be saved.");
-  redirect(`/candidate/applications/${applicationId}?document=uploaded`);
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "The files uploaded, but their records could not be saved. The batch was rolled back; please retry.",
+    );
+  }
+
+  try {
+    await saveImmigrationSectionProgress(applicationId, "documents", "in_progress");
+  } catch {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "Your documents were uploaded, but the section status could not be updated. Reload this page before continuing.",
+    );
+  }
+
+  redirect(
+    `/candidate/applications/${applicationId}?section=documents&saved=documents&uploaded=${files.length}`,
+  );
+}
+
+export async function completeCandidateDocumentsSection(applicationId: string) {
+  const { supabase } = await verifyCandidateApplication(applicationId);
+
+  const { data: documents, error } = await supabase
+    .from("application_documents")
+    .select("id")
+    .eq("application_id", applicationId);
+
+  if (error) {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "We could not verify your uploaded documents.",
+    );
+  }
+
+  if (!documents?.length) {
+    return failCandidateSection(
+      applicationId,
+      "documents",
+      "Upload at least one supporting document before continuing to review.",
+    );
+  }
+
+  await saveImmigrationSectionProgress(applicationId, "documents", "complete");
+  redirect(`/candidate/applications/${applicationId}?section=review&saved=documents`);
 }
 function immigrationText(
   formData: FormData,
@@ -576,13 +822,17 @@ export async function completeCandidateAddressSection(
     .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "addresses",
       "We could not verify your address history.",
     );
   }
 
   if (!addresses || addresses.length === 0) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "addresses",
       "Add at least one address before completing this section.",
     );
   }
@@ -592,7 +842,9 @@ export async function completeCandidateAddressSection(
   );
 
   if (!hasCurrentAddress) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "addresses",
       "Please add your current residential address.",
     );
   }
@@ -845,7 +1097,9 @@ export async function completeCandidateFamilySection(
     .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "family",
       "We could not verify your dependant records.",
     );
   }
@@ -857,7 +1111,9 @@ export async function completeCandidateFamilySection(
       true &&
     recordedDependants === 0
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "family",
       "You indicated that you have dependants. Please add their information before continuing.",
     );
   }
@@ -867,7 +1123,9 @@ export async function completeCandidateFamilySection(
     recordedDependants <
       immigrationProfile.dependants_count
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "family",
       `You indicated ${immigrationProfile.dependants_count} dependant(s), but only ${recordedDependants} have been added.`,
     );
   }
@@ -895,7 +1153,9 @@ export async function addCandidateEducation(
   );
 
   if (!institutionName) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Please provide the name of the school, college or institution.",
     );
   }
@@ -915,11 +1175,18 @@ export async function addCandidateEducation(
     "graduation_date",
   );
 
-  if (
-    startDate &&
-    Number.isNaN(new Date(startDate).getTime())
-  ) {
-    throw new Error(
+  if (!startDate) {
+    return failCandidateSection(
+      applicationId,
+      "education",
+      "Please provide an education start date.",
+    );
+  }
+
+  if (Number.isNaN(new Date(startDate).getTime())) {
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Please provide a valid education start date.",
     );
   }
@@ -928,17 +1195,20 @@ export async function addCandidateEducation(
     endDate &&
     Number.isNaN(new Date(endDate).getTime())
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Please provide a valid education end date.",
     );
   }
 
   if (
-    startDate &&
     endDate &&
     new Date(endDate) < new Date(startDate)
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Education end date cannot be before the start date.",
     );
   }
@@ -949,7 +1219,9 @@ export async function addCandidateEducation(
       new Date(graduationDate).getTime(),
     )
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Please provide a valid graduation date.",
     );
   }
@@ -997,8 +1269,18 @@ export async function addCandidateEducation(
     });
 
   if (error) {
-    throw new Error(
-      "We could not save this education record.",
+    console.error("[candidate] education save failed", {
+      application_id: applicationId,
+      code: error.code ?? null,
+      message: error.message ?? "unknown_error",
+      details: error.details ?? null,
+      hint: error.hint ?? null,
+    });
+
+    return failCandidateSection(
+      applicationId,
+      "education",
+      "We could not save this education record. Please check the details and try again.",
     );
   }
 
@@ -1064,7 +1346,9 @@ export async function completeCandidateEducationSection(
       .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "We could not verify your education history.",
     );
   }
@@ -1073,7 +1357,9 @@ export async function completeCandidateEducationSection(
     !educationRecords ||
     educationRecords.length === 0
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Please add at least one education record before continuing.",
     );
   }
@@ -1086,7 +1372,9 @@ export async function completeCandidateEducationSection(
     );
 
   if (invalidRecord) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "education",
       "Please make sure each education record includes the institution and start date.",
     );
   }
@@ -1287,7 +1575,9 @@ export async function completeCandidateEmploymentSection(
       .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "employment",
       "We could not verify your employment history.",
     );
   }
@@ -1302,7 +1592,9 @@ export async function completeCandidateEmploymentSection(
     records.length === 0 &&
     !noEmploymentHistory
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "employment",
       "Please add your employment history, or confirm that you have no previous employment history.",
     );
   }
@@ -1316,7 +1608,9 @@ export async function completeCandidateEmploymentSection(
   );
 
   if (invalidRecord) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "employment",
       "Please make sure every employment record contains the required dates and employment information.",
     );
   }
@@ -1502,13 +1796,17 @@ export async function completeCandidateLanguagesSection(
       .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "languages",
       "We could not verify your language information.",
     );
   }
 
   if (!languages || languages.length === 0) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "languages",
       "Please add at least one language before continuing.",
     );
   }
@@ -1523,7 +1821,9 @@ export async function completeCandidateLanguagesSection(
   );
 
   if (incomplete) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "languages",
       "Please provide speaking, reading, writing and listening levels for each language.",
     );
   }
@@ -1693,7 +1993,9 @@ export async function completeCandidateLicensesSection(
       .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "licenses",
       "We could not verify your professional licence information.",
     );
   }
@@ -1708,7 +2010,9 @@ export async function completeCandidateLicensesSection(
     records.length === 0 &&
     !noProfessionalLicenses
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "licenses",
       "Please add your professional licences or certifications, or confirm that you do not have any to declare.",
     );
   }
@@ -1718,7 +2022,9 @@ export async function completeCandidateLicensesSection(
   );
 
   if (invalidRecord) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "licenses",
       "Please make sure every professional licence or certification has a name.",
     );
   }
@@ -1730,9 +2036,11 @@ export async function completeCandidateLicensesSection(
       new Date(record.expiry_date) <
         new Date(record.issue_date)
     ) {
-      throw new Error(
-        "One of your professional licence records has an expiry date before its issue date.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "licenses",
+      "One of your professional licence records has an expiry date before its issue date.",
+    );
     }
   }
 
@@ -1928,7 +2236,9 @@ export async function completeCandidateTravelSection(
       );
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "travel",
       "We could not verify your travel history.",
     );
   }
@@ -1945,7 +2255,9 @@ export async function completeCandidateTravelSection(
     records.length === 0 &&
     !noTravelHistory
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "travel",
       "Please add your previous international travel, or confirm that you have no international travel history.",
     );
   }
@@ -1958,9 +2270,11 @@ export async function completeCandidateTravelSection(
       !record.country ||
       !record.arrival_date
     ) {
-      throw new Error(
-        "Each travel record must include the country and arrival date.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "travel",
+      "Each travel record must include the country and arrival date.",
+    );
     }
 
     const arrival = new Date(
@@ -1972,15 +2286,19 @@ export async function completeCandidateTravelSection(
         arrival.getTime(),
       )
     ) {
-      throw new Error(
-        "One of your travel records has an invalid arrival date.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "travel",
+      "One of your travel records has an invalid arrival date.",
+    );
     }
 
     if (arrival > today) {
-      throw new Error(
-        "One of your travel records contains a future arrival date.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "travel",
+      "One of your travel records contains a future arrival date.",
+    );
     }
 
     if (record.departure_date) {
@@ -1993,21 +2311,27 @@ export async function completeCandidateTravelSection(
           departure.getTime(),
         )
       ) {
-        throw new Error(
-          "One of your travel records has an invalid departure date.",
-        );
+        return failCandidateSection(
+      applicationId,
+      "travel",
+      "One of your travel records has an invalid departure date.",
+    );
       }
 
       if (departure < arrival) {
-        throw new Error(
-          "One of your travel records has a departure date before its arrival date.",
-        );
+        return failCandidateSection(
+      applicationId,
+      "travel",
+      "One of your travel records has a departure date before its arrival date.",
+    );
       }
 
       if (departure > today) {
-        throw new Error(
-          "One of your travel records contains a future departure date.",
-        );
+        return failCandidateSection(
+      applicationId,
+      "travel",
+      "One of your travel records contains a future departure date.",
+    );
       }
     }
   }
@@ -2280,7 +2604,9 @@ export async function completeCandidateVisaSection(
       );
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "visas",
       "We could not verify your visa history.",
     );
   }
@@ -2297,16 +2623,20 @@ export async function completeCandidateVisaSection(
     records.length === 0 &&
     !noVisaHistory
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "visas",
       "Please add your previous visa history, or confirm that you have no visa history to declare.",
     );
   }
 
   for (const record of records) {
     if (!record.country) {
-      throw new Error(
-        "Every visa history record must include a country.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "visas",
+      "Every visa history record must include a country.",
+    );
     }
 
     if (
@@ -2314,9 +2644,11 @@ export async function completeCandidateVisaSection(
         "refused" &&
       !record.refusal_reason
     ) {
-      throw new Error(
-        "A refusal reason is required for every refused visa application.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "visas",
+      "A refusal reason is required for every refused visa application.",
+    );
     }
 
     if (
@@ -2329,9 +2661,11 @@ export async function completeCandidateVisaSection(
           record.application_date,
         )
     ) {
-      throw new Error(
-        "One visa record has a decision date before its application date.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "visas",
+      "One visa record has a decision date before its application date.",
+    );
     }
 
     if (
@@ -2344,9 +2678,11 @@ export async function completeCandidateVisaSection(
           record.valid_from,
         )
     ) {
-      throw new Error(
-        "One visa record has an expiry date before its valid-from date.",
-      );
+      return failCandidateSection(
+      applicationId,
+      "visas",
+      "One visa record has an expiry date before its valid-from date.",
+    );
     }
   }
 
@@ -2495,13 +2831,17 @@ export async function completeCandidateEmergencySection(
       .eq("application_id", applicationId);
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "emergency",
       "We could not verify your emergency contact information.",
     );
   }
 
   if (!contacts || contacts.length === 0) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "emergency",
       "Please add at least one emergency contact before continuing.",
     );
   }
@@ -2512,7 +2852,9 @@ export async function completeCandidateEmergencySection(
   );
 
   if (incompleteContact) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "emergency",
       "Every emergency contact must include a full name and phone number.",
     );
   }
@@ -2679,7 +3021,9 @@ export async function completeCandidateReferencesSection(
       );
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "references",
       "We could not verify your reference information.",
     );
   }
@@ -2693,9 +3037,11 @@ export async function completeCandidateReferencesSection(
     records.length === 0 &&
     !noReferences
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "references",
       "Please add at least one reference, or confirm that you have no references to declare.",
-   );
+    );
   }
 
   const incomplete = records.find(
@@ -2709,7 +3055,9 @@ export async function completeCandidateReferencesSection(
   );
 
   if (incomplete) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "references",
       "Please make sure every reference has a full name and a contact method where contact permission is granted.",
     );
   }
@@ -2760,23 +3108,32 @@ export async function saveCandidateFinancialInformation(
       ? null
       : Number(monthlyIncomeText);
 
+  // Matches Postgres numeric(14,2): 12 integer digits and 2 decimal places.
+  const maxFinancialAmount = 999_999_999_999.99;
+
   if (
     availableFunds !== null &&
     (!Number.isFinite(availableFunds) ||
-      availableFunds < 0)
+      availableFunds < 0 ||
+      availableFunds > maxFinancialAmount)
   ) {
-    throw new Error(
-      "Please provide a valid available-funds amount.",
+    return failCandidateSection(
+      applicationId,
+      "finances",
+      "Please provide a valid available-funds amount below 1 trillion.",
     );
   }
 
   if (
     monthlyIncome !== null &&
     (!Number.isFinite(monthlyIncome) ||
-      monthlyIncome < 0)
+      monthlyIncome < 0 ||
+      monthlyIncome > maxFinancialAmount)
   ) {
-    throw new Error(
-      "Please provide a valid monthly-income.",
+    return failCandidateSection(
+      applicationId,
+      "finances",
+      "Please provide a valid monthly-income amount below 1 trillion.",
     );
   }
 
@@ -2830,8 +3187,18 @@ export async function saveCandidateFinancialInformation(
     );
 
   if (error) {
-    throw new Error(
-      "We could not save your financial information.",
+    console.error("[candidate] finance save failed", {
+      application_id: applicationId,
+      code: error.code ?? null,
+      message: error.message ?? "unknown_error",
+      details: error.details ?? null,
+      hint: error.hint ?? null,
+    });
+
+    return failCandidateSection(
+      applicationId,
+      "finances",
+      "We could not save your financial information. Check the amounts and try again.",
     );
   }
 
@@ -2869,19 +3236,25 @@ export async function completeCandidateFinancesSection(
       .maybeSingle();
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "finances",
       "We could not verify your financial information.",
     );
   }
 
   if (!financialInformation) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "finances",
       "Please save your financial information before continuing.",
     );
   }
 
   if (!financialInformation.funding_source) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "finances",
       "Please select or provide your primary funding source before continuing.",
     );
   }
@@ -2890,7 +3263,9 @@ export async function completeCandidateFinancesSection(
     financialInformation.available_funds !== null &&
     Number(financialInformation.available_funds) < 0
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "finances",
       "Available funds cannot be negative.",
     );
   }
@@ -2899,9 +3274,11 @@ export async function completeCandidateFinancesSection(
     financialInformation.monthly_income !== null &&
     Number(financialInformation.monthly_income) < 0
   ) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "finances",
       "Monthly income cannot be negative.",
-   );
+    );
   }
 
   await saveImmigrationSectionProgress(
@@ -3053,31 +3430,41 @@ export async function completeCandidateDeclarationsSection(
     .maybeSingle();
 
   if (error) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "declarations",
       "We could not verify your immigration declarations.",
     );
   }
 
   if (!declaration) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "declarations",
       "Please save your declarations before continuing.",
     );
   }
 
   if (!declaration.consent_to_data_processing) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "declarations",
       "You must confirm consent to process the information required for this application.",
     );
   }
 
   if (!declaration.certify_true_and_complete) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "declarations",
       "You must certify that the information provided is true and complete.",
     );
   }
 
   if (!declaration.declaration_signed_name) {
-    throw new Error(
+    return failCandidateSection(
+      applicationId,
+      "declarations",
       "Please enter your full legal name to sign the declaration.",
     );
   }

@@ -7,10 +7,12 @@ type Props = { searchParams?: Promise<Record<string, string | string[] | undefin
 export default async function RegisterPage({ searchParams }: Props) {
   const params = (await searchParams) ?? {};
   const error = typeof params.error === "string" ? params.error : null;
+  const next = typeof params.next === "string" ? params.next : "";
 
   return (
     <main className="min-h-screen bg-[#F3F4F6] px-4 py-10">
       <form action={registerCandidate} className="mx-auto grid max-w-2xl gap-5 rounded-md bg-white p-8 shadow-xl">
+        <input type="hidden" name="next" value={next} />
         <div>
           <RedstoneLogo
             href="/"
@@ -38,7 +40,7 @@ export default async function RegisterPage({ searchParams }: Props) {
         <label className="flex gap-2 text-sm font-semibold"><input type="checkbox" name="privacy" required /> I acknowledge the Privacy Policy.</label>
         <label className="flex gap-2 text-sm font-semibold"><input type="checkbox" name="terms" required /> I acknowledge the Terms.</label>
         <button className="rounded-md bg-[#D4AF37] px-5 py-3 font-black text-[#071A3D]">Register</button>
-        <Link href="/login" className="text-sm font-bold text-[#071A3D]">Already have an account? Sign in</Link>
+        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-sm font-bold text-[#071A3D]">Already have an account? Sign in</Link>
       </form>
     </main>
   );

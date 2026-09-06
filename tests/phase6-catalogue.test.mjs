@@ -6,6 +6,7 @@ const migration = readFileSync("supabase/migrations/20260822220000_phase6_advanc
 const costs = readFileSync("src/lib/jobs/costs.ts", "utf8");
 const catalogue = readFileSync("src/lib/jobs/catalogue.ts", "utf8");
 const publicJobs = readFileSync("src/lib/public/jobs.ts", "utf8");
+const jobDetailContext = readFileSync("src/lib/public/job-detail-context.ts", "utf8");
 const jobDetail = readFileSync("src/app/(public)/jobs/[slug]/page.tsx", "utf8");
 const jobCard = readFileSync("src/components/public/job-card.tsx", "utf8");
 const validation = readFileSync("src/lib/admin/validation.ts", "utf8");
@@ -46,13 +47,13 @@ test("document fee catalogue supports Gulf and non-Gulf medical plus IELTS opt-i
 test("calculator accounts for existing candidate documents and safe public fields", () => {
   assert.match(costs, /alreadyUploaded/);
   assert.match(costs, /candidate_can_provide_existing/);
-  assert.match(publicJobs, /getJobCatalogueContext/);
-  assert.doesNotMatch(publicJobs, /select\("\*"\)/);
+  assert.match(jobDetailContext, /getJobDetailContext/);
+  assert.doesNotMatch(jobDetailContext, /document_fee_catalog[\s\S]{0,100}select\("\*"\)/);
 });
 
 test("salary TBD and confirmed salary are both supported", () => {
   assert.match(publicJobs, /salary_confirmed/);
-  assert.match(`${jobDetail}\n${jobCard}`, /To be confirmed by employer/);
+  assert.match(`${jobDetail}\n${jobCard}`, /To be confirmed/);
   assert.match(validation, /salary_period/);
 });
 

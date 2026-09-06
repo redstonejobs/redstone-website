@@ -6,14 +6,11 @@ export const CONTACT = {
   emails: {
     general: "info@redstone.co.ke",
     jobs: "jobs@redstone.co.ke",
-    recruitment: "recruitment@redstone.co.ke",
-    employers: "employers@redstone.co.ke",
     support: "support@redstone.co.ke",
-    documents: "documents@redstone.co.ke",
-    accounts: "accounts@redstone.co.ke",
-    complaints: "complaints@redstone.co.ke",
     hr: "hr@redstone.co.ke",
+    visa: "visa@redstone.co.ke",
     admin: "admin@redstone.co.ke",
+    noreply: "noreply@redstone.co.ke",
   },
 };
 

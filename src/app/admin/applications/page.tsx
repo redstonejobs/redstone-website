@@ -296,6 +296,7 @@ export default async function ApplicationsPage({
             "Destination",
             "Status",
             "Assigned Officer",
+            "Referral Staff",
             "Created / Submitted",
             "Last Updated",
             "Action",
@@ -319,6 +320,11 @@ export default async function ApplicationsPage({
             const assigned = nestedRow(
               application,
               "assigned_staff",
+            );
+
+            const referralStaff = nestedRow(
+              application,
+              "referral_staff",
             );
 
             const applicationId = textValue(
@@ -362,6 +368,18 @@ export default async function ApplicationsPage({
               assigned,
               ["full_name"],
               "Unassigned",
+            );
+
+            const referralStaffName = textValue(
+              referralStaff,
+              ["full_name"],
+              "Direct / Unattributed",
+            );
+
+            const referralCode = textValue(
+              referralStaff,
+              ["referral_code"],
+              "",
             );
 
             const createdDate =
@@ -457,6 +475,18 @@ export default async function ApplicationsPage({
                       {assignedName === "Unassigned"
                         ? "Requires assignment"
                         : "Case officer"}
+                    </p>
+                  </div>
+                </td>
+
+                {/* REFERRAL */}
+                <td className="px-4 py-4 align-top">
+                  <div className="min-w-[150px]">
+                    <p className={`text-sm font-semibold ${referralStaff ? "text-[#071A3D]" : "text-slate-400"}`}>
+                      {referralStaffName}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {referralCode || "No staff referral"}
                     </p>
                   </div>
                 </td>

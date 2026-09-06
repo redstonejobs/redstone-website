@@ -2,12 +2,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import type { CandidateContext, CandidateProfile } from "./types";
 
-export async function requireCandidate(): Promise<CandidateContext> {
+export async function requireCandidate(returnTo = "/candidate"): Promise<CandidateContext> {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
 
   if (error || !data.user) {
-    redirect("/login?next=/candidate");
+    redirect(`/login?next=${encodeURIComponent(returnTo)}`);
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -21,6 +21,10 @@ export async function requireCandidate(): Promise<CandidateContext> {
   }
 
   if (profile.profile_type !== "candidate" || profile.is_active !== true) {
+    if (returnTo.startsWith("/apply/")) {
+      redirect(`/login?next=${encodeURIComponent(returnTo)}&error=candidate_required`);
+    }
+
     redirect(profile.profile_type === "admin" || profile.profile_type === "super_admin" || profile.profile_type === "staff" ? "/admin" : "/");
   }
 

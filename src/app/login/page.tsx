@@ -18,6 +18,9 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const next = searchParams.get("next") ?? "";
+  const registerHref = next
+    ? `/register?next=${encodeURIComponent(next)}`
+    : "/register";
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -76,7 +79,7 @@ function LoginForm() {
             </button>
           </form>
           <div className="mt-6 flex flex-wrap justify-between gap-3 text-sm font-semibold">
-            <Link href="/register" className="text-[#071A3D]">Create candidate account</Link>
+            <Link href={registerHref} className="text-[#071A3D]">Create candidate account</Link>
             <Link href="/employer/register" className="text-[#071A3D]">Create employer account</Link>
             <Link href="/forgot-password" className="text-[#B8860B]">Forgot password?</Link>
           </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RedstoneLogo } from "@/components/brand/redstone-logo";
+import { ReferralLinkCard } from "@/components/staff/referral-link-card";
 import { uploadOwnStaffAvatar } from "@/lib/staff/actions";
 import { createClient } from "@/utils/supabase/server";
 
@@ -45,10 +46,6 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
     "Access your employment information, personnel account and authorized staff services.",
 };
 
-type ClientStatusRow = {
-  status: string;
-};
-
 type CompensationRow = {
   monthly_salary: number | string | null;
   salary_currency: string | null;
@@ -81,6 +78,7 @@ export default async function StaffDashboardPage() {
         department,
         duty_station,
         avatar_url,
+        referral_code,
         reporting_officer,
         appointment_date,
         employment_type
@@ -130,6 +128,8 @@ export default async function StaffDashboardPage() {
   const roleLabel =
     ROLE_LABELS[primaryRole] ?? "Staff Member";
 
+  const recruitmentWorkspaceEnabled = profile.profile_type === "staff";
+
   const fullName =
     profile.full_name || "Staff Member";
 
@@ -174,49 +174,21 @@ export default async function StaffDashboardPage() {
      RECRUITMENT COUNTERS
   ============================================================ */
 
-  let clientRows: ClientStatusRow[] = [];
-
-  if (primaryRole === "recruiter") {
-    const { data } = await supabase
-      .from("staff_clients")
-      .select("status")
-      .eq("staff_user_id", user.id);
-
-    clientRows = (data ?? []) as ClientStatusRow[];
-  }
-
-  const recruitmentMetrics = {
-    total: clientRows.length,
-
-    leads: clientRows.filter(
-      (item) => item.status === "lead"
-    ).length,
-
-    contacted: clientRows.filter(
-      (item) => item.status === "contacted"
-    ).length,
-
-    registered: clientRows.filter(
-      (item) => item.status === "registered"
-    ).length,
-
-    applied: clientRows.filter(
-      (item) => item.status === "applied"
-    ).length,
-
-    processing: clientRows.filter(
-      (item) => item.status === "processing"
-    ).length,
-
-    placed: clientRows.filter(
-      (item) => item.status === "placed"
-    ).length,
-  };
+  const recruitmentMetrics = await loadRecruitmentMetrics(
+    supabase,
+    user.id
+  );
 
   const salaryDisplay = formatMoney(
     compensation?.monthly_salary,
     compensation?.salary_currency || "KES"
   );
+
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://redstone.co.ke").replace(/\/+$/, "");
+  const referralCode = profile.referral_code || null;
+  const referralLink = referralCode
+    ? `${siteUrl}/r/${encodeURIComponent(referralCode)}`
+    : null;
 
   return (
     <main className="min-h-screen bg-[#EEF1F5] text-slate-900">
@@ -330,7 +302,7 @@ export default async function StaffDashboardPage() {
                 {portalDescription}
               </p>
 
-              {primaryRole === "recruiter" ? (
+              {recruitmentWorkspaceEnabled ? (
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
                     href="/staff/clients"
@@ -389,11 +361,18 @@ export default async function StaffDashboardPage() {
           </div>
         </section>
 
+        <div className="mt-7">
+          <ReferralLinkCard
+            referralCode={referralCode}
+            referralLink={referralLink}
+          />
+        </div>
+
         {/* ====================================================
-            RECRUITER PERFORMANCE SNAPSHOT
+            CLIENT PORTFOLIO SNAPSHOT
         ==================================================== */}
 
-        {primaryRole === "recruiter" ? (
+        {recruitmentWorkspaceEnabled ? (
           <section className="mt-7">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -402,7 +381,7 @@ export default async function StaffDashboardPage() {
                 </p>
 
                 <h2 className="mt-1 text-xl font-black text-[#071A3D]">
-                  My Pipeline Snapshot
+                  My Client Portfolio
                 </h2>
               </div>
 
@@ -1517,4 +1496,62 @@ function formatMoney(
       }
     )}`;
   }
+}
+
+async function loadRecruitmentMetrics(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  staffUserId: string
+) {
+  const statuses = [
+    "lead",
+    "contacted",
+    "registered",
+    "applied",
+    "processing",
+    "placed",
+  ] as const;
+
+  const [total, ...statusCounts] = await Promise.all([
+    countOwnStaffClients(supabase, staffUserId),
+    ...statuses.map((status) =>
+      countOwnStaffClients(supabase, staffUserId, status)
+    ),
+  ]);
+
+  return {
+    total,
+    leads: statusCounts[0] ?? 0,
+    contacted: statusCounts[1] ?? 0,
+    registered: statusCounts[2] ?? 0,
+    applied: statusCounts[3] ?? 0,
+    processing: statusCounts[4] ?? 0,
+    placed: statusCounts[5] ?? 0,
+  };
+}
+
+async function countOwnStaffClients(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  staffUserId: string,
+  status?: string
+) {
+  let query = supabase
+    .from("staff_clients")
+    .select("id", { count: "exact", head: true })
+    .eq("staff_user_id", staffUserId);
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { count, error } = await query;
+
+  if (error) {
+    console.error("[staff] dashboard client count failed", {
+      code: error.code ?? null,
+      message: error.message,
+    });
+    return 0;
+  }
+
+  return count ?? 0;
 }
