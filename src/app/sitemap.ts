@@ -1,4 +1,4 @@
-﻿import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/public/blog";
 import { COUNTRIES } from "@/lib/public/countries";
 import { FAQ_CATEGORIES } from "@/lib/public/faq-library";
@@ -49,6 +49,7 @@ const staticRoutes = [
   "/refund-cancellation",
   "/payment-terms",
   "/account-deletion",
+  "/data-protection",
   "/privacy",
   "/terms",
   "/cookies",
