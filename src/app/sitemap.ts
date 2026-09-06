@@ -1,6 +1,7 @@
 ﻿import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/public/blog";
 import { COUNTRIES } from "@/lib/public/countries";
+import { FAQ_CATEGORIES } from "@/lib/public/faq-library";
 import {
   getPublishedJobSitemapCount,
   getPublishedJobSitemapEntries,
@@ -81,6 +82,13 @@ export default async function sitemap({
       ? []
       : COUNTRIES.map((country) => ({
           url: `${SITE_URL}/countries/${country.slug}`,
+          lastModified: now,
+        }))),
+
+    ...(isJobShard
+      ? []
+      : FAQ_CATEGORIES.map((category) => ({
+          url: `${SITE_URL}/faq/${category.slug}`,
           lastModified: now,
         }))),
 
