@@ -15,11 +15,29 @@ export const dynamic = "force-dynamic";
 
 type JobsProps = { searchParams?: Promise<Record<string, string | string[] | undefined>> };
 
+const SORT_FILTER_KEYS = [
+  "q",
+  "country",
+  "category",
+  "skill",
+  "sponsorship",
+  "job_type",
+  "contract_type",
+  "salary_min",
+  "accommodation",
+  "foreign_worker",
+] as const;
+
 export default async function JobsPage({ searchParams }: JobsProps) {
   const raw = (await searchParams) ?? {};
   const params = Object.fromEntries(
     Object.entries(raw).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value])
   ) as Record<string, string | undefined>;
+
+  // Source and maximum-salary filters were removed from the public search UI.
+  // Ignore stale links carrying them so candidates never have invisible filters applied.
+  delete params.source;
+  delete params.salary_max;
 
   const [result, countries] = await Promise.all([getPublishedJobs(params), getConfiguredCountries()]);
   const totalPages = Math.max(Math.ceil(result.count / result.pageSize), 1);
@@ -47,14 +65,37 @@ export default async function JobsPage({ searchParams }: JobsProps) {
             <JobSearch defaults={params} countries={countries} />
           </div>
 
-          <div className="mt-10 flex flex-col gap-2 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mt-10 flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">Current Vacancies</p>
               <h2 className="mt-1 text-2xl font-black text-[#071A3D]">Available Jobs</h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500">
+                {result.count.toLocaleString()} {result.count === 1 ? "opportunity" : "opportunities"}
+              </p>
             </div>
-            <p className="text-sm font-semibold text-slate-500">
-              {result.count.toLocaleString()} {result.count === 1 ? "opportunity" : "opportunities"}
-            </p>
+
+            <form className="flex flex-wrap items-end gap-2" aria-label="Sort jobs">
+              {SORT_FILTER_KEYS.map((key) =>
+                params[key] ? <input key={key} type="hidden" name={key} value={params[key]} /> : null
+              )}
+              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                Sort
+                <select
+                  name="sort"
+                  defaultValue={params.sort ?? "newest"}
+                  className="min-h-10 min-w-48 rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-700 outline-none transition focus:border-[#B8860B] focus:ring-2 focus:ring-[#D4AF37]/20"
+                >
+                  <option value="newest">Newest on Red Stone</option>
+                  <option value="source_newest">Newest at source</option>
+                  <option value="salary_asc">Salary Low to High</option>
+                  <option value="salary_desc">Salary High to Low</option>
+                  <option value="deadline">Closing Soon</option>
+                </select>
+              </label>
+              <button className="min-h-10 rounded-xl border border-slate-300 bg-white px-4 text-sm font-black text-[#071A3D] transition hover:border-[#D4AF37] hover:bg-[#fffaf0]">
+                Apply
+              </button>
+            </form>
           </div>
 
           <div className="mt-7">
