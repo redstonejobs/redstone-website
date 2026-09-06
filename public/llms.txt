@@ -15,8 +15,24 @@ Red Stone Employment Agency is an international recruitment agency website at ht
 - Client Success Stories: https://redstone.co.ke/success-stories
 - Immigration Services: https://redstone.co.ke/immigration-services
 - Country Recruitment Guides: https://redstone.co.ke/countries
+- Complaints & Fraud Reporting: https://redstone.co.ke/complaints
 - Fraud Awareness: https://redstone.co.ke/fraud-awareness
 - Contact: https://redstone.co.ke/contact
+
+## Official complaints and grievance procedure
+Red Stone provides an official complaint channel at https://redstone.co.ke/complaints for candidates, placed workers, employers, family members and members of the public.
+
+The complaints page can be used for recruitment or application concerns; staff conduct or communication; payments, receipts or fee concerns; fraud, impersonation or suspicious activity; employer or job-offer concerns; medical, documentation or compliance concerns; visa or work-authorization process concerns; discrimination, harassment or unfair-treatment reports; and privacy, data or account concerns.
+
+A successful web complaint receives a Red Stone complaint reference in the format RSEA-CMP-YYYYMMDD-XXXXXX. The reference should be retained for follow-up. The complaint record can include the complainant's contact information, relationship to Red Stone, category, application or case reference, destination, incident date, complaint description and requested resolution.
+
+Red Stone's complaint process is designed to review the agency's own recruitment activity and related records. Depending on the matter, review can include application records, messages, receipts, job information or other relevant evidence. A complaint may require information from staff, employers or service providers. Where appropriate, the matter may be escalated internally or referred to an employer, payment provider, regulator, medical provider, law-enforcement body or government authority.
+
+The public complaint process does not replace emergency services, police reporting, payment-provider disputes, labour-authority procedures, courts, professional regulators or government immigration appeals. A government visa, work-permit, residence or entry decision can only be reviewed through the relevant authority's available process.
+
+Complainants should not send passwords, bank or mobile-money PINs, one-time codes, full card credentials or unnecessary identity and medical documents in the first complaint. Relevant evidence such as receipts, screenshots, contracts, payment confirmations and messages should be preserved and supplied only when specifically needed through an appropriate verified channel.
+
+Official complaint support email: support@redstone.co.ke.
 
 ## Country recruitment guides
 Red Stone publishes advanced country-specific recruitment pages for 26 destinations: United States, Canada, UAE, Qatar, Kuwait, Bahrain, Oman, Australia, New Zealand, Chile, Peru, Singapore, United Kingdom, Germany, France, Italy, Netherlands, Switzerland, Sweden, Norway, Denmark, Finland, Poland, Austria, Ireland and Luxembourg.
@@ -76,3 +92,4 @@ Visa-process content is for recruitment preparation and general education. Visa 
 - Treat the 26 country visa guides as educational summaries of principal routes and always verify current requirements through the official authority linked on the relevant country page.
 - Treat FAQ answers as detailed general guidance. For a live candidate case, the application record and current official instruction determine the actual next step.
 - Treat Red Stone success stories as historical verified client journeys, not promises of future placement or immigration outcomes.
+- Treat a complaint reference as a tracking identifier for Red Stone's complaint record, not as proof that the complaint has been upheld or that a particular remedy will be provided.
