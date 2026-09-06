@@ -62,8 +62,8 @@ const immigrationImage =
 const quickLinks = [
   { label: "Candidate Support", href: "/candidate-support" },
   { label: "Medicals & Compliance", href: "/medicals-compliance" },
+  { label: "Employer Recruitment Services", href: "/employer-services" },
   { label: "Ethical Recruitment", href: "/ethical-recruitment" },
-  { label: "Employer Screening", href: "/employers" },
   { label: "International Opportunities", href: "/jobs" },
 ];
 
@@ -146,7 +146,7 @@ export default async function HomePage() {
           <PathCard number="01" title="I am looking for a job" body="Search current skilled and entry-level vacancies and begin your application online." href="/jobs" action="Find Jobs" />
           <PathCard number="02" title="I need candidate support" body="Get guidance on CV preparation, application readiness, interviews and recruitment documents." href="/candidate-support" action="Candidate Support" />
           <PathCard number="03" title="I need medical or compliance guidance" body="Understand recruitment medicals, biometrics, police clearance and document-verification requirements." href="/medicals-compliance" action="Medicals & Compliance" />
-          <PathCard number="04" title="I am an employer" body="Learn how Red Stone supports candidate sourcing, screening and recruitment coordination." href="/employers" action="Recruit With Us" />
+          <PathCard number="04" title="I am an employer" body="Explore workforce sourcing, candidate screening, interview coordination and international recruitment support." href="/employer-services" action="Employer Recruitment Services" />
           <PathCard number="05" title="I am preparing to travel" body="Review work-permit, visa, documentation and travel-preparation guidance for the post-selection stage." href="/immigration-services" action="Immigration Guidance" />
         </div>
       </Band>
@@ -216,9 +216,9 @@ export default async function HomePage() {
           <div>
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#F2D675]">Employers</p>
             <h2 className="mt-2 text-3xl font-black">Need Reliable Talent?</h2>
-            <p className="mt-3 max-w-2xl text-slate-200">Red Stone helps employers source and screen candidates through a responsible recruitment process.</p>
+            <p className="mt-3 max-w-2xl text-slate-200">Red Stone helps employers source, screen and coordinate candidates through a responsible international recruitment process.</p>
           </div>
-          <Link href="/employers" className="rounded-md bg-[#D4AF37] px-5 py-3 text-center text-sm font-black text-[#071A3D]">Recruit With Us</Link>
+          <Link href="/employer-services" className="rounded-md bg-[#D4AF37] px-5 py-3 text-center text-sm font-black text-[#071A3D]">Employer Recruitment Services</Link>
         </div>
       </Band>
 
