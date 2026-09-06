@@ -40,8 +40,10 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   delete params.salary_max;
 
   const selectedSort = params.sort ?? "mixed";
-  const [result, countries] = await Promise.all([getPublishedJobs(params), getConfiguredCountries()]);
-  const displayJobs = selectedSort === "mixed" ? mixJobs(result.jobs, result.page) : result.jobs;
+  const [result, countries] = await Promise.all([
+    selectedSort === "mixed" ? getMixedPublishedJobs(params) : getPublishedJobs(params),
+    getConfiguredCountries(),
+  ]);
   const totalPages = Math.max(Math.ceil(result.count / result.pageSize), 1);
   const queryWithoutPage = new URLSearchParams(
     Object.entries(params).filter(
@@ -102,9 +104,9 @@ export default async function JobsPage({ searchParams }: JobsProps) {
           </div>
 
           <div className="mt-7">
-            {displayJobs.length ? (
+            {result.jobs.length ? (
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                {displayJobs.map((job) => (
+                {result.jobs.map((job) => (
                   <JobCard key={job.id} job={job} />
                 ))}
               </div>
@@ -144,10 +146,44 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   );
 }
 
-function mixJobs(jobs: PublicJob[], page: number) {
+async function getMixedPublishedJobs(params: Record<string, string | undefined>) {
+  const displayPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const groupStart = Math.floor((displayPage - 1) / 3) * 3 + 1;
+  const slot = (displayPage - 1) % 3;
+
+  // Pull three neighboring result pages, mix all 27 jobs together, then split
+  // them back into three display pages. This prevents imported alphabetical
+  // batches from appearing together while keeping pagination stable and free
+  // from duplicates across the three-page group.
+  const sourcePages = await Promise.all(
+    [groupStart, groupStart + 1, groupStart + 2].map((sourcePage) =>
+      getPublishedJobs({
+        ...params,
+        sort: "newest",
+        page: String(sourcePage),
+      })
+    )
+  );
+
+  const first = sourcePages[0];
+  const mixed = mixJobs(
+    sourcePages.flatMap((source) => source.jobs),
+    groupStart
+  );
+  const from = slot * first.pageSize;
+  const jobs = mixed.slice(from, from + first.pageSize);
+
+  return {
+    ...first,
+    jobs,
+    page: displayPage,
+  };
+}
+
+function mixJobs(jobs: PublicJob[], seed: number) {
   return [...jobs].sort((a, b) => {
-    const aScore = stableMixScore(`${page}:${a.id}`);
-    const bScore = stableMixScore(`${page}:${b.id}`);
+    const aScore = stableMixScore(`${seed}:${a.id}:${a.title ?? ""}:${a.country ?? ""}`);
+    const bScore = stableMixScore(`${seed}:${b.id}:${b.title ?? ""}:${b.country ?? ""}`);
     return aScore - bScore;
   });
 }
