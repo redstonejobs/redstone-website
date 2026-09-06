@@ -46,6 +46,7 @@ const staticRoutes = [
   "/contact",
   "/fraud-awareness",
   "/complaints",
+  "/refund-cancellation",
   "/privacy",
   "/terms",
   "/cookies",
