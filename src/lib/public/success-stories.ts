@@ -34,7 +34,7 @@ const VERIFIED_CLIENT_ROWS = [
 ] as const;
 
 export const VERIFIED_SUCCESS_STORIES: SuccessStory[] = VERIFIED_CLIENT_ROWS.map(
-  ([id, clientName, role, destination, travelDate]) => ({
+  ([id, clientName, role, destination, travelDate]): SuccessStory => ({
     id,
     clientName,
     role,
