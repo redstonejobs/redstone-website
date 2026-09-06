@@ -17,6 +17,8 @@ const staticRoutes = [
   "/why-red-stone",
   "/ethical-recruitment",
   "/candidate-protection",
+  "/candidate-support",
+  "/immigration-services",
   "/employer-services",
   "/recruitment-process",
   "/compliance",
