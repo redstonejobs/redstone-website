@@ -6,14 +6,14 @@ const jobsPage = fs.readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
 const search = fs.readFileSync("src/components/public/job-search.tsx", "utf8");
 const card = fs.readFileSync("src/components/public/job-card.tsx", "utf8");
 
-test("public jobs defaults to confirmed sponsorship vacancies", () => {
-  assert.match(jobsPage, /params\.sponsorship \?\? "confirmed"/);
-  assert.match(jobsPage, /queryParams\.sponsorship = "true"/);
-  assert.match(jobsPage, /Sponsorship Job Opportunities/);
+test("public jobs defaults to the full Red Stone programme catalogue", () => {
+  assert.match(jobsPage, /params\.sponsorship \?\? "programme"/);
+  assert.match(jobsPage, /queryParams\.source = "redstone"/);
+  assert.match(jobsPage, /All Published Job Opportunities/);
 });
 
 test("sponsorship filter distinguishes programme from confirmed employer sponsorship", () => {
-  assert.match(search, /Red Stone programme/);
+  assert.match(search, /All Red Stone programme jobs/);
   assert.match(search, /Employer-confirmed visa sponsorship/);
   assert.match(jobsPage, /selectedSponsorship === "confirmed"/);
   assert.match(jobsPage, /queryParams\.sponsorship = "true"/);
