@@ -21,8 +21,18 @@ Configure these as Worker secrets:
 - `RESEND_API_KEY`
 - `OPENAI_API_KEY`
 - `AI_INTERNAL_SECRET`
+- `AI_RATE_LIMIT_SALT`
 
-Configure `AI_WEBSITE_CHAT_ENABLED=false` until the Red Stone website assistant is intentionally activated. Set it to `true` only after `OPENAI_API_KEY` is configured and the candidate-facing chat has passed production checks. The widget and public AI route are both gated by this server-side flag.
+`AI_RATE_LIMIT_SALT` must be a long random server-only value. The website AI hashes the Cloudflare client IP with this salt before rate-limit storage; raw visitor IP addresses are not stored in the AI rate-limit table.
+
+Keep `AI_WEBSITE_CHAT_ENABLED=false` until the Red Stone website assistant is intentionally activated. Set it to `true` only after `OPENAI_API_KEY`, `AI_RATE_LIMIT_SALT`, and the production checks are complete. The widget and public AI route fail closed when any required AI protection is missing.
+
+Website AI abuse-control defaults:
+
+- `AI_WEBSITE_RATE_LIMIT=30`
+- `AI_WEBSITE_RATE_WINDOW_SECONDS=600`
+
+These values mean 30 valid AI messages per hashed visitor identity in a 10-minute window. Adjust only after reviewing real traffic and candidate conversation lengths.
 
 Optional AI model overrides:
 
