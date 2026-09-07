@@ -10,9 +10,15 @@ const callback = readFileSync("src/app/auth/callback/route.ts", "utf8");
 const candidate = readFileSync("src/lib/candidate/actions.ts", "utf8");
 const staffPage = readFileSync("src/app/staff/page.tsx", "utf8");
 const staffClients = readFileSync("src/app/staff/clients/page.tsx", "utf8");
+const staffClientNew = readFileSync("src/app/staff/clients/new/page.tsx", "utf8");
+const staffClientNewActions = readFileSync("src/app/staff/clients/new/actions.ts", "utf8");
 const staffActions = readFileSync("src/lib/staff/actions.ts", "utf8");
 const staffClientsMigration = readFileSync(
   "supabase/migrations/20260904120000_staff_clients_intake_tracking.sql",
+  "utf8",
+);
+const staffServicePermissions = readFileSync(
+  "supabase/migrations/20260907095000_staff_crm_service_role_permissions.sql",
   "utf8",
 );
 const adminData = readFileSync("src/lib/admin/data.ts", "utf8");
@@ -42,26 +48,28 @@ test("candidate registration and application consume staff referral attribution"
   assert.match(referral, /source: "referral_link"/);
 });
 
-test("staff home is lightweight while CRM keeps referral and client tools", () => {
+test("staff home and CRM routes remain lightweight", () => {
   assert.match(staffPage, /await requireStaff\(\)/);
   assert.match(staffPage, /Staff Action Centre/);
   assert.match(staffPage, /href="\/staff\/clients"/);
   assert.match(staffPage, /href="\/staff\/applications"/);
+  assert.match(staffPage, /href="\/staff\/clients\/new"/);
   assert.doesNotMatch(staffPage, /createAdminClient|staff_compensation|countOwnStaffClients/);
-  assert.match(staffClients, /ReferralLinkCard/);
-  assert.match(staffClients, /referral_code/);
   assert.match(staffClients, /My Client Pipeline/);
-  assert.match(staffActions, /createOwnStaffClient/);
+  assert.match(staffClients, /loadFailed/);
+  assert.doesNotMatch(staffClients, /ReferralLinkCard|loadStaffClientCounts|Promise\.all\(/);
+  assert.match(staffClientNew, /Register New Client/);
 });
 
 test("staff client intake records real CRM fields without fake auth users", () => {
   for (const field of ["passport_status", "medical_status", "follow_up_date"]) {
     assert.match(staffClientsMigration, new RegExp(field));
-    assert.match(staffClients, new RegExp(`name=\\"${field}\\"`));
+    assert.match(staffClientNew, new RegExp(`name=\\"${field}\\"`));
   }
-  assert.match(staffClients, /Job of Interest/);
-  assert.match(staffClients, /Country of Interest/);
-  assert.doesNotMatch(staffActions, /auth\.admin\.createUser|signUp\(/);
+  assert.match(staffClientNew, /Job of Interest/);
+  assert.match(staffClientNew, /Country of Interest/);
+  assert.match(staffClientNew, /registerOwnStaffClient/);
+  assert.doesNotMatch(staffClientNewActions, /auth\.admin\.createUser|signUp\(/);
 });
 
 test("medical status supports the positive-client completed state", () => {
@@ -76,26 +84,37 @@ test("medical status supports the positive-client completed state", () => {
     "expired",
   ]) {
     assert.match(staffClientsMigration, new RegExp(`'${value}'`));
-    assert.match(staffActions, new RegExp(`"${value}"`));
+    assert.match(staffClientNewActions, new RegExp(`"${value}"`));
   }
   assert.match(staffClientsMigration, /staff_clients_medical_status_check/);
+  assert.match(staffClients, /Positive Client/);
 });
 
 test("duplicate detection warns instead of merging uncertain clients", () => {
-  assert.match(staffActions, /countPotentialDuplicateStaffClients/);
-  assert.match(staffActions, /normalizeEmailContact\(email\)/);
-  assert.match(staffActions, /normalizePhoneContact\(phone\)/);
+  assert.match(staffClientNewActions, /normalizeEmailContact\(email\)/);
+  assert.match(staffClientNewActions, /normalizePhoneContact\(phone\)/);
   assert.match(contactNormalization, /replace\(\/\\D\/g, ""\)/);
-  assert.match(staffActions, /duplicate_warning/);
-  assert.doesNotMatch(staffActions, /upsert\(/);
+  assert.match(staffClientNewActions, /duplicate_warning/);
+  assert.doesNotMatch(staffClientNewActions, /upsert\(/);
 });
 
-test("staff CRM reads are scoped and paginated", () => {
+test("staff CRM reads are scoped and paginated without count fan-out", () => {
   assert.match(staffClients, /await requireStaff\(\)/);
   assert.match(staffClients, /\.eq\("staff_user_id", context\.user\.id\)/);
   assert.match(staffClients, /PAGE_SIZE = 25/);
   assert.match(staffClients, /\.range\(from, to\)/);
-  assert.match(staffClients, /count: "exact", head: true/);
+  assert.match(staffClients, /count: "exact"/);
+  assert.doesNotMatch(staffClients, /head: true|loadStaffClientCounts/);
+});
+
+test("staff client registration uses own-session RLS and audit remains server-only", () => {
+  assert.match(staffClientNewActions, /await createClient\(\)/);
+  assert.match(staffClientNewActions, /staff_user_id: context\.user\.id/);
+  assert.match(staffClientNewActions, /createAdminClient\(\)/);
+  assert.match(staffServicePermissions, /grant select, insert, update, delete/);
+  assert.match(staffServicePermissions, /public\.staff_clients/);
+  assert.match(staffServicePermissions, /grant select, insert/);
+  assert.match(staffServicePermissions, /public\.admin_audit_logs/);
 });
 
 test("staff client mutations cannot reassign other staff records", () => {
