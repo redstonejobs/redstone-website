@@ -8,6 +8,7 @@ import {
 } from "@/lib/ai/rate-limit";
 import { AiServiceError, handleAiChat } from "@/lib/ai/service";
 import type { AiContactInput } from "@/lib/ai/types";
+import { createClient } from "@/utils/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,11 +53,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const candidateUserId = await resolveVerifiedCandidateUserId();
     const result = await handleAiChat({
       channel: "website",
       message: validation.message,
       conversationId: validation.conversationId,
       contact: validation.contact,
+      candidateUserId,
     });
 
     return NextResponse.json(result, {
@@ -86,6 +89,28 @@ export async function POST(request: Request) {
 
     console.error("Website AI chat request failed", error);
     return NextResponse.json({ error: "ai_request_failed" }, { status: 500 });
+  }
+}
+
+async function resolveVerifiedCandidateUserId() {
+  try {
+    const supabase = await createClient();
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) return undefined;
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("profile_type, is_active")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+
+    if (profileError || !profile) return undefined;
+    if (profile.profile_type !== "candidate" || profile.is_active !== true) return undefined;
+
+    return authData.user.id;
+  } catch (error) {
+    console.error("Website AI candidate session lookup failed", error);
+    return undefined;
   }
 }
 
