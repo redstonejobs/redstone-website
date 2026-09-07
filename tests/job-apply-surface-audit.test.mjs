@@ -4,6 +4,7 @@ import test from "node:test";
 
 const jobCard = readFileSync("src/components/public/job-card.tsx", "utf8");
 const jobsPage = readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
+const jobSearch = readFileSync("src/components/public/job-search.tsx", "utf8");
 const jobDetail = readFileSync("src/app/(public)/jobs/[slug]/page.tsx", "utf8");
 const applyPage = readFileSync("src/app/apply/[slug]/page.tsx", "utf8");
 const genericApply = readFileSync("src/app/(public)/apply/page.tsx", "utf8");
@@ -80,9 +81,18 @@ test("Apply entry stays bounded for Cloudflare Workers", () => {
   assert.doesNotMatch(start, /\.from\("jobs"\)|getPublishedJobs|getCandidateApplications/);
 });
 
-test("generic and sponsorship Apply entry points select a real confirmed vacancy before application", () => {
+test("jobs page shows the full Red Stone catalogue by default and ignores stale hiding filters", () => {
+  assert.match(jobsPage, /params\.sponsorship \?\? "programme"/);
+  assert.match(jobsPage, /delete params\.job_type/);
+  assert.match(jobsPage, /delete params\.contract_type/);
+  assert.match(jobsPage, /queryParams\.source = "redstone"/);
+  assert.doesNotMatch(jobSearch, /name="job_type"/);
+  assert.doesNotMatch(jobSearch, /name="contract_type"/);
+  assert.match(jobSearch, /Show All Jobs/);
+});
+
+test("generic and sponsorship Apply entry points select a real vacancy before application", () => {
   assert.match(genericApply, /redirect\("\/jobs\?sort=newest"\)/);
-  assert.match(jobsPage, /params\.sponsorship \?\? "confirmed"/);
   assert.match(jobsPage, /queryParams\.sponsorship = "true"/);
 
   assert.match(sponsorshipRole, /q: job\.role/);
