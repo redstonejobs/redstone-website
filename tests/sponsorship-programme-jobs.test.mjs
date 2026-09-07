@@ -6,9 +6,9 @@ const jobsPage = fs.readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
 const search = fs.readFileSync("src/components/public/job-search.tsx", "utf8");
 const card = fs.readFileSync("src/components/public/job-card.tsx", "utf8");
 
-test("public jobs defaults to Red Stone sponsorship programme vacancies", () => {
-  assert.match(jobsPage, /params\.sponsorship \?\? "programme"/);
-  assert.match(jobsPage, /queryParams\.source = "redstone"/);
+test("public jobs defaults to confirmed sponsorship vacancies", () => {
+  assert.match(jobsPage, /params\.sponsorship \?\? "confirmed"/);
+  assert.match(jobsPage, /queryParams\.sponsorship = "true"/);
   assert.match(jobsPage, /Sponsorship Job Opportunities/);
 });
 
@@ -17,9 +17,10 @@ test("sponsorship filter distinguishes programme from confirmed employer sponsor
   assert.match(search, /Employer-confirmed visa sponsorship/);
   assert.match(jobsPage, /selectedSponsorship === "confirmed"/);
   assert.match(jobsPage, /queryParams\.sponsorship = "true"/);
+  assert.match(jobsPage, /queryParams\.source = "redstone"/);
 });
 
-test("internal Red Stone cards are visibly available through the sponsorship programme", () => {
+test("internal Red Stone cards retain programme and application state messaging", () => {
   assert.match(card, /Sponsorship Programme/);
   assert.match(card, /Employer-specific visa sponsorship/);
   assert.match(card, /\{apply\.label\}/);
