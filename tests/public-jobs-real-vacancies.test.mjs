@@ -55,7 +55,7 @@ test("job cards preserve Red Stone application state and source-directed externa
 
   assert.doesNotMatch(
     jobCard,
-    /JOB_OCCUPATIONS|occupation\.slug|\/apply\?occupation/
+    /JOB_OCCUPATIONS|occupation\.slug|\/apply\?occupation|@\/lib\/jobs\/catalogue|@\/lib\/jobs\/costs|@\/lib\/admin\/format/
   );
 });
 
@@ -101,15 +101,10 @@ test("country job counts use database head counts without downloading all jobs",
   assert.doesNotMatch(countries, /\.range\(from, to\)/);
 });
 
-test("public free-text search loads the occupation catalogue only on demand", () => {
-  assert.match(
-    publicJobs,
-    /await import\("@\/lib\/jobs\/catalogue"\)/
-  );
-  assert.doesNotMatch(
-    publicJobs,
-    /^import .*occupationSearchTerms/m
-  );
+test("public free-text search stays lightweight and bounded", () => {
+  assert.doesNotMatch(publicJobs, /@\/lib\/jobs\/catalogue|occupationSearchTerms|JOB_OCCUPATIONS/);
+  assert.match(publicJobs, /function lightweightSearchTerms/);
+  assert.match(publicJobs, /\.slice\(0, 6\)/);
 });
 
 test("JobPosting JSON-LD remains limited to eligible open Red Stone job details", () => {
