@@ -35,7 +35,7 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
               <Link href="/staff/applications" className={primaryActionClass}>
                 Applications
               </Link>
-              <Link href="/staff/clients#add-client" className={secondaryActionClass}>
+              <Link href="/staff/clients/new" className={secondaryActionClass}>
                 + Register Client
               </Link>
               <Link href="/staff/clients?status=processing" className={secondaryActionClass}>

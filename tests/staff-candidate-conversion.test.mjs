@@ -13,7 +13,7 @@ test("staff can convert only their own CRM client into an invited candidate", ()
   assert.match(staffActions, /referred_by_staff_id: context\.user\.id/);
   assert.match(staffActions, /\.eq\("staff_user_id", context\.user\.id\)/);
   assert.match(staffClientsPage, /Convert to Candidate/);
-  assert.match(staffClientsPage, /Candidate Account Linked/);
+  assert.match(staffClientsPage, /Candidate Linked/);
 });
 
 test("candidate conversion requires an email and does not overwrite existing auth accounts", () => {
@@ -28,7 +28,7 @@ test("staff can delete only their own CRM record without deleting candidate iden
   assert.match(staffActions, /formData\.get\("confirm"\) !== "yes"/);
   assert.match(staffActions, /\.from\("staff_clients"\)[\s\S]*?\.delete\(\)[\s\S]*?\.eq\("id", existing\.id\)[\s\S]*?\.eq\("staff_user_id", context\.user\.id\)/);
   assert.match(staffActions, /candidate authentication account, profile and applications are[\s\S]*?intentionally left untouched/);
-  assert.match(staffClientsPage, /Delete Client Record/);
-  assert.match(staffClientsPage, /linked candidate login, profile and applications will not be deleted/);
+  assert.match(staffClientsPage, /Delete CRM Record/);
+  assert.match(staffClientsPage, /Confirm Delete/);
   assert.doesNotMatch(staffActions, /auth\.admin\.deleteUser/);
 });

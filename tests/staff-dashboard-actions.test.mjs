@@ -10,7 +10,7 @@ test("staff navigation exposes core recruitment actions", () => {
     'href="/staff"',
     'href="/staff/clients"',
     'href="/staff/applications"',
-    'href="/staff/clients#add-client"',
+    'href="/staff/clients/new"',
     'href="/staff/clients?status=processing"',
     'href="/staff/clients?status=placed"',
   ]) {
