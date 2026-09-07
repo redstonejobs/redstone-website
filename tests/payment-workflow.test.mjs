@@ -15,7 +15,7 @@ const daraja = readFileSync("src/lib/payments/mpesa/daraja.ts", "utf8");
 const phone = readFileSync("src/lib/payments/mpesa/phone.ts", "utf8");
 const candidateActions = readFileSync("src/lib/candidate/actions.ts", "utf8");
 const candidatePage = readFileSync(
-  "src/app/candidate/applications/[id]/page.tsx",
+  "src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx",
   "utf8",
 );
 const candidateList = readFileSync(

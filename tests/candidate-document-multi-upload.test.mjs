@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const actions = fs.readFileSync(path.join(root, "src/lib/candidate/actions.ts"), "utf8");
-const page = fs.readFileSync(path.join(root, "src/app/candidate/applications/[id]/page.tsx"), "utf8");
+const page = fs.readFileSync(path.join(root, "src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx"), "utf8");
 const uploader = fs.readFileSync(path.join(root, "src/components/candidate/DocumentUploadRows.tsx"), "utf8");
 const paymentService = fs.readFileSync(path.join(root, "src/lib/payments/application-payments.ts"), "utf8");
 const nextConfig = fs.readFileSync(path.join(root, "next.config.ts"), "utf8");
@@ -32,11 +32,14 @@ test("documents can be submitted and moved to final review", () => {
   assert.match(actions, /export async function completeCandidateDocumentsSection/);
   assert.match(actions, /saveImmigrationSectionProgress\(applicationId, "documents", "complete"\)/);
   assert.match(actions, /section=review&saved=documents/);
-  assert.match(page, /Complete Documents & Continue to Review/);
+  assert.match(page, /completeCandidateDocumentsSection\.bind\(null, id\)/);
+  assert.match(page, /Finish Documents & Continue to Review/);
+  assert.match(page, /disabled=\{!editable \|\| documents\.length === 0\}/);
 });
 
 test("review continues to payment only after document step is complete", () => {
   assert.match(page, /Continue to Verification Fee/);
   assert.match(page, /prepareApplicationPayment\.bind\(null, id\)/);
+  assert.match(page, /disabled=\{!readyForReview \|\| status !== "draft"\}/);
   assert.match(paymentService, /\["personal", "passport", "declarations", "documents"\]/);
 });

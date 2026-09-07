@@ -3,66 +3,17 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const source = readFileSync(
-  "src/app/candidate/applications/[id]/page.tsx",
+  "src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx",
   "utf8",
 );
 
-test("candidate application loads only the active section data", () => {
-  assert.match(source, /switch \(section\)/);
-
-  for (const section of [
-    "addresses",
-    "family",
-    "education",
-    "employment",
-    "languages",
-    "licenses",
-    "travel",
-    "visas",
-    "emergency",
-    "references",
-    "finances",
-    "declarations",
-  ]) {
-    assert.match(
-      source,
-      new RegExp(`case \\"${section}\\"`),
-    );
-  }
-
-  assert.notEqual(
-    source.indexOf("const requestedSection"),
-    -1,
-    "requestedSection declaration must exist",
-  );
-
-  assert.match(
-    source,
-    /const section = SECTIONS\.some/,
-  );
-
-  assert.ok(
-    source.indexOf("const requestedSection") <
-      source.indexOf("await Promise.all(["),
-  );
-
-  assert.match(
-    source,
-    /case "addresses"[\s\S]*?\.from\("application_addresses"\)/,
-  );
-
-  assert.match(
-    source,
-    /includeDocuments: section === "documents"/,
-  );
-
-  assert.match(
-    source,
-    /includePayments: section === "payment"/,
-  );
-
-  assert.doesNotMatch(
-    source,
-    /const \[[\s\S]{0,1200}addressRows[\s\S]{0,1200}dependantRows[\s\S]{0,1200}educationRows[\s\S]{0,1200}\] = await Promise\.all/,
-  );
+test("candidate application loads only data needed by the active simple section", () => {
+  assert.match(source, /const requestedSection = typeof query\.section === "string" \? query\.section : "personal"/);
+  assert.match(source, /const section = STEPS\.find\(\(step\) => step\.key === requestedSection\)\?\.key \?\? "personal"/);
+  assert.match(source, /const needsDocuments = section === "documents" \|\| section === "review"/);
+  assert.match(source, /const needsPayments = section === "payment"/);
+  assert.match(source, /includeDocuments: needsDocuments/);
+  assert.match(source, /includePayments: needsPayments/);
+  assert.match(source, /includeTimeline: false/);
+  assert.doesNotMatch(source, /application_addresses|application_dependants|application_education|application_employment|application_languages|application_licenses|application_travel_history|application_visas|application_references|application_financial_information/);
 });

@@ -2,29 +2,31 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const page = readFileSync("src/app/candidate/applications/[id]/page.tsx", "utf8");
+const page = readFileSync("src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx", "utf8");
 const list = readFileSync("src/app/candidate/applications/page.tsx", "utf8");
 const actions = readFileSync("src/lib/candidate/actions.ts", "utf8");
 
-test("wizard loads only the active immigration section", () => {
-  assert.match(page, /switch \(section\)/);
-  for (const key of ["addresses", "family", "education", "employment", "languages", "licenses", "travel", "visas", "emergency", "references", "finances", "declarations"]) {
-    assert.match(page, new RegExp(`case "${key}"`));
+test("wizard exposes only the simplified required application sections", () => {
+  for (const key of ["personal", "passport", "declarations", "documents", "review", "payment"]) {
+    assert.match(page, new RegExp(`key: "${key}"`));
   }
-  assert.match(page, /needsImmigrationProfile = \["personal", "passport", "family"\]\.includes\(section\)/);
+  for (const legacy of ["addresses", "family", "education", "employment", "languages", "licenses", "travel", "visas", "emergency", "references", "finances"]) {
+    assert.doesNotMatch(page, new RegExp(`key: "${legacy}"`));
+  }
+  assert.match(page, /const needsDocuments = section === "documents" \|\| section === "review"/);
+  assert.match(page, /const needsPayments = section === "payment"/);
 });
 
 test("wizard navigation disables automatic Next prefetch", () => {
-  assert.match(page, /key=\{item\.key\}[\s\S]{0,120}prefetch=\{false\}[\s\S]{0,180}section=\$\{item\.key\}/);
+  assert.match(page, /key=\{step\.key\}[\s\S]{0,220}href=\{`\/candidate\/applications\/\$\{id\}\?section=\$\{target\}`\}[\s\S]{0,120}prefetch=\{false\}/);
   assert.ok((page.match(/prefetch=\{false\}/g) ?? []).length >= 4);
-  assert.match(page, /Review \{item\.label\}/);
   assert.match(list, /prefetch=\{false\}[\s\S]{0,120}href=\{applicationHref\}/);
 });
 
 test("validation returns to the correct section and is visible", () => {
   assert.match(actions, /function failCandidateSection\(/);
   assert.match(actions, /error=\$\{encodeURIComponent\(message\)\}/);
-  assert.match(page, /typeof query\.error === "string"/);
-  assert.match(page, /Please check this section before continuing\./);
-  assert.match(page, /\{sectionError\}/);
+  assert.match(page, /const error = typeof query\.error === "string" \? query\.error : ""/);
+  assert.match(page, /title="Please check this section"/);
+  assert.match(page, /text=\{error\}/);
 });

@@ -4,7 +4,7 @@ import test from "node:test";
 
 const actions = readFileSync("src/lib/candidate/actions.ts", "utf8");
 const page = readFileSync(
-  "src/app/candidate/applications/[id]/page.tsx",
+  "src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx",
   "utf8",
 );
 
@@ -36,8 +36,8 @@ test("candidate section completion validation redirects back with readable error
   }
 });
 
-test("candidate page shows section validation feedback instead of generic server failure", () => {
-  assert.match(page, /const sectionError =/);
-  assert.match(page, /Please check this section before continuing\./);
-  assert.match(page, /\{sectionError\}/);
+test("simple candidate page shows readable section validation feedback", () => {
+  assert.match(page, /const error = typeof query\.error === "string" \? query\.error : ""/);
+  assert.match(page, /title="Please check this section"/);
+  assert.match(page, /text=\{error\}/);
 });

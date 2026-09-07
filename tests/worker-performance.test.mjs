@@ -4,12 +4,11 @@ import test from "node:test";
 
 const proxy = readFileSync("proxy.ts", "utf8");
 const publicJobs = readFileSync("src/lib/public/jobs.ts", "utf8");
-const jobsPage = readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
 const jobDetail = readFileSync("src/app/(public)/jobs/[slug]/page.tsx", "utf8");
 const jobDetailContext = readFileSync("src/lib/public/job-detail-context.ts", "utf8");
 const applyPage = readFileSync("src/app/apply/[slug]/page.tsx", "utf8");
 const genericApplyPage = readFileSync("src/app/(public)/apply/page.tsx", "utf8");
-const candidatePage = readFileSync("src/app/candidate/applications/[id]/page.tsx", "utf8");
+const candidatePage = readFileSync("src/app/candidate/applications/[id]/SimpleCandidateApplicationPage.tsx", "utf8");
 const candidateData = readFileSync("src/lib/candidate/data.ts", "utf8");
 const homePage = readFileSync("src/app/(public)/home-page.tsx", "utf8");
 const countries = readFileSync("src/lib/public/countries.ts", "utf8");
@@ -63,13 +62,13 @@ test("apply route performs no full candidate catalogue or application-list scans
   assert.doesNotMatch(applyPage, /getCandidateApplications|getCandidateDocuments|getJobCatalogueContext|JOB_OCCUPATIONS/);
 });
 
-test("candidate wizard loads only current section data", () => {
-  assert.match(candidatePage, /Only progress plus the[\s\S]*currently visible section is loaded/);
-  assert.match(candidatePage, /switch \(section\)/);
-  assert.match(candidatePage, /case "addresses"/);
-  assert.match(candidatePage, /case "declarations"/);
-  assert.doesNotMatch(candidatePage, /const \[[\s\S]{0,1200}addressRows[\s\S]{0,1200}dependantRows[\s\S]{0,1200}educationRows[\s\S]{0,1200}\] = await Promise\.all/);
-  assert.match(candidatePage, /includeDocuments: section === "documents"/);
+test("candidate wizard loads only current simple section data", () => {
+  assert.match(candidatePage, /const needsDocuments = section === "documents" \|\| section === "review"/);
+  assert.match(candidatePage, /const needsPayments = section === "payment"/);
+  assert.match(candidatePage, /includeDocuments: needsDocuments/);
+  assert.match(candidatePage, /includePayments: needsPayments/);
+  assert.match(candidatePage, /includeTimeline: false/);
+  assert.doesNotMatch(candidatePage, /application_addresses|application_dependants|application_education|application_employment|application_languages|application_licenses|application_travel_history|application_visas|application_references|application_financial_information/);
   assert.doesNotMatch(candidateData, /const JOB_FIELDS =/);
   assert.match(candidateData, /const CANDIDATE_JOB_FIELDS =/);
 });
@@ -147,7 +146,8 @@ test("sitemap job URLs are split into bounded shards", () => {
   assert.doesNotMatch(sitemap, /Math\.min\([^)]*100/);
   assert.match(sitemap, /getPublishedJobSitemapEntries\(id\)/);
   assert.match(sitemap, /const isJobShard = typeof id === "number"/);
-  assert.match(sitemap, /const jobs = isJobShard \? await getPublishedJobSitemapEntries\(id\) : \[\]/);
+  assert.match(sitemap, /const \[jobs, blogPosts\] = await Promise\.all/);
+  assert.match(sitemap, /isJobShard \? getPublishedJobSitemapEntries\(id\) : Promise\.resolve\(\[\]\)/);
 });
 
 test("sitemap shard count scales dynamically without a permanent ceiling", () => {
