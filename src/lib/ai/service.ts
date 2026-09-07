@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/utils/supabase/admin";
+import { loadAiApplicationContext } from "./application-context";
 import { loadAiJobContext } from "./job-context";
 import { AiProviderError, generateAiResponse } from "./openai";
 import { routeWorker } from "./workers";
@@ -25,6 +26,7 @@ export async function handleAiChat(input: AiChatInput) {
     conversationId: input.conversationId,
     channel,
     externalThreadId: input.externalThreadId,
+    candidateUserId: input.candidateUserId,
   });
 
   await ensureLead(admin, conversation.id);
@@ -62,16 +64,31 @@ export async function handleAiChat(input: AiChatInput) {
     await createHumanHandoff(admin, conversation.id, input.message);
   }
 
-  const jobContext = await loadAiJobContext(admin, {
-    workerKey: worker.key,
-    message: input.message,
-    contact: input.contact,
-  });
+  const [jobContext, applicationContext] = await Promise.all([
+    loadAiJobContext(admin, {
+      workerKey: worker.key,
+      message: input.message,
+      contact: input.contact,
+    }),
+    loadAiApplicationContext(admin, {
+      workerKey: worker.key,
+      message: input.message,
+      candidateUserId: conversation.candidate_user_id ?? undefined,
+    }),
+  ]);
+
+  const verifiedContext = [jobContext.text, applicationContext.text]
+    .filter((value): value is string => Boolean(value))
+    .join("\n\n");
   const history = await loadHistory(admin, conversation.id);
   const startedAt = Date.now();
 
   try {
-    const result = await generateAiResponse(worker, history, jobContext.text);
+    const result = await generateAiResponse(
+      worker,
+      history,
+      verifiedContext || undefined,
+    );
     const durationMs = Date.now() - startedAt;
 
     const { error: outboundError } = await admin.from("ai_messages").insert({
@@ -87,6 +104,11 @@ export async function handleAiChat(input: AiChatInput) {
           attempted: jobContext.attempted,
           status: jobContext.status,
           match_count: jobContext.matchCount,
+        },
+        application_grounding: {
+          attempted: applicationContext.attempted,
+          status: applicationContext.status,
+          match_count: applicationContext.matchCount,
         },
       },
     });
@@ -133,17 +155,27 @@ export async function handleAiChat(input: AiChatInput) {
 }
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+type ConversationRow = {
+  id: string;
+  status: string;
+  candidate_user_id: string | null;
+};
 
 async function resolveConversation(
   admin: AdminClient,
-  input: { conversationId?: string; channel: string; externalThreadId?: string }
-) {
+  input: {
+    conversationId?: string;
+    channel: string;
+    externalThreadId?: string;
+    candidateUserId?: string;
+  },
+): Promise<ConversationRow> {
   if (input.conversationId) {
     const { data, error } = await admin
       .from("ai_conversations")
-      .select("id, status")
+      .select("id, status, candidate_user_id")
       .eq("id", input.conversationId)
-      .maybeSingle();
+      .maybeSingle<ConversationRow>();
 
     if (error) {
       throw new AiServiceError("conversation_lookup_failed", "Could not load the conversation.");
@@ -151,21 +183,24 @@ async function resolveConversation(
     if (!data) {
       throw new AiServiceError("conversation_not_found", "Conversation not found.", 404);
     }
-    return data;
+
+    return bindOrVerifyCandidate(admin, data, input.candidateUserId);
   }
 
   if (input.externalThreadId) {
     const { data, error } = await admin
       .from("ai_conversations")
-      .select("id, status")
+      .select("id, status, candidate_user_id")
       .eq("channel", input.channel)
       .eq("external_thread_id", input.externalThreadId)
-      .maybeSingle();
+      .maybeSingle<ConversationRow>();
 
     if (error) {
       throw new AiServiceError("conversation_lookup_failed", "Could not load the conversation.");
     }
-    if (data) return data;
+    if (data) {
+      return bindOrVerifyCandidate(admin, data, input.candidateUserId);
+    }
   }
 
   const { data, error } = await admin
@@ -173,14 +208,73 @@ async function resolveConversation(
     .insert({
       channel: input.channel,
       external_thread_id: input.externalThreadId ?? null,
+      candidate_user_id: input.candidateUserId ?? null,
       current_worker: "faith_reception",
       status: "open",
     })
-    .select("id, status")
-    .single();
+    .select("id, status, candidate_user_id")
+    .single<ConversationRow>();
 
   if (error || !data) {
     throw new AiServiceError("conversation_create_failed", "Could not create the conversation.");
+  }
+
+  return data;
+}
+
+async function bindOrVerifyCandidate(
+  admin: AdminClient,
+  conversation: ConversationRow,
+  candidateUserId?: string,
+): Promise<ConversationRow> {
+  if (conversation.candidate_user_id) {
+    if (!candidateUserId || conversation.candidate_user_id !== candidateUserId) {
+      throw new AiServiceError(
+        "conversation_access_denied",
+        "This conversation belongs to a different authenticated candidate session.",
+        403,
+      );
+    }
+    return conversation;
+  }
+
+  if (!candidateUserId) return conversation;
+
+  const { data, error } = await admin
+    .from("ai_conversations")
+    .update({
+      candidate_user_id: candidateUserId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", conversation.id)
+    .is("candidate_user_id", null)
+    .select("id, status, candidate_user_id")
+    .maybeSingle<ConversationRow>();
+
+  if (error) {
+    throw new AiServiceError("conversation_bind_failed", "Could not secure the conversation.");
+  }
+
+  if (!data) {
+    const { data: reloaded, error: reloadError } = await admin
+      .from("ai_conversations")
+      .select("id, status, candidate_user_id")
+      .eq("id", conversation.id)
+      .maybeSingle<ConversationRow>();
+
+    if (reloadError || !reloaded) {
+      throw new AiServiceError("conversation_bind_failed", "Could not secure the conversation.");
+    }
+
+    if (reloaded.candidate_user_id !== candidateUserId) {
+      throw new AiServiceError(
+        "conversation_access_denied",
+        "This conversation belongs to a different authenticated candidate session.",
+        403,
+      );
+    }
+
+    return reloaded;
   }
 
   return data;
