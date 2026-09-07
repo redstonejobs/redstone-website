@@ -57,12 +57,23 @@ const staticRoutes = [
 ] as const;
 
 export async function generateSitemaps() {
-  const count = await getPublishedJobSitemapCount();
-  const shardCount = getPublishedJobSitemapShardCount(count);
+  try {
+    const count = await getPublishedJobSitemapCount();
+    const shardCount = getPublishedJobSitemapShardCount(count);
 
-  return Array.from({ length: shardCount }, (_, id) => ({
-    id,
-  }));
+    return Array.from({ length: shardCount }, (_, id) => ({
+      id,
+    }));
+  } catch (error) {
+    // Cloudflare builds must not fail just because Supabase is temporarily
+    // unreachable while Next.js collects metadata route parameters. The root
+    // sitemap remains available; job shards can be restored on a later build
+    // once the public database query succeeds again.
+    console.warn("[sitemap] published-job count unavailable; continuing build without job shards", {
+      message: error instanceof Error ? error.message : "unknown_error",
+    });
+    return [];
+  }
 }
 
 export default async function sitemap({
