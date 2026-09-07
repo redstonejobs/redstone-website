@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const proxy = readFileSync("proxy.ts", "utf8");
+const sessionProxy = readFileSync("src/utils/supabase/proxy.ts", "utf8");
 const publicJobs = readFileSync("src/lib/public/jobs.ts", "utf8");
 const jobsPage = readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
 const jobCard = readFileSync("src/components/public/job-card.tsx", "utf8");
@@ -26,10 +27,12 @@ function sliceBetween(source, start, end) {
   return source.slice(startIndex, endIndex);
 }
 
-test("public jobs bypass auth proxy and duplicate legacy middleware is removed", () => {
+test("public jobs bypass auth proxy and protected account routes refresh sessions", () => {
   assert.match(proxy, /"\/admin\/:path\*"/);
+  assert.match(proxy, /"\/staff\/:path\*"/);
   assert.match(proxy, /"\/candidate\/:path\*"/);
   assert.match(proxy, /"\/employer\/:path\*"/);
+  assert.match(sessionProxy, /pathname\.startsWith\("\/staff"\)/);
   assert.doesNotMatch(proxy, /\(\(\?!_next\/static/);
   assert.doesNotMatch(proxy, /"\/jobs/);
   assert.doesNotMatch(proxy, /"\/apply\/:path\*"/);
