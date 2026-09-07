@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { JOB_CATEGORIES, SKILL_LEVELS } from "@/lib/jobs/catalogue";
 import type { Country } from "@/lib/public/countries";
 
@@ -28,12 +29,12 @@ export function JobSearch({
             All current published Red Stone jobs are shown by default. Use filters only when you want to narrow the list.
           </p>
         </div>
-        <a
+        <Link
           href="/jobs?sponsorship=programme"
           className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#D4AF37] bg-[#FFF9E8] px-4 text-sm font-black text-[#071A3D] transition hover:bg-[#F2D675]"
         >
           Show All Jobs
-        </a>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
