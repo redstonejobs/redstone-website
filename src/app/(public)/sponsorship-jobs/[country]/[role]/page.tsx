@@ -67,11 +67,11 @@ export default async function SponsorshipRolePage({ params }: Props) {
   const medical = job.countrySlug === "gulf" ? SPONSORSHIP_MEDICALS[0] : SPONSORSHIP_MEDICALS[1];
   const vacancySearch = new URLSearchParams({
     q: job.role,
-    sponsorship: "true",
     sort: "newest",
   });
-  if (job.country !== "Gulf Countries") {
-    vacancySearch.set("country", job.country);
+  const countryFilter = job.country === "United States" ? "USA" : job.country;
+  if (countryFilter !== "Gulf Countries") {
+    vacancySearch.set("country", countryFilter);
   }
   const vacanciesHref = `/jobs?${vacancySearch.toString()}`;
 
@@ -119,7 +119,7 @@ export default async function SponsorshipRolePage({ params }: Props) {
             </div>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href={vacanciesHref} className="rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D]">
-                Apply for Sponsorship
+                Find Matching Vacancies
               </Link>
               <Link
                 href={vacanciesHref}
@@ -229,7 +229,7 @@ export default async function SponsorshipRolePage({ params }: Props) {
             </p>
           </div>
           <Link href={vacanciesHref} className="mt-6 inline-flex rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D] lg:mt-0 lg:shrink-0">
-            Start Application
+            Find Matching Vacancies
           </Link>
         </div>
       </Band>
