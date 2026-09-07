@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { requireStaff } from "@/lib/admin/auth";
-import { createOwnStaffClient } from "@/lib/staff/actions";
+import { registerOwnStaffClient } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +90,7 @@ export default async function NewStaffClientPage({ searchParams }: PageProps) {
             <h2 className="mt-1 text-xl font-black">Client Details</h2>
           </div>
 
-          <form action={createOwnStaffClient} className="space-y-5 p-6 sm:p-8">
+          <form action={registerOwnStaffClient} className="space-y-5 p-6 sm:p-8">
             <Field label="Full Name" name="full_name" required placeholder="Client full legal name" />
 
             <div className="grid gap-4 sm:grid-cols-2">
