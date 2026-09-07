@@ -77,7 +77,7 @@ test("public search uses bounded terms while returning only published jobs", () 
 });
 
 test("public jobs page shows current vacancies only and omits the occupation template catalogue", () => {
-  assert.match(publicJobsPage, /Available Sponsorship Jobs/);
+  assert.match(publicJobsPage, /Available Jobs/);
   assert.match(publicJobsPage, /result\.jobs\.map/);
   assert.doesNotMatch(publicJobsPage, /JOB_OCCUPATIONS|Job Categories \/ Occupations We Recruit For/);
   assert.doesNotMatch(publicJobsPage, /href=\{`\/apply\?\$\{occupation/);

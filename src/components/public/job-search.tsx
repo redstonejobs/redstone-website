@@ -1,4 +1,5 @@
-import { CONTRACT_TYPES, JOB_CATEGORIES, SKILL_LEVELS } from "@/lib/jobs/catalogue";
+import Link from "next/link";
+import { JOB_CATEGORIES, SKILL_LEVELS } from "@/lib/jobs/catalogue";
 import type { Country } from "@/lib/public/countries";
 
 export function JobSearch({
@@ -9,24 +10,31 @@ export function JobSearch({
   countries?: Country[];
 }) {
   const advancedFiltersActive = Boolean(
-    defaults.contract_type ||
-      defaults.salary_min ||
+    defaults.salary_min ||
       defaults.accommodation ||
       defaults.foreign_worker
   );
 
   return (
     <form className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(7,26,61,0.08)] md:p-6">
-      <div className="mb-5">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-[#B8860B]">
-          Sponsorship Job Search
-        </p>
-        <h2 className="mt-1 text-xl font-black text-[#071A3D] md:text-2xl">
-          Find the right programme opportunity
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Search current vacancies by job title, employer, location or category.
-        </p>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#B8860B]">
+            Job Search
+          </p>
+          <h2 className="mt-1 text-xl font-black text-[#071A3D] md:text-2xl">
+            Find the right opportunity
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            All current published Red Stone jobs are shown by default. Use filters only when you want to narrow the list.
+          </p>
+        </div>
+        <Link
+          href="/jobs?sponsorship=programme"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#D4AF37] bg-[#FFF9E8] px-4 text-sm font-black text-[#071A3D] transition hover:bg-[#F2D675]"
+        >
+          Show All Jobs
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
@@ -75,23 +83,9 @@ export function JobSearch({
           defaultValue={defaults.sponsorship}
           options={["programme", "confirmed", ""]}
           labels={{
-            programme: "Red Stone programme",
+            programme: "All Red Stone programme jobs",
             confirmed: "Employer-confirmed visa sponsorship",
-            "": "Any vacancy",
-          }}
-        />
-
-        <Select
-          name="job_type"
-          label="Job Type"
-          defaultValue={defaults.job_type}
-          options={["", "full_time", "part_time", "contract", "seasonal"]}
-          labels={{
-            "": "Any",
-            full_time: "Full time",
-            part_time: "Part time",
-            contract: "Contract",
-            seasonal: "Seasonal",
+            "": "Any published vacancy",
           }}
         />
 
@@ -108,15 +102,7 @@ export function JobSearch({
           More filters
         </summary>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Select
-            name="contract_type"
-            label="Contract"
-            defaultValue={defaults.contract_type}
-            options={["", ...CONTRACT_TYPES]}
-            labels={{ "": "Any contract" }}
-          />
-
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Field
             name="salary_min"
             label="Minimum Salary"
@@ -148,10 +134,8 @@ export function JobSearch({
       </details>
 
       <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
-        <strong>Programme status and visa sponsorship are different.</strong>{" "}
-        A Red Stone programme vacancy is open for sponsorship recruitment processing,
-        but employer-specific visa sponsorship is treated as confirmed only when the
-        verified vacancy or written offer says so.
+        <strong>All published jobs stay available by default.</strong>{" "}
+        The old Job Type and Contract filters were removed because those fields are not populated consistently in the current published catalogue and could incorrectly hide genuine jobs. Use the remaining filters only when you intentionally want to narrow the list.
       </div>
     </form>
   );

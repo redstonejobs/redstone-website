@@ -6,9 +6,9 @@ import { getConfiguredCountries } from "@/lib/public/countries";
 import { canonical } from "@/lib/public/site";
 
 export const metadata: Metadata = {
-  title: "Sponsorship Jobs",
+  title: "Available Jobs",
   description:
-    "Browse confirmed Red Stone sponsorship vacancies and apply through the verified Red Stone recruitment workflow.",
+    "Browse all current published Red Stone recruitment vacancies and apply through the verified Red Stone recruitment workflow.",
   alternates: { canonical: canonical("/jobs") },
 };
 
@@ -24,8 +24,6 @@ const SORT_FILTER_KEYS = [
   "category",
   "skill",
   "sponsorship",
-  "job_type",
-  "contract_type",
   "salary_min",
   "accommodation",
   "foreign_worker",
@@ -45,10 +43,17 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   delete params.source;
   delete params.salary_max;
 
-  // Sponsorship entry points should land on employer-confirmed sponsorship
-  // vacancies by default. Candidates can still deliberately switch to the
-  // wider Red Stone programme or all vacancies from the public filter.
-  const selectedSponsorship = params.sponsorship ?? "confirmed";
+  // Older public links used employment-style values such as part_time in the
+  // job_type field even though the production job data uses that column for
+  // work arrangement (currently onsite). Contract type is also not populated
+  // on the published catalogue. Ignore both stale filters so genuine published
+  // jobs cannot disappear just because an old URL contains unsupported values.
+  delete params.job_type;
+  delete params.contract_type;
+
+  // Show the complete Red Stone programme catalogue by default. Candidates can
+  // still deliberately narrow to employer-confirmed sponsorship or any vacancy.
+  const selectedSponsorship = params.sponsorship ?? "programme";
   params.sponsorship = selectedSponsorship;
 
   const queryParams: Record<string, string | undefined> = { ...params };
@@ -108,19 +113,18 @@ export default async function JobsPage({ searchParams }: JobsProps) {
       <section className="bg-[#071A3D] px-4 pb-24 pt-14 text-white sm:pb-28 sm:pt-16">
         <div className="mx-auto max-w-7xl">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#F2D675]">
-            Red Stone Sponsorship Programme
+            Red Stone Employment Opportunities
           </p>
           <h1 className="mt-3 max-w-3xl text-3xl font-black leading-tight sm:text-4xl lg:text-5xl">
-            Sponsorship Job Opportunities
+            All Published Job Opportunities
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-200 sm:text-lg">
-            Browse current confirmed sponsorship vacancies, choose a matching job,
+            Browse every current published Red Stone vacancy, choose a matching job,
             and submit your application through the official recruitment system.
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-            A confirmed sponsorship vacancy means the vacancy is recorded as offering
-            sponsorship in the Red Stone system. Employer selection and government visa
-            or work-permit approval remain separate decisions.
+            Jobs remain visible by default. Use the search filters only when you want
+            to narrow the catalogue by country, category, skill level or sponsorship status.
           </p>
         </div>
       </section>
@@ -134,19 +138,18 @@ export default async function JobsPage({ searchParams }: JobsProps) {
           <div className="mt-10 flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">
-                Current Sponsorship Vacancies
+                Current Published Vacancies
               </p>
               <h2 className="mt-1 text-2xl font-black text-[#071A3D]">
-                Available Sponsorship Jobs
+                Available Jobs
               </h2>
               <p className="mt-1 text-sm font-semibold text-slate-500">
                 {result.count.toLocaleString()} {result.count === 1 ? "opportunity" : "opportunities"}
               </p>
               {selectedSponsorship === "programme" ? (
                 <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-                  These are vacancies available through the wider Red Stone sponsorship
-                  recruitment programme. Use the confirmed sponsorship filter to show
-                  only vacancies recorded with employer sponsorship included.
+                  All current published Red Stone programme vacancies are included.
+                  Use the optional filters only when you want a smaller matching set.
                 </p>
               ) : null}
             </div>
