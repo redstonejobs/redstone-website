@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname !== "/apply";
   const protectedPath =
     request.nextUrl.pathname.startsWith("/admin") ||
+    request.nextUrl.pathname.startsWith("/staff") ||
     request.nextUrl.pathname.startsWith("/candidate") ||
     (request.nextUrl.pathname.startsWith("/employer") &&
       !request.nextUrl.pathname.startsWith("/employer/register") &&

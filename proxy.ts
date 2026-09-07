@@ -8,12 +8,13 @@ export async function proxy(request: NextRequest) {
 /**
  * Public vacancy pages deliberately bypass the auth proxy. They do not need a
  * session refresh, and avoiding an auth/JWT round trip on every public request
- * materially reduces Cloudflare Worker CPU usage. /apply/[slug] performs its
- * own explicit auth check and preserves its safe login return path.
+ * materially reduces Cloudflare Worker CPU usage. Protected account areas do
+ * refresh and validate the Supabase session through this proxy.
  */
 export const config = {
   matcher: [
     "/admin/:path*",
+    "/staff/:path*",
     "/candidate/:path*",
     "/employer/:path*",
   ],
