@@ -8,7 +8,7 @@ import { canonical } from "@/lib/public/site";
 export const metadata: Metadata = {
   title: "Sponsorship Jobs",
   description:
-    "Browse Red Stone sponsorship programme vacancies and apply through the verified Red Stone recruitment workflow.",
+    "Browse confirmed Red Stone sponsorship vacancies and apply through the verified Red Stone recruitment workflow.",
   alternates: { canonical: canonical("/jobs") },
 };
 
@@ -45,10 +45,10 @@ export default async function JobsPage({ searchParams }: JobsProps) {
   delete params.source;
   delete params.salary_max;
 
-  // Red Stone's public jobs page is sponsorship-programme first. Candidates may
-  // still choose "Any vacancy" or "Employer-confirmed visa sponsorship" from
-  // the filter without us overstating employer-specific sponsorship evidence.
-  const selectedSponsorship = params.sponsorship ?? "programme";
+  // Sponsorship entry points should land on employer-confirmed sponsorship
+  // vacancies by default. Candidates can still deliberately switch to the
+  // wider Red Stone programme or all vacancies from the public filter.
+  const selectedSponsorship = params.sponsorship ?? "confirmed";
   params.sponsorship = selectedSponsorship;
 
   const queryParams: Record<string, string | undefined> = { ...params };
@@ -114,14 +114,13 @@ export default async function JobsPage({ searchParams }: JobsProps) {
             Sponsorship Job Opportunities
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-200 sm:text-lg">
-            Browse current Red Stone programme vacancies, choose a matching job,
+            Browse current confirmed sponsorship vacancies, choose a matching job,
             and submit your application through the official recruitment system.
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-            Programme availability does not itself guarantee employer selection,
-            visa sponsorship or visa approval. Employer-specific sponsorship is
-            confirmed only where it is explicitly stated in the verified vacancy
-            or written offer.
+            A confirmed sponsorship vacancy means the vacancy is recorded as offering
+            sponsorship in the Red Stone system. Employer selection and government visa
+            or work-permit approval remain separate decisions.
           </p>
         </div>
       </section>
@@ -135,7 +134,7 @@ export default async function JobsPage({ searchParams }: JobsProps) {
           <div className="mt-10 flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[#B8860B]">
-                Current Programme Vacancies
+                Current Sponsorship Vacancies
               </p>
               <h2 className="mt-1 text-2xl font-black text-[#071A3D]">
                 Available Sponsorship Jobs
@@ -145,9 +144,9 @@ export default async function JobsPage({ searchParams }: JobsProps) {
               </p>
               {selectedSponsorship === "programme" ? (
                 <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-                  These are vacancies available through the Red Stone sponsorship
-                  recruitment programme. Visa sponsorship and benefits remain
-                  subject to employer confirmation, eligibility and the written offer.
+                  These are vacancies available through the wider Red Stone sponsorship
+                  recruitment programme. Use the confirmed sponsorship filter to show
+                  only vacancies recorded with employer sponsorship included.
                 </p>
               ) : null}
             </div>
