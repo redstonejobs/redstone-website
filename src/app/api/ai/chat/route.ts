@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { AiProviderError } from "@/lib/ai/openai";
+import {
+  AiRateLimitError,
+  consumeWebsiteAiRateLimit,
+  websiteAiRateLimitConfigured,
+} from "@/lib/ai/rate-limit";
 import { AiServiceError, handleAiChat } from "@/lib/ai/service";
 import type { AiContactInput } from "@/lib/ai/types";
 
@@ -29,6 +34,24 @@ export async function POST(request: Request) {
   }
 
   try {
+    const rateLimit = await consumeWebsiteAiRateLimit(request);
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.max(
+        1,
+        Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000),
+      );
+      return NextResponse.json(
+        { error: "ai_rate_limit_exceeded" },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(retryAfter),
+          },
+        },
+      );
+    }
+
     const result = await handleAiChat({
       channel: "website",
       message: validation.message,
@@ -40,9 +63,14 @@ export async function POST(request: Request) {
       headers: {
         "Cache-Control": "no-store",
         "X-Robots-Tag": "noindex, nofollow",
+        "X-RateLimit-Remaining": String(rateLimit.remaining),
       },
     });
   } catch (error) {
+    if (error instanceof AiRateLimitError) {
+      return NextResponse.json({ error: error.code }, { status: error.status });
+    }
+
     if (error instanceof AiServiceError) {
       return NextResponse.json({ error: error.code }, { status: error.status });
     }
@@ -62,7 +90,11 @@ export async function POST(request: Request) {
 }
 
 function websiteChatEnabled() {
-  return process.env.AI_WEBSITE_CHAT_ENABLED === "true" && Boolean(process.env.OPENAI_API_KEY?.trim());
+  return (
+    process.env.AI_WEBSITE_CHAT_ENABLED === "true" &&
+    Boolean(process.env.OPENAI_API_KEY?.trim()) &&
+    websiteAiRateLimitConfigured()
+  );
 }
 
 function isAllowedOrigin(origin: string | null) {
