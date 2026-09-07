@@ -112,9 +112,14 @@ export async function permanentlyDeleteStaffAccount(
   }
 
   const activeTargetRoles = targetRoles.filter((role) => role.active !== false);
-  const targetsAdministrator = activeTargetRoles.some(
-    (role) => role.role === "admin" || role.role === "super_admin",
+  const privilegedProfile = ["admin", "super_admin"].includes(
+    String(targetProfile.profile_type ?? ""),
   );
+  const targetsAdministrator =
+    privilegedProfile ||
+    activeTargetRoles.some(
+      (role) => role.role === "admin" || role.role === "super_admin",
+    );
   const targetsSuperAdmin = activeTargetRoles.some(
     (role) => role.role === "super_admin",
   );
