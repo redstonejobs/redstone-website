@@ -65,6 +65,15 @@ export default async function SponsorshipRolePage({ params }: Props) {
 
   const pageUrl = `${SITE_URL}/sponsorship-jobs/${job.countrySlug}/${job.roleSlug}`;
   const medical = job.countrySlug === "gulf" ? SPONSORSHIP_MEDICALS[0] : SPONSORSHIP_MEDICALS[1];
+  const vacancySearch = new URLSearchParams({
+    q: job.role,
+    sponsorship: "true",
+    sort: "newest",
+  });
+  if (job.country !== "Gulf Countries") {
+    vacancySearch.set("country", job.country);
+  }
+  const vacanciesHref = `/jobs?${vacancySearch.toString()}`;
 
   return (
     <main className="bg-white text-slate-900">
@@ -109,11 +118,11 @@ export default async function SponsorshipRolePage({ params }: Props) {
               <p className="mt-2 text-xs leading-6 text-slate-300">{job.salaryNote}</p>
             </div>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/apply" className="rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D]">
+              <Link href={vacanciesHref} className="rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D]">
                 Apply for Sponsorship
               </Link>
               <Link
-                href={`/jobs?search=${encodeURIComponent(job.role)}&country=${encodeURIComponent(job.country === "Gulf Countries" ? "" : job.country)}`}
+                href={vacanciesHref}
                 className="rounded-xl border border-white/20 px-6 py-3.5 text-sm font-black text-white"
               >
                 Check Published Vacancies
@@ -219,7 +228,7 @@ export default async function SponsorshipRolePage({ params }: Props) {
               Red Stone supports recruitment, documentation and process coordination. Applying or paying the CV and document verification fee does not buy a job, sponsorship, visa or work permit. Employer selection and official immigration decisions remain separate.
             </p>
           </div>
-          <Link href="/apply" className="mt-6 inline-flex rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D] lg:mt-0 lg:shrink-0">
+          <Link href={vacanciesHref} className="mt-6 inline-flex rounded-xl bg-[#D4AF37] px-6 py-3.5 text-sm font-black text-[#071A3D] lg:mt-0 lg:shrink-0">
             Start Application
           </Link>
         </div>
