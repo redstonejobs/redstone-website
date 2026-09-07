@@ -28,6 +28,8 @@ export type AiChatInput = {
   channel?: AiChannel;
   externalThreadId?: string;
   contact?: AiContactInput;
+  /** Trusted server-derived identity only. Never accept this from a public request body. */
+  candidateUserId?: string;
 };
 
 export type AiConversationMessage = {
