@@ -68,12 +68,12 @@ test("admin and employer forms use the shared occupation catalogue while public 
   assert.doesNotMatch(publicJobSearch, /JOB_OCCUPATIONS/);
 });
 
-test("public search expands occupation keywords while returning only published jobs", () => {
-  assert.match(publicJobs, /occupationSearchTerms/);
+test("public search uses bounded terms while returning only published jobs", () => {
+  assert.match(publicJobs, /lightweightSearchTerms/);
+  assert.match(publicJobs, /\.slice\(0, 6\)/);
+  assert.doesNotMatch(publicJobs, /occupationSearchTerms|@\/lib\/jobs\/catalogue/);
   assert.match(publicJobs, /\.eq\("status", "published"\)/);
   assert.match(publicJobs, /job_type\.ilike/);
-  assert.match(catalogue, /housekeeping/);
-  assert.match(catalogue, /warehouse/);
 });
 
 test("public jobs page shows current vacancies only and omits the occupation template catalogue", () => {
