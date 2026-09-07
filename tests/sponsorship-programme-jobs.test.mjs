@@ -21,6 +21,6 @@ test("sponsorship filter distinguishes programme from confirmed employer sponsor
 
 test("internal Red Stone cards are visibly available through the sponsorship programme", () => {
   assert.match(card, /Sponsorship Programme/);
-  assert.match(card, /Apply for Sponsorship/);
   assert.match(card, /Employer-specific visa sponsorship/);
+  assert.match(card, /\{apply\.label\}/);
 });
