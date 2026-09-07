@@ -24,10 +24,12 @@ export function JobCard({ job }: { job: PublicJob }) {
   const external = isExternalJob(job);
   const externalApply = externalJobApplyUrl(job);
   const employerName = job.employer?.company_name || job.source_employer_name;
+  const sponsorshipProgramme = !external && job.application_mode === "redstone";
 
   const badges = [
     skillLevelLabel(job.skill_level),
-    job.visa_sponsorship ? "Visa Sponsorship" : null,
+    sponsorshipProgramme ? "Sponsorship Programme" : null,
+    job.visa_sponsorship ? "Visa Sponsorship Confirmed" : null,
     job.accommodation ? "Accommodation" : null,
     job.transport ? "Transport" : null,
     job.meals ? "Meals" : null,
@@ -48,14 +50,27 @@ export function JobCard({ job }: { job: PublicJob }) {
           ))}
         </div>
 
-        <h3 className="mt-4 text-xl font-black text-[#071A3D]">{job.title}</h3>
+        <h3 className="mt-4 text-xl font-black text-[#071A3D]">
+          {job.title}
+        </h3>
 
         <p className="mt-2 text-sm text-slate-600">
-          {[job.city, job.country].filter(Boolean).join(", ") || "Location to be confirmed"}
+          {[job.city, job.country].filter(Boolean).join(", ") ||
+            "Location to be confirmed"}
         </p>
 
         {employerName ? (
           <p className="mt-1 text-sm text-slate-500">{employerName}</p>
+        ) : null}
+
+        {sponsorshipProgramme ? (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+            <strong className="text-[#071A3D]">
+              Available through the Red Stone Sponsorship Programme.
+            </strong>{" "}
+            Employer-specific visa sponsorship, benefits and final terms are
+            confirmed only where stated in the verified vacancy or written offer.
+          </div>
         ) : null}
 
         {external ? (
@@ -64,33 +79,44 @@ export function JobCard({ job }: { job: PublicJob }) {
               {foreignWorkerLabel(job.foreign_worker_status)}
             </strong>
             {job.source_posted_at ? (
-              <span> • Source posted {formatCardDate(job.source_posted_at)}</span>
+              <span>
+                {" "}• Source posted {formatCardDate(job.source_posted_at)}
+              </span>
             ) : null}
           </div>
         ) : null}
 
         <div className="mt-4 grid gap-2 text-sm text-slate-700">
-          {salary ? <p><strong>Salary:</strong> {salary}</p> : null}
-          {!salary ? <p><strong>Salary:</strong> To be confirmed by employer</p> : null}
+          {salary ? (
+            <p>
+              <strong>Salary:</strong> {salary}
+            </p>
+          ) : (
+            <p>
+              <strong>Salary:</strong> To be confirmed by employer
+            </p>
+          )}
 
           <p>
-            <strong>Contract:</strong>{" "}
-            {formatCardContract(job)}
+            <strong>Contract:</strong> {formatCardContract(job)}
           </p>
 
           {!external ? (
             <p>
-              <strong>Processing:</strong>{" "}
-              {formatCardProcessingTime(job)}
+              <strong>Processing:</strong> {formatCardProcessingTime(job)}
             </p>
           ) : null}
 
           {job.vacancies ? (
-            <p><strong>Vacancies:</strong> {job.vacancies}</p>
+            <p>
+              <strong>Vacancies:</strong> {job.vacancies}
+            </p>
           ) : null}
 
           {job.application_deadline ? (
-            <p><strong>Deadline:</strong> {formatCardDate(job.application_deadline)}</p>
+            <p>
+              <strong>Deadline:</strong> {formatCardDate(job.application_deadline)}
+            </p>
           ) : null}
         </div>
       </div>
@@ -143,7 +169,7 @@ export function EmptyJobsState() {
   return (
     <div className="rounded-md border border-dashed border-slate-300 bg-white p-8 text-center">
       <h3 className="text-xl font-black text-[#071A3D]">
-        New opportunities are being prepared.
+        New sponsorship opportunities are being prepared.
       </h3>
       <p className="mt-2 text-slate-600">
         Check back soon or contact Red Stone through official channels for guidance.

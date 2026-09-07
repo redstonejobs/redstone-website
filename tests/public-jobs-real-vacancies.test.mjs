@@ -29,7 +29,8 @@ test("public vacancy surfaces read active published jobs from Supabase only", ()
 });
 
 test("jobs page contains only real vacancy results and no occupation-template catalogue", () => {
-  assert.match(publicJobsPage, /getPublishedJobs\(params\)/);
+  assert.match(publicJobsPage, /getPublishedJobs\(queryParams\)/);
+  assert.match(publicJobsPage, /queryParams\.source = "redstone"/);
   assert.match(publicJobsPage, /result\.jobs\.map/);
   assert.doesNotMatch(publicJobsPage, /catalogueGroups|JOB_OCCUPATIONS|occupationGroups/);
   assert.doesNotMatch(publicJobsPage, /JobPosting/);

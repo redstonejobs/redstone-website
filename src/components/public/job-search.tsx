@@ -19,10 +19,10 @@ export function JobSearch({
     <form className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(7,26,61,0.08)] md:p-6">
       <div className="mb-5">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#B8860B]">
-          Job Search
+          Sponsorship Job Search
         </p>
         <h2 className="mt-1 text-xl font-black text-[#071A3D] md:text-2xl">
-          Find the right opportunity
+          Find the right programme opportunity
         </h2>
         <p className="mt-1 text-sm text-slate-500">
           Search current vacancies by job title, employer, location or category.
@@ -63,7 +63,9 @@ export function JobSearch({
           options={["", ...SKILL_LEVELS.map((item) => item.value)]}
           labels={{
             "": "Any skill level",
-            ...Object.fromEntries(SKILL_LEVELS.map((item) => [item.value, item.label])),
+            ...Object.fromEntries(
+              SKILL_LEVELS.map((item) => [item.value, item.label])
+            ),
           }}
         />
 
@@ -71,8 +73,12 @@ export function JobSearch({
           name="sponsorship"
           label="Sponsorship"
           defaultValue={defaults.sponsorship}
-          options={["", "true"]}
-          labels={{ "": "Any", true: "Visa sponsorship" }}
+          options={["programme", "confirmed", ""]}
+          labels={{
+            programme: "Red Stone programme",
+            confirmed: "Employer-confirmed visa sponsorship",
+            "": "Any vacancy",
+          }}
         />
 
         <Select
@@ -94,7 +100,10 @@ export function JobSearch({
         </button>
       </div>
 
-      <details className="mt-5 border-t border-slate-200 pt-4" open={advancedFiltersActive}>
+      <details
+        className="mt-5 border-t border-slate-200 pt-4"
+        open={advancedFiltersActive}
+      >
         <summary className="cursor-pointer select-none text-sm font-black text-[#071A3D] marker:text-[#B8860B]">
           More filters
         </summary>
@@ -137,6 +146,13 @@ export function JobSearch({
           />
         </div>
       </details>
+
+      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+        <strong>Programme status and visa sponsorship are different.</strong>{" "}
+        A Red Stone programme vacancy is open for sponsorship recruitment processing,
+        but employer-specific visa sponsorship is treated as confirmed only when the
+        verified vacancy or written offer says so.
+      </div>
     </form>
   );
 }
