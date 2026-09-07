@@ -126,8 +126,8 @@ test("candidate list and document helpers have bounded result sets", () => {
   );
 });
 
-test("generic Apply entry routes visitors to real vacancies without mixed sorting", () => {
-  assert.match(genericApplyPage, /redirect\("\/jobs\?sort=newest"\)/);
+test("generic Apply entry routes visitors to confirmed sponsorship vacancies without mixed sorting", () => {
+  assert.match(genericApplyPage, /redirect\("\/jobs\?sponsorship=confirmed&sort=newest"\)/);
 });
 
 test("homepage avoids all-job country count scans", () => {

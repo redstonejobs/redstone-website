@@ -92,7 +92,7 @@ test("jobs page shows the full Red Stone catalogue by default and ignores stale 
 });
 
 test("generic and sponsorship Apply entry points select a real vacancy before application", () => {
-  assert.match(genericApply, /redirect\("\/jobs\?sort=newest"\)/);
+  assert.match(genericApply, /redirect\("\/jobs\?sponsorship=confirmed&sort=newest"\)/);
   assert.match(jobsPage, /queryParams\.sponsorship = "true"/);
 
   assert.match(sponsorshipRole, /q: job\.role/);
