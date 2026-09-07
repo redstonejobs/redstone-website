@@ -1,14 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-const staffActions = [
-  { label: "Dashboard", href: "/staff", primary: false },
-  { label: "My Clients", href: "/staff/clients", primary: false },
-  { label: "Applications", href: "/staff/applications", primary: true },
-  { label: "+ Register Client", href: "/staff/clients#add-client", primary: false },
-  { label: "Processing Cases", href: "/staff/clients?status=processing", primary: false },
-  { label: "Placements", href: "/staff/clients?status=placed", primary: false },
-] as const;
+const secondaryActionClass =
+  "inline-flex min-h-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-100 transition hover:border-[#D4AF37]/60 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#D4AF37]";
+
+const primaryActionClass =
+  "inline-flex min-h-10 items-center justify-center rounded-lg bg-[#D4AF37] px-4 py-2 text-xs font-black uppercase tracking-wide text-[#071A3D] shadow-sm transition hover:bg-[#F2D675] focus:outline-none focus:ring-2 focus:ring-[#F2D675]";
 
 export default function StaffLayout({ children }: { children: ReactNode }) {
   return (
@@ -29,19 +26,24 @@ export default function StaffLayout({ children }: { children: ReactNode }) {
               className="flex flex-wrap gap-2"
               aria-label="Staff dashboard actions"
             >
-              {staffActions.map((action) => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className={
-                    action.primary
-                      ? "inline-flex min-h-10 items-center justify-center rounded-lg bg-[#D4AF37] px-4 py-2 text-xs font-black uppercase tracking-wide text-[#071A3D] shadow-sm transition hover:bg-[#F2D675] focus:outline-none focus:ring-2 focus:ring-[#F2D675]"
-                      : "inline-flex min-h-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-100 transition hover:border-[#D4AF37]/60 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#D4AF37]"
-                  }
-                >
-                  {action.label}
-                </Link>
-              ))}
+              <Link href="/staff" className={secondaryActionClass}>
+                Dashboard
+              </Link>
+              <Link href="/staff/clients" className={secondaryActionClass}>
+                My Clients
+              </Link>
+              <Link href="/staff/applications" className={primaryActionClass}>
+                Applications
+              </Link>
+              <Link href="/staff/clients#add-client" className={secondaryActionClass}>
+                + Register Client
+              </Link>
+              <Link href="/staff/clients?status=processing" className={secondaryActionClass}>
+                Processing Cases
+              </Link>
+              <Link href="/staff/clients?status=placed" className={secondaryActionClass}>
+                Placements
+              </Link>
             </nav>
           </div>
         </div>
