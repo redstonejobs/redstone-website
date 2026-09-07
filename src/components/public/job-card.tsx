@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { dateText } from "@/lib/admin/format";
-import { formatContract, formatProcessingTime } from "@/lib/jobs/costs";
-import { skillLevelLabel } from "@/lib/jobs/catalogue";
+import {
+  formatCardContract,
+  formatCardDate,
+  formatCardProcessingTime,
+  skillLevelLabel,
+} from "@/lib/public/job-card-format";
 import {
   formatSalary,
   jobHref,
@@ -61,7 +64,7 @@ export function JobCard({ job }: { job: PublicJob }) {
               {foreignWorkerLabel(job.foreign_worker_status)}
             </strong>
             {job.source_posted_at ? (
-              <span> • Source posted {dateText(job.source_posted_at)}</span>
+              <span> • Source posted {formatCardDate(job.source_posted_at)}</span>
             ) : null}
           </div>
         ) : null}
@@ -72,13 +75,13 @@ export function JobCard({ job }: { job: PublicJob }) {
 
           <p>
             <strong>Contract:</strong>{" "}
-            {formatContract(job as unknown as Record<string, unknown>)}
+            {formatCardContract(job)}
           </p>
 
           {!external ? (
             <p>
               <strong>Processing:</strong>{" "}
-              {formatProcessingTime(job as unknown as Record<string, unknown>)}
+              {formatCardProcessingTime(job)}
             </p>
           ) : null}
 
@@ -87,7 +90,7 @@ export function JobCard({ job }: { job: PublicJob }) {
           ) : null}
 
           {job.application_deadline ? (
-            <p><strong>Deadline:</strong> {dateText(job.application_deadline)}</p>
+            <p><strong>Deadline:</strong> {formatCardDate(job.application_deadline)}</p>
           ) : null}
         </div>
       </div>

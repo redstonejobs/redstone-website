@@ -41,9 +41,9 @@ export default async function JobsPage({ searchParams }: JobsProps) {
 
   const selectedSort = params.sort ?? "mixed";
 
-  // Mixed mode gets a stable seed for the current result set, plus a fresh
-  // seed for the next Shuffle Jobs submission. This means pagination stays
-  // stable, but pressing Shuffle Jobs actually produces a new mixture.
+  // Mixed mode gets a stable seed for the current page, plus a fresh seed for
+  // the next Shuffle Jobs submission. The Worker only fetches one page and
+  // shuffles those rows in memory, avoiding the former multi-page fan-out.
   const mixSeed = params.mix_seed || crypto.randomUUID();
   const nextMixSeed = crypto.randomUUID();
 
@@ -171,65 +171,24 @@ async function getMixedPublishedJobs(
   params: Record<string, string | undefined>,
   seed: string
 ) {
-  const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-
-  // First query gives us the filtered catalogue size. The source-page order is
-  // then deterministically shuffled across the entire catalogue, rather than
-  // mixing only neighboring pages that may contain similar imported titles.
-  const first = await getPublishedJobs({
+  const result = await getPublishedJobs({
     ...params,
     sort: "newest",
-    page: "1",
   });
 
-  const sourcePageCount = Math.max(Math.ceil(first.count / first.pageSize), 1);
-  const displayPage = Math.min(requestedPage, sourcePageCount);
-  const sourcePageOrder = Array.from({ length: sourcePageCount }, (_, index) => index + 1).sort(
-    (a, b) => {
-      const difference =
-        stableMixScore(`${seed}:source-page:${a}`) -
-        stableMixScore(`${seed}:source-page:${b}`);
-      return difference || a - b;
-    }
-  );
-
-  const groupStartIndex = Math.floor((displayPage - 1) / 3) * 3;
-  const slot = (displayPage - 1) % 3;
-  const sourcePageNumbers = sourcePageOrder.slice(groupStartIndex, groupStartIndex + 3);
-
-  const sourcePages = await Promise.all(
-    sourcePageNumbers.map((sourcePage) =>
-      sourcePage === 1
-        ? Promise.resolve(first)
-        : getPublishedJobs({
-            ...params,
-            sort: "newest",
-            page: String(sourcePage),
-          })
-    )
-  );
-
-  const mixed = mixJobs(
-    sourcePages.flatMap((source) => source.jobs),
-    `${seed}:display-group:${groupStartIndex}`
-  );
-  const from = slot * first.pageSize;
-  const jobs = mixed.slice(from, from + first.pageSize);
-
   return {
-    ...first,
-    jobs,
-    page: displayPage,
+    ...result,
+    jobs: mixJobs(result.jobs, `${seed}:page:${result.page}`),
   };
 }
 
 function mixJobs(jobs: PublicJob[], seed: string) {
   return [...jobs].sort((a, b) => {
     const aScore = stableMixScore(
-      `${seed}:${a.id}:${a.title ?? ""}:${a.country ?? ""}:${a.category ?? ""}`
+      `${seed}:${a.id}:${a.title ?? ""}:${a.country ?? ""}`
     );
     const bScore = stableMixScore(
-      `${seed}:${b.id}:${b.title ?? ""}:${b.country ?? ""}:${b.category ?? ""}`
+      `${seed}:${b.id}:${b.title ?? ""}:${b.country ?? ""}`
     );
     return aScore - bScore || a.id.localeCompare(b.id);
   });

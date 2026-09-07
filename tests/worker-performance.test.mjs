@@ -4,6 +4,9 @@ import test from "node:test";
 
 const proxy = readFileSync("proxy.ts", "utf8");
 const publicJobs = readFileSync("src/lib/public/jobs.ts", "utf8");
+const jobsPage = readFileSync("src/app/(public)/jobs/page.tsx", "utf8");
+const jobCard = readFileSync("src/components/public/job-card.tsx", "utf8");
+const jobCardFormat = readFileSync("src/lib/public/job-card-format.ts", "utf8");
 const jobDetail = readFileSync("src/app/(public)/jobs/[slug]/page.tsx", "utf8");
 const jobDetailContext = readFileSync("src/lib/public/job-detail-context.ts", "utf8");
 const applyPage = readFileSync("src/app/apply/[slug]/page.tsx", "utf8");
@@ -34,15 +37,44 @@ test("public jobs bypass auth proxy and duplicate legacy middleware is removed",
 });
 
 test("jobs listing fetches only one database page using a reduced card projection", () => {
+  const cardProjection = sliceBetween(
+    publicJobs,
+    "const PUBLIC_JOB_CARD_SELECT",
+    "export const SITEMAP_SHARD_SIZE",
+  );
+
   assert.match(publicJobs, /const PUBLIC_JOB_CARD_SELECT/);
   assert.match(publicJobs, /\.select\(PUBLIC_JOB_CARD_SELECT, \{ count: "exact" \}\)/);
   assert.match(publicJobs, /\.range\(from, to\)/);
   assert.match(publicJobs, /export const PAGE_SIZE = 9/);
+  assert.doesNotMatch(
+    cardProjection,
+    /description,|responsibilities,|requirements,|immigration_evidence|import_quality_score|source_last_seen_at|source_external_id/,
+  );
 });
 
-test("free-text occupation catalogue loads only when a search query is actually used", () => {
-  assert.doesNotMatch(publicJobs, /^import .*occupationSearchTerms/m);
-  assert.match(publicJobs, /await import\("@\/lib\/jobs\/catalogue"\)/);
+test("mixed jobs stays on one paginated query", () => {
+  const mixedHelper = sliceBetween(
+    jobsPage,
+    "async function getMixedPublishedJobs",
+    "function mixJobs",
+  );
+
+  assert.equal((mixedHelper.match(/getPublishedJobs\(/g) ?? []).length, 1);
+  assert.doesNotMatch(mixedHelper, /Promise\.all|Array\.from|sourcePageCount|sourcePageOrder|sourcePageNumbers|flatMap/);
+  assert.match(mixedHelper, /mixJobs\(result\.jobs/);
+});
+
+test("public job cards do not initialize admin or occupation catalogue modules", () => {
+  assert.match(jobCard, /@\/lib\/public\/job-card-format/);
+  assert.doesNotMatch(jobCard, /@\/lib\/jobs\/catalogue|@\/lib\/jobs\/costs|@\/lib\/admin\/format/);
+  assert.doesNotMatch(jobCardFormat, /^import /m);
+});
+
+test("free-text job search stays bounded without occupation catalogue expansion", () => {
+  assert.doesNotMatch(publicJobs, /@\/lib\/jobs\/catalogue|occupationSearchTerms|JOB_OCCUPATIONS/);
+  assert.match(publicJobs, /function lightweightSearchTerms/);
+  assert.match(publicJobs, /\.slice\(0, 6\)/);
 });
 
 test("job detail route avoids related-job scans, candidate auth and heavy catalogue expansion", () => {

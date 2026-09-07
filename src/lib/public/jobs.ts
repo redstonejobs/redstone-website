@@ -192,22 +192,21 @@ const PUBLIC_JOB_SELECT = `
   employer:employers(company_name, verification_status, is_active)
 `;
 
+// Keep list/card requests intentionally lean. Large descriptions, evidence,
+// import metadata and unused benefit notes belong on detail/admin routes, not
+// on the Worker hot path that renders nine public cards.
 const PUBLIC_JOB_CARD_SELECT = `
   id,
   title,
   slug,
-  employer_id,
   country,
   city,
-  category,
-  job_type,
   skill_level,
   salary_min,
   salary_max,
   currency,
   salary_period,
   salary_confirmed,
-  salary_note,
   contract_type,
   contract_duration_value,
   contract_duration_unit,
@@ -218,29 +217,19 @@ const PUBLIC_JOB_CARD_SELECT = `
   accommodation:accommodation_provided,
   transport:transport_provided,
   meals:meals_provided,
-  sponsorship_status,
-  accommodation_status,
-  meals_status,
-  transport_status,
   processing_time_min,
   processing_time_max,
   processing_time_unit,
   processing_time_note,
-  published_at,
   source_provider,
-  source_external_id,
   source_url,
   source_apply_url,
   source_employer_name,
   source_posted_at,
-  source_last_seen_at,
   source_attribution,
   source_status,
-  auto_imported,
   application_mode,
   foreign_worker_status,
-  immigration_evidence,
-  import_quality_score,
   employer:employers(company_name, verification_status, is_active)
 `;
 
@@ -268,20 +257,9 @@ export async function getPublishedJobs(params: JobSearchParams = {}) {
   }
 
   if (params.q) {
-    const safe = params.q.replaceAll("%", "").replaceAll(",", " ").trim();
+    const searchTerms = lightweightSearchTerms(params.q);
 
-    if (safe) {
-      // Load the large occupation catalogue only for an actual free-text search.
-      const { occupationSearchTerms } = await import("@/lib/jobs/catalogue");
-
-      const searchTerms = [
-        ...new Set(
-          [safe, ...occupationSearchTerms(safe)]
-            .map(safeSearchTerm)
-            .filter(Boolean)
-        ),
-      ];
-
+    if (searchTerms.length) {
       query = query.or(
         searchTerms
           .flatMap((term) => [
@@ -686,10 +664,26 @@ function isPublicJobVisible(
       employer.is_active === true
   );
 }
+
+function lightweightSearchTerms(value: string) {
+  const safe = safeSearchTerm(value);
+  if (!safe) return [];
+
+  const words = safe
+    .split(/\s+/)
+    .filter((word) => word.length >= 3);
+
+  return [...new Set([safe, ...words])].slice(0, 6);
+}
+
 function safeSearchTerm(value: string) {
   return value
     .replaceAll("%", "")
     .replaceAll(",", " ")
+    .replaceAll("(", " ")
+    .replaceAll(")", " ")
+    .replaceAll("/", " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
