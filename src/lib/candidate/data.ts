@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { getCandidateApplicationPayments } from "@/lib/payments/application-payments";
 import { isExternalJob, type SourceAwareJob } from "@/lib/public/job-source";
 import type { CandidateContext, CandidateRow } from "./types";
@@ -170,13 +171,66 @@ function todayDate() {
 async function attachJobs(applications: CandidateRow[], error: unknown): Promise<{ rows: CandidateRow[]; error: unknown }> {
   if (error || applications.length === 0) return { rows: applications, error };
 
-  const supabase = await createClient();
   const jobIds = [...new Set(applications.map((application) => String(application.job_id ?? "")).filter(Boolean))];
-  const { data: jobs } = await supabase.from("jobs").select(CANDIDATE_JOB_FIELDS).in("id", jobIds).returns<CandidateRow[]>();
-  const jobMap = new Map((jobs ?? []).map((job) => [String(job.id), job]));
+  if (jobIds.length === 0) {
+    return {
+      rows: applications.map((application) => ({ ...application, job: null }) as CandidateRow),
+      error,
+    };
+  }
+
+  const supabase = await createClient();
+  const { data: visibleJobs, error: visibleJobsError } = await supabase
+    .from("jobs")
+    .select(CANDIDATE_JOB_FIELDS)
+    .in("id", jobIds)
+    .returns<CandidateRow[]>();
+
+  if (visibleJobsError) {
+    console.warn("[candidate] application job lookup failed", {
+      code: visibleJobsError.code ?? null,
+      application_count: applications.length,
+    });
+  }
+
+  const jobs = [...(visibleJobs ?? [])];
+  const visibleIds = new Set(jobs.map((job) => String(job.id)));
+  const missingJobIds = jobIds.filter((jobId) => !visibleIds.has(jobId));
+
+  if (missingJobIds.length) {
+    try {
+      // Application rows reaching this helper were already scoped to the signed-in
+      // candidate. The server-only fallback retrieves only a small display-safe
+      // job projection for those owned application job ids, so an existing
+      // application keeps its selected job context even if public job visibility
+      // later changes because of deadline, lifecycle or RLS conditions.
+      const admin = createAdminClient();
+      const { data: fallbackJobs, error: fallbackError } = await admin
+        .from("jobs")
+        .select(CANDIDATE_JOB_FIELDS)
+        .in("id", missingJobIds)
+        .returns<CandidateRow[]>();
+
+      if (fallbackError) {
+        console.warn("[candidate] owned application job fallback failed", {
+          code: fallbackError.code ?? null,
+          missing_job_count: missingJobIds.length,
+        });
+      } else {
+        jobs.push(...(fallbackJobs ?? []));
+      }
+    } catch (fallbackError) {
+      console.warn("[candidate] owned application job fallback unavailable", {
+        message: fallbackError instanceof Error ? fallbackError.message : "unknown_error",
+        missing_job_count: missingJobIds.length,
+      });
+    }
+  }
+
+  const jobMap = new Map(jobs.map((job) => [String(job.id), job]));
 
   return {
     rows: applications.map((application) => ({ ...application, job: jobMap.get(String(application.job_id ?? "")) ?? null }) as CandidateRow),
-    error,
+    error: visibleJobsError ?? error,
   };
 }
