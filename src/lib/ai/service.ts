@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/utils/supabase/admin";
+import { loadAiJobContext } from "./job-context";
 import { AiProviderError, generateAiResponse } from "./openai";
 import { routeWorker } from "./workers";
 import type { AiChatInput, AiContactInput, AiConversationMessage } from "./types";
@@ -61,11 +62,16 @@ export async function handleAiChat(input: AiChatInput) {
     await createHumanHandoff(admin, conversation.id, input.message);
   }
 
+  const jobContext = await loadAiJobContext(admin, {
+    workerKey: worker.key,
+    message: input.message,
+    contact: input.contact,
+  });
   const history = await loadHistory(admin, conversation.id);
   const startedAt = Date.now();
 
   try {
-    const result = await generateAiResponse(worker, history);
+    const result = await generateAiResponse(worker, history, jobContext.text);
     const durationMs = Date.now() - startedAt;
 
     const { error: outboundError } = await admin.from("ai_messages").insert({
@@ -75,7 +81,14 @@ export async function handleAiChat(input: AiChatInput) {
       worker_key: worker.key,
       content: result.text,
       openai_response_id: result.responseId,
-      metadata: { model: worker.model },
+      metadata: {
+        model: worker.model,
+        job_grounding: {
+          attempted: jobContext.attempted,
+          status: jobContext.status,
+          match_count: jobContext.matchCount,
+        },
+      },
     });
 
     if (outboundError) {
