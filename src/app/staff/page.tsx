@@ -73,8 +73,8 @@ export default async function StaffDashboardPage() {
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             The dashboard home is intentionally lightweight for reliability on
-            Cloudflare. Detailed client counts, referral tools and case records
-            remain inside the dedicated workspaces.
+            Cloudflare. Detailed client records and case work remain inside the
+            dedicated workspaces.
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -84,7 +84,7 @@ export default async function StaffDashboardPage() {
             <Link href="/staff/applications" className={secondaryButton}>
               Applications
             </Link>
-            <Link href="/staff/clients#add-client" className={secondaryButton}>
+            <Link href="/staff/clients/new" className={secondaryButton}>
               + Register Client
             </Link>
             <Link href="/staff/clients?status=contacted" className={secondaryButton}>
@@ -102,7 +102,7 @@ export default async function StaffDashboardPage() {
         <section className="mt-7 grid gap-5 md:grid-cols-3">
           <WorkspaceCard
             title="Client CRM"
-            body="Open your assigned client pipeline, referral link, passport and medical tracking, notes and follow-up dates."
+            body="Open your assigned client pipeline, passport and medical tracking, notes and follow-up dates."
             href="/staff/clients"
             action="Open My Clients"
           />
