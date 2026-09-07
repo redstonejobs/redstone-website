@@ -19,6 +19,15 @@ Configure these as Worker secrets:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `RESEND_API_KEY`
+- `OPENAI_API_KEY`
+- `AI_INTERNAL_SECRET`
+
+Configure `AI_WEBSITE_CHAT_ENABLED=false` until the Red Stone website assistant is intentionally activated. Set it to `true` only after `OPENAI_API_KEY` is configured and the candidate-facing chat has passed production checks. The widget and public AI route are both gated by this server-side flag.
+
+Optional AI model overrides:
+
+- `AI_FAST_MODEL=gpt-5.6-luna`
+- `AI_REASONING_MODEL=gpt-5.6-terra`
 
 `wrangler.jsonc` sets `keep_vars` to `true` so CLI deploys preserve dashboard-managed variables.
 
