@@ -36,11 +36,6 @@ export function JobCard({ job }: { job: PublicJob }) {
     external ? sourceLabel(job) : null,
   ].filter(Boolean);
 
-  const applyLabel =
-    sponsorshipProgramme && !apply.disabled && apply.label === "Apply Now"
-      ? "Apply for Sponsorship"
-      : apply.label;
-
   return (
     <article className="flex h-full flex-col rounded-md border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex-1">
@@ -162,7 +157,7 @@ export function JobCard({ job }: { job: PublicJob }) {
                 : "border border-[#D4AF37] bg-[#D4AF37] text-[#071A3D] hover:bg-[#F2D675]"
             }`}
           >
-            {applyLabel}
+            {apply.label}
           </Link>
         )}
       </div>
